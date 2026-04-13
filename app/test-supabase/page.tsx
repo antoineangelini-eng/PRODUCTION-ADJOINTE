@@ -50,7 +50,7 @@ export default function Page() {
       <ul>
         {rows.map((r) => (
           <li key={r.id}>
-            <b>{r.case_number}</b> — {r.nature_du_travail} — {r.created_at}
+            <b>{r.case_number}</b> - {r.nature_du_travail} - {r.created_at}
           </li>
         ))}
       </ul>
