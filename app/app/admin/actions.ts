@@ -134,11 +134,11 @@ export async function loadAllCasesAction(): Promise<AdminCaseRow[]> {
     const sectorsDone = Object.entries(sectors)
       .filter(([, s]) => s === "done").map(([k]) => k);
 
-    const dm  = dmMap[c.id]  ?? {};
-    const dr  = drMap[c.id]  ?? {};
-    const ut  = utMap[c.id]  ?? {};
-    const ur  = urMap[c.id]  ?? {};
-    const fin = finMap[c.id] ?? {};
+    const dm: any  = dmMap[c.id]  ?? {};
+    const dr: any  = drMap[c.id]  ?? {};
+    const ut: any  = utMap[c.id]  ?? {};
+    const ur: any  = urMap[c.id]  ?? {};
+    const fin: any = finMap[c.id] ?? {};
 
     return {
       id: c.id,
@@ -148,13 +148,13 @@ export async function loadAllCasesAction(): Promise<AdminCaseRow[]> {
       nature_du_travail: c.nature_du_travail,
       type_de_dents: (dr as any).type_de_dents ?? (dm as any).type_de_dents ?? null,
       // DM
-      dm_design_chassis:       dm.design_chassis       ?? null,
-      dm_design_chassis_at:    dm.design_chassis_at    ?? null,
-      dm_dentall_case_number:  dm.dentall_case_number  ?? null,
-      dm_envoye_dentall:       dm.envoye_dentall       ?? null,
-      dm_reception_metal_date: dm.reception_metal_date ?? null,
-      dm_modele_a_faire_ok:    dm.modele_a_faire_ok    ?? null,
-      dm_teintes_associees:    dm.teintes_associees    ?? null,
+      dm_design_chassis:       (dm as any).design_chassis       ?? null,
+      dm_design_chassis_at:    (dm as any).design_chassis_at    ?? null,
+      dm_dentall_case_number:  (dm as any).dentall_case_number  ?? null,
+      dm_envoye_dentall:       (dm as any).envoye_dentall       ?? null,
+      dm_reception_metal_date: (dm as any).reception_metal_date ?? null,
+      dm_modele_a_faire_ok:    (dm as any).modele_a_faire_ok    ?? null,
+      dm_teintes_associees:    (dm as any).teintes_associees    ?? null,
       // DR
       dr_design_dents_resine:    dr.design_dents_resine     ?? null,
       dr_design_dents_resine_at: dr.design_dents_resine_at  ?? null,
