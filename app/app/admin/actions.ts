@@ -34,7 +34,6 @@ export type AdminCaseRow = {
   ut_nombre_brut: string | null;
   ut_nombre_brut_h: string | null;
   ut_numero_lot_metal: string | null;
-  ut_numero_calcul: string | null;
   ut_reception_metal_date: string | null;
   ut_modele_a_faire_ok: boolean | null;
   // Usinage Résine
@@ -171,7 +170,6 @@ export async function loadAllCasesAction(): Promise<AdminCaseRow[]> {
       ut_nombre_brut:          ut.nombre_brut          ?? null,
       ut_nombre_brut_h:        ut.nombre_brut_h        ?? null,
       ut_numero_lot_metal:     ut.numero_lot_metal   ?? null,
-      ut_numero_calcul:        ut.numero_calcul      ?? null,
       ut_reception_metal_date: ut.reception_metal_at ?? null,  // colonne réelle : reception_metal_at
       ut_modele_a_faire_ok:    dm.modele_a_faire_ok ?? null,  // modele vient de sector_design_metal
       // UR
