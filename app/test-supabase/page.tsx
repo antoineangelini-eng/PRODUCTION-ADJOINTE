@@ -54,7 +54,6 @@ export default function TestSupabasePage() {
     </div>
   );
 }
-"use client";
 
 import { rpcUpdateUsinageResine } from "@/app/actions/rpc-update-usinage-resine";
 
