@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { rpcUpdateUsinageResine } from "@/app/actions/rpc-update-usinage-resine";
 
 type CaseRow = {
   id: string;
@@ -10,10 +11,12 @@ type CaseRow = {
   created_at: string;
 };
 
-export default function TestSupabasePage() {
+export default function Page() {
   const [rows, setRows] = useState<CaseRow[]>([]);
   const [info, setInfo] = useState<string>("Chargement...");
   const [error, setError] = useState<string | null>(null);
+
+  const caseId = "887ab252-e27c-4939-bc78-ccf8dd1e3ec8";
 
   useEffect(() => {
     (async () => {
@@ -51,27 +54,19 @@ export default function TestSupabasePage() {
           </li>
         ))}
       </ul>
+
+      <button
+        onClick={async () => {
+          try {
+            await rpcUpdateUsinageResine(caseId);
+            alert("OK");
+          } catch (e: any) {
+            alert(e.message);
+          }
+        }}
+      >
+        Test RPC Usinage Résine
+      </button>
     </div>
-  );
-}
-
-import { rpcUpdateUsinageResine } from "@/app/actions/rpc-update-usinage-resine";
-
-export default function Page() {
-  const caseId = "887ab252-e27c-4939-bc78-ccf8dd1e3ec8"; // ton vrai ID
-
-  return (
-    <button
-      onClick={async () => {
-        try {
-          await rpcUpdateUsinageResine(caseId);
-          alert("OK");
-        } catch (e: any) {
-          alert(e.message);
-        }
-      }}
-    >
-      Test RPC Usinage Résine
-    </button>
   );
 }
