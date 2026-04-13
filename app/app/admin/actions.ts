@@ -146,7 +146,7 @@ export async function loadAllCasesAction(): Promise<AdminCaseRow[]> {
       created_at: c.created_at,
       date_expedition: c.date_expedition,
       nature_du_travail: c.nature_du_travail,
-      type_de_dents: dr.type_de_dents ?? dm.type_de_dents ?? null,
+      type_de_dents: (dr as any).type_de_dents ?? (dm as any).type_de_dents ?? null,
       // DM
       dm_design_chassis:       dm.design_chassis       ?? null,
       dm_design_chassis_at:    dm.design_chassis_at    ?? null,
