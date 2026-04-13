@@ -1,0 +1,94 @@
+"use client";
+import React, { useEffect, useState, useCallback } from "react";
+import { loadFinHistoryAction, reopenFinCaseAction, type FinHistoryRow } from "./fin-history-actions";
+import { fmtDate, Check, Txt, Field, ReopenModal, HistoryFilters, CardShell, latestDate } from "@/components/history/history-shared";
+
+function FinCard({ row, onReopen }: { row: FinHistoryRow; onReopen: () => void }) {
+  const [open, setOpen] = useState(false);
+  const recepComplete = latestDate(row.reception_metal_at, row.reception_resine_at);
+
+  return (
+    <CardShell
+      row={row} accentColor="#facc15" open={open}
+      onToggle={() => setOpen(o => !o)}
+      onReopen={e => { e.stopPropagation(); onReopen(); }}
+      summaryExtra={
+        <div style={{ display: "flex", flexDirection: "column" as const, gap: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ fontSize: 9, fontWeight: 600, textTransform: "uppercase" as const, color: "#999", letterSpacing: "0.05em" }}>Réception métal</div>
+            {row.nature_du_travail === "Provisoire Résine" || row.nature_du_travail === "Définitif Résine"
+              ? <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "1px 10px", borderRadius: 4, background: "repeating-linear-gradient(135deg, rgba(239,68,68,0.06) 0px, rgba(239,68,68,0.06) 4px, transparent 4px, transparent 8px)", border: "1px solid rgba(239,68,68,0.18)", color: "rgba(239,68,68,0.3)", fontSize: 13 }}>⊘</span>
+              : <span style={{ fontSize: 11, color: "#e0e0e0" }}>{fmtDate(row.reception_metal_at)}</span>}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ fontSize: 9, fontWeight: 600, textTransform: "uppercase" as const, color: "#999", letterSpacing: "0.05em" }}>Réception résine</div>
+            <span style={{ fontSize: 11, color: "#e0e0e0" }}>{fmtDate(row.reception_resine_at)}</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase" as const, color: "#e0e0e0", letterSpacing: "0.05em" }}>Réception complète</div>
+            <span style={{ fontSize: 12, color: "#e0e0e0", fontWeight: 700 }}>{fmtDate(recepComplete)}</span>
+          </div>
+        </div>
+      }
+    >
+      <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ flex: 1 }}><Field label="Validation"><Check val={row.validation} /></Field></div>
+        <div style={{ flex: 1 }}><Field label="Type de dents"><Txt val={row.type_de_dents} color="#818cf8" /></Field></div>
+        <div style={{ flex: 1 }}><Field label="Teintes"><Txt val={row.teintes_associees} /></Field></div>
+      </div>
+    </CardShell>
+  );
+}
+
+export function FinitionHistory() {
+  const [rows, setRows]             = useState<FinHistoryRow[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [search, setSearch]         = useState("");
+  const [natFilter, setNatFilter]   = useState("");
+  const [yearFilter, setYearFilter] = useState("");
+  const [reopenRow, setReopenRow]   = useState<FinHistoryRow | null>(null);
+  const [note, setNote]             = useState("");
+  const [saving, setSaving]         = useState(false);
+  const [error, setError]           = useState<string | null>(null);
+
+  const load = useCallback(async () => { setLoading(true); setRows(await loadFinHistoryAction()); setLoading(false); }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const years = [...new Set(rows.map(r => r.completed_at?.slice(0, 4)).filter(Boolean))].sort().reverse() as string[];
+  const filtered = rows.filter(r => {
+    if (search && !r.case_number?.toLowerCase().includes(search.toLowerCase())) return false;
+    if (natFilter && r.nature_du_travail !== natFilter) return false;
+    if (yearFilter && r.completed_at?.slice(0, 4) !== yearFilter) return false;
+    return true;
+  });
+
+  async function handleReopen() {
+    if (!reopenRow) return;
+    setSaving(true); setError(null);
+    const res = await reopenFinCaseAction(reopenRow.id, note.trim() || null);
+    setSaving(false);
+    if (!res.ok) { setError(res.error ?? "Erreur"); return; }
+    setReopenRow(null); setNote(""); load();
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+      <HistoryFilters count={filtered.length} natFilter={natFilter} setNatFilter={setNatFilter}
+        yearFilter={yearFilter} setYearFilter={setYearFilter} search={search} setSearch={setSearch}
+        years={years} onReload={load} />
+      <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
+        {loading ? <div style={{ padding: 32, color: "#555", fontSize: 13 }}>Chargement…</div>
+          : filtered.length === 0 ? <div style={{ padding: 32, color: "#333", fontSize: 13, textAlign: "center" }}>Aucun dossier terminé.</div>
+          : <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 10 }}>
+              {filtered.map(row => <FinCard key={row.id} row={row} onReopen={() => setReopenRow(row)} />)}
+            </div>}
+      </div>
+      {reopenRow && (
+        <ReopenModal caseNumber={reopenRow.case_number} natureDuTravail={reopenRow.nature_du_travail}
+          dateExpedition={reopenRow.date_expedition} sectorLabel="Finition"
+          saving={saving} error={error} note={note} setNote={setNote}
+          onClose={() => { setReopenRow(null); setNote(""); setError(null); }} onConfirm={handleReopen} />
+      )}
+    </div>
+  );
+}

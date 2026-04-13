@@ -1,0 +1,490 @@
+"use client";
+import React from "react";
+import ReactDOM from "react-dom";
+import { useEffect, useState, useCallback, useRef } from "react";
+import {
+  loadUsinageResineRowsAction,
+  saveUsinageResineCellAction,
+  completeUsinageResineBatchAction,
+  deleteCaseAction,
+  type UsinageResineRow,
+  type BatchResult,
+} from "@/app/app/usinage-resine/actions";
+import { printUrLabelAction } from "@/app/app/usinage-resine/print-actions";
+import { lookupDisqueAction } from "@/app/app/usinage-resine/ur-sheet-lookup-actions";
+import type { ToastCase } from "@/components/sheet/CaseToast";
+
+const NATURE_META: Record<string, { color: string }> = {
+  "Chassis Argoat":    { color: "#4ade80" },
+  "Chassis Dent All":  { color: "#22d3ee" },
+  "Définitif Résine":  { color: "#f472b6" },
+  "Provisoire Résine": { color: "#c084fc" },
+};
+const MACHINE_OPTIONS = [
+  { value: "PM1", color: "#818cf8" },
+  { value: "PM2", color: "#22d3ee" },
+  { value: "PM3", color: "#f472b6" },
+  { value: "PM4", color: "#fb923c" },
+];
+const TYPE_DENTS_OPTIONS = [
+  { value: "Dents usiner",      color: "#818cf8" },
+  { value: "Dents du commerce", color: "#fb923c" },
+];
+const BG_CARD = "#1e1e1e", BG_LABEL_ROW = "#181818", BG_VAL_ROW = "#1e1e1e";
+const BG_LABEL_SAISIE = "#151515", BG_VAL_SAISIE = "#161616";
+const BD_LIGHT = "1px solid #242424", BD_MED = "1px solid #252525", BD_STRONG = "2px solid #2e2e2e";
+const CARD_KEYFRAMES = `
+@keyframes card-new { 0%{box-shadow:0 0 0 2px rgba(74,222,128,0.8)} 60%{box-shadow:0 0 0 2px rgba(74,222,128,0.3)} 100%{box-shadow:none} }
+@keyframes card-found { 0%{box-shadow:0 0 0 2px transparent} 10%{box-shadow:0 0 0 2px rgba(74,222,128,0.9)} 100%{box-shadow:0 0 0 2px transparent} }`;
+
+function addBusinessDays(date: Date, days: number): Date {
+  const d = new Date(date); let added = 0;
+  while (added < days) { d.setDate(d.getDate() + 1); const day = d.getDay(); if (day !== 0 && day !== 6) added++; }
+  return d;
+}
+function fmtDate(s: string | null | undefined): string {
+  if (!s) return "—";
+  return new Date(s.slice(0, 10) + "T00:00:00").toLocaleDateString("fr-FR");
+}
+function fmtDT(iso: string | null | undefined) {
+  if (!iso) return null;
+  const d = new Date(iso); if (isNaN(d.getTime())) return null;
+  return { date: d.toLocaleDateString("fr-FR"), time: d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) };
+}
+function sortByExp(rows: UsinageResineRow[]) {
+  return [...rows].sort((a, b) => (a.date_expedition ?? "9999").localeCompare(b.date_expedition ?? "9999"));
+}
+function Lbl({ children, color = "#e0e0e0" }: { children: React.ReactNode; color?: string }) {
+  return <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase" as const, color, lineHeight: 1, display: "block", textAlign: "center" }}>{children}</span>;
+}
+function Val({ children, muted }: { children: React.ReactNode; muted?: boolean }) {
+  return <span style={{ fontSize: 12, color: muted ? "#3a3a3a" : "#d0d0d0", fontWeight: 500, display: "block", textAlign: "center" }}>{children}</span>;
+}
+function OuiBadge() {
+  return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80", display: "inline-block" }} /><span style={{ fontSize: 12, color: "#4ade80", fontWeight: 600 }}>Oui</span></div>;
+}
+function TimeBadge({ dt }: { dt: { date: string; time: string } | null }) {
+  if (!dt) return <Val muted>—</Val>;
+  return <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}><span style={{ fontSize: 11, color: "#aaa" }}>{dt.date}</span><span style={{ fontSize: 12, fontWeight: 700, color: "#4ade80", background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.3)", borderRadius: 5, padding: "1px 10px" }}>{dt.time}</span></div>;
+}
+const MFR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+const DFR = ["Lu","Ma","Me","Je","Ve","Sa","Di"];
+function MiniCalendar({ value, onSelect, onClose, rect }: { value: string; onSelect: (d: string) => void; onClose: () => void; rect: DOMRect }) {
+  const today = new Date(); const init = value ? new Date(value + "T00:00:00") : today;
+  const [view, setView] = useState({ year: init.getFullYear(), month: init.getMonth() });
+  const ref = useRef<HTMLDivElement>(null);
+  const top = rect.bottom + 260 > window.innerHeight ? rect.top - 264 : rect.bottom + 4;
+  useEffect(() => {
+    function h(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) onClose(); }
+    setTimeout(() => document.addEventListener("mousedown", h), 0); return () => document.removeEventListener("mousedown", h);
+  }, [onClose]);
+  const sel = value ? new Date(value + "T00:00:00") : null;
+  const { year, month } = view;
+  const total = new Date(year, month + 1, 0).getDate();
+  const first = (() => { const d = new Date(year, month, 1).getDay(); return d === 0 ? 6 : d - 1; })();
+  const cells: (number | null)[] = [...Array(first).fill(null), ...Array.from({ length: total }, (_, i) => i + 1)];
+  while (cells.length % 7) cells.push(null);
+  const pick = (day: number) => { const mm = String(month + 1).padStart(2, "0"); const dd = String(day).padStart(2, "0"); onSelect(`${year}-${mm}-${dd}`); onClose(); };
+  return (
+    <div ref={ref} style={{ position: "fixed", zIndex: 9999, top, left: rect.left, background: "#1a1a1a", border: "1px solid #3d3d3d", borderRadius: 10, padding: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.8)", minWidth: 224, userSelect: "none" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <button onClick={() => setView(v => v.month === 0 ? { year: v.year - 1, month: 11 } : { ...v, month: v.month - 1 })} style={{ background: "none", border: "none", color: "white", cursor: "pointer", fontSize: 18, padding: "0 6px" }}>‹</button>
+        <span style={{ fontSize: 12, fontWeight: 700, color: "white" }}>{MFR[month]} {year}</span>
+        <button onClick={() => setView(v => v.month === 11 ? { year: v.year + 1, month: 0 } : { ...v, month: v.month + 1 })} style={{ background: "none", border: "none", color: "white", cursor: "pointer", fontSize: 18, padding: "0 6px" }}>›</button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2, marginBottom: 4 }}>
+        {DFR.map(d => <div key={d} style={{ textAlign: "center", fontSize: 10, color: "#555", fontWeight: 600 }}>{d}</div>)}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2 }}>
+        {cells.map((day, i) => {
+          if (!day) return <div key={i} />;
+          const iT = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+          const iS = sel && day === sel.getDate() && month === sel.getMonth() && year === sel.getFullYear();
+          return <button key={i} onClick={() => pick(day)} style={{ background: iS ? "#4ade80" : iT ? "rgba(74,222,128,0.12)" : "none", border: iT && !iS ? "1px solid rgba(74,222,128,0.3)" : "1px solid transparent", color: iS ? "#000" : "white", borderRadius: 5, fontSize: 11, padding: "4px 2px", cursor: "pointer", fontWeight: iS ? 700 : 400 }}
+            onMouseEnter={e => { if (!iS) (e.target as HTMLButtonElement).style.background = "rgba(255,255,255,0.08)"; }}
+            onMouseLeave={e => { if (!iS) (e.target as HTMLButtonElement).style.background = iT ? "rgba(74,222,128,0.12)" : "none"; }}>{day}</button>;
+        })}
+      </div>
+      <button onClick={() => { onSelect(""); onClose(); }} style={{ marginTop: 8, width: "100%", background: "none", border: "1px solid #3d3d3d", borderRadius: 6, color: "#555", fontSize: 11, padding: "5px 0", cursor: "pointer" }}>Effacer</button>
+    </div>
+  );
+}
+function focusNav(el: HTMLElement, dir: "left"|"right"|"up"|"down") {
+  const nav = el.dataset.nav; if (!nav) return;
+  const [rowId, colPart] = nav.split("_col_"); const col = parseInt(colPart);
+  if (dir === "right" || dir === "left") { const next = dir === "right" ? col + 1 : col - 1; document.querySelector<HTMLElement>(`[data-nav="${rowId}_col_${next}"]`)?.focus(); return; }
+  const allCards = Array.from(document.querySelectorAll<HTMLElement>("[data-nav-row]"));
+  const idx = allCards.findIndex(c => c.dataset.navRow === rowId);
+  const nextCard = allCards[dir === "down" ? idx + 1 : idx - 1];
+  if (nextCard) nextCard.querySelector<HTMLElement>(`[data-nav$="_col_${col}"]`)?.focus();
+}
+function InlineText({ value, onSave, onFocusChange, placeholder = "—", navAttr }: { value: string|null; onSave:(v:string)=>void; onFocusChange?:(f:boolean)=>void; placeholder?:string; navAttr?:string }) {
+  const [focused, setFocused] = React.useState(false);
+  return <input data-nav={navAttr} defaultValue={value ?? ""} placeholder={focused ? "" : placeholder}
+    onFocus={() => { setFocused(true); onFocusChange?.(true); }}
+    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); onSave(e.currentTarget.value); e.currentTarget.blur(); return; } if (!navAttr) return; const el = e.currentTarget; if (e.key === "ArrowRight" && el.selectionEnd === el.value.length) { e.preventDefault(); focusNav(el,"right"); } else if (e.key === "ArrowLeft" && el.selectionStart === 0) { e.preventDefault(); focusNav(el,"left"); } else if (e.key === "ArrowDown") { e.preventDefault(); focusNav(el,"down"); } else if (e.key === "ArrowUp") { e.preventDefault(); focusNav(el,"up"); } }}
+    onBlur={e => { setFocused(false); onFocusChange?.(false); onSave(e.currentTarget.value); }}
+    style={{ padding: "3px 7px", border: focused ? "1px solid #4ade80" : "1px solid #2a2a2a", background: focused ? "rgba(74,222,128,0.06)" : "#1a1a1a", color: "white", fontSize: 12, borderRadius: 5, outline: "none", transition: "all 150ms", width: "90%", boxSizing: "border-box" as const, display: "block", textAlign: "center" }} />;
+}
+function MachineDropdown({ options, value, onChange, buttonStyle }: {
+  options: { value: string; color: string }[];
+  value: string;
+  onChange: (v: string) => void;
+  buttonStyle?: React.CSSProperties;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const btnRef = React.useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = React.useState({ top: 0, left: 0 });
+
+  React.useEffect(() => {
+    if (!open) return;
+    function h(e: MouseEvent) {
+      const target = e.target as Node;
+      if (btnRef.current && !btnRef.current.contains(target)) {
+        const dropdown = document.getElementById("machine-dropdown-portal");
+        if (dropdown && !dropdown.contains(target)) setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+
+  function handleOpen(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 4, left: rect.left + rect.width / 2 });
+    }
+    setOpen(o => !o);
+  }
+
+  const selected = options.find(o => o.value === value);
+
+  return (
+    <>
+      <button ref={btnRef} onClick={handleOpen}
+        style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 6,
+          border: selected ? `1px solid ${selected.color}55` : "1px solid #333",
+          background: selected ? `${selected.color}18` : "#1e1e1e",
+          color: selected ? selected.color : "#555",
+          fontSize: 12, fontWeight: 700, cursor: "pointer", minWidth: 68, justifyContent: "center",
+          ...buttonStyle }}>
+        {selected ? selected.value : "—"}
+        <svg viewBox="0 0 10 6" width="8" height="8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6, flexShrink: 0 }}><path d="M1 1l4 4 4-4" /></svg>
+      </button>
+      {open && typeof document !== "undefined" && ReactDOM.createPortal(
+        <div id="machine-dropdown-portal"
+          style={{ position: "fixed", top: pos.top, left: pos.left, transform: "translateX(-50%)",
+            background: "#1c1c1c", border: "1px solid #2e2e2e", borderRadius: 8, padding: 5,
+            zIndex: 9999, display: "flex", flexDirection: "column", gap: 2, minWidth: 80,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.6)" }}>
+          <button onClick={e => { e.stopPropagation(); onChange(""); setOpen(false); }}
+            style={{ padding: "4px 10px", borderRadius: 5, border: "none", background: !value ? "#2a2a2a" : "transparent", color: "#555", fontSize: 12, fontWeight: 600, cursor: "pointer", textAlign: "center" as const }}>—</button>
+          {options.map(o => (
+            <button key={o.value} onClick={e => { e.stopPropagation(); onChange(o.value); setOpen(false); }}
+              style={{ padding: "4px 10px", borderRadius: 5, border: value === o.value ? `1px solid ${o.color}55` : "1px solid transparent", background: value === o.value ? `${o.color}20` : "transparent", color: o.color, fontSize: 12, fontWeight: 700, cursor: "pointer", textAlign: "center" as const }}>
+              {o.value}
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
+function SelectMachine({ value, onChange }: { value:string; onChange:(v:string)=>void; navAttr?:string }) {
+  return <MachineDropdown options={MACHINE_OPTIONS} value={value} onChange={onChange} />;
+}
+function SelectTypeDents({ value, onChange, navAttr }: { value:string; onChange:(v:string)=>void; navAttr?:string }) {
+  const color = TYPE_DENTS_OPTIONS.find(o => o.value === value)?.color ?? "#555";
+  const navKeyDown = (e: React.KeyboardEvent<HTMLSelectElement>) => { if (!navAttr) return; const el = e.currentTarget as unknown as HTMLElement; el.dataset.nav = navAttr; if (e.key === "ArrowRight") { e.preventDefault(); focusNav(el,"right"); } else if (e.key === "ArrowLeft") { e.preventDefault(); focusNav(el,"left"); } };
+  return <div style={{ position:"relative", display:"inline-flex", width:"auto", maxWidth:150 }}><select data-nav={navAttr} value={value} onChange={e => onChange(e.target.value)} onKeyDown={navKeyDown} style={{ padding:"3px 22px 3px 8px", border:`1px solid ${color}40`, background:value?`${color}15`:"#1a1a1a", color:value?color:"#3a3a3a", fontSize:11, fontWeight:600, borderRadius:5, cursor:"pointer", outline:"none", appearance:"none", WebkitAppearance:"none", width:"100%" }}><option value="" style={{ background:"#111", color:"#555" }}>—</option>{TYPE_DENTS_OPTIONS.map(o => <option key={o.value} value={o.value} style={{ background:"#111", color:o.color, fontWeight:600 }}>{o.value}</option>)}</select><svg viewBox="0 0 10 6" width="9" height="9" style={{ position:"absolute", right:6, top:"50%", transform:"translateY(-50%)", pointerEvents:"none", opacity:0.7 }} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1l4 4 4-4" /></svg></div>;
+}
+
+// ─── Champ N° disque avec lookup Google Sheets ───────────────────────────────
+
+function DisqueLookupInput({ value, onSave, onFocusChange, navAttr }: {
+  value: string | null;
+  onSave: (v: string, lotPmma: string | null) => void;
+  onFocusChange?: (f: boolean) => void;
+  navAttr?: string;
+}) {
+  const [focused, setFocused] = React.useState(false);
+  const [local, setLocal] = React.useState(value ?? "");
+  const [status, setStatus] = React.useState<"idle" | "loading" | "ok" | "notfound" | "error">("idle");
+  const [msg, setMsg] = React.useState("");
+  const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => { setLocal(value ?? ""); }, [value]);
+
+  async function doLookup(v: string) {
+    if (!v.trim()) { onSave("", null); setStatus("idle"); return; }
+    setStatus("loading");
+    try {
+      const res = await lookupDisqueAction(v.trim());
+      if (res.ok && res.valeurC !== undefined) {
+        onSave(v.trim(), res.valeurC);
+        setStatus("ok");
+        setMsg(res.valeurC);
+      } else {
+        onSave(v.trim(), null);
+        setStatus("notfound");
+        setMsg(res.error ?? "Non trouvé");
+      }
+    } catch {
+      onSave(v.trim(), null);
+      setStatus("error");
+      setMsg("Erreur réseau");
+    }
+  }
+
+  function handleChange(v: string) {
+    setLocal(v);
+    setStatus("idle");
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!v.trim()) { onSave("", null); return; }
+    debounceRef.current = setTimeout(() => doLookup(v), 400);
+  }
+
+  function handleBlur() {
+    setFocused(false);
+    onFocusChange?.(false);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    // Sauvegarde le disque même sans lookup réussi
+    if (local.trim()) onSave(local.trim(), null);
+  }
+
+  const borderColor = focused
+    ? "1px solid #4ade80"
+    : status === "ok"       ? "1px solid rgba(74,222,128,0.5)"
+    : status === "notfound" ? "1px solid rgba(248,113,113,0.5)"
+    : status === "error"    ? "1px solid rgba(248,113,113,0.5)"
+    : "1px solid #2a2a2a";
+
+  return (
+    <div style={{ position: "relative", display: "inline-flex", alignItems: "center", width: "90%" }}>
+      <input
+        data-nav={navAttr}
+        value={local}
+        placeholder={focused ? "" : "—"}
+        onFocus={() => { setFocused(true); onFocusChange?.(true); }}
+        onChange={e => handleChange(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === "Enter") { e.preventDefault(); if (debounceRef.current) clearTimeout(debounceRef.current); doLookup(local); e.currentTarget.blur(); return; }
+          if (!navAttr) return;
+          const el = e.currentTarget;
+          if (e.key === "ArrowRight" && el.selectionEnd === el.value.length) { e.preventDefault(); focusNav(el, "right"); }
+          else if (e.key === "ArrowLeft" && el.selectionStart === 0) { e.preventDefault(); focusNav(el, "left"); }
+          else if (e.key === "ArrowDown") { e.preventDefault(); focusNav(el, "down"); }
+          else if (e.key === "ArrowUp") { e.preventDefault(); focusNav(el, "up"); }
+        }}
+        onBlur={handleBlur}
+        style={{ padding: "3px 7px", border: borderColor, background: focused ? "rgba(74,222,128,0.06)" : "#1a1a1a", color: "white", fontSize: 12, borderRadius: 5, outline: "none", transition: "border-color 150ms", width: "100%", boxSizing: "border-box" as const, display: "block", textAlign: "center" }}
+      />
+      {status === "loading"  && <span style={{ position: "absolute", right: 5, fontSize: 10, color: "#fb923c", pointerEvents: "none" }}>…</span>}
+      {status === "ok"       && <span style={{ position: "absolute", right: 5, fontSize: 10, color: "#4ade80", pointerEvents: "none" }} title={`Lot: ${msg}`}>✓</span>}
+      {(status === "notfound" || status === "error") && <span style={{ position: "absolute", right: 5, fontSize: 10, color: "#f87171", pointerEvents: "none" }} title={msg}>✕</span>}
+    </div>
+  );
+}
+
+export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectionChange, onNewCases }: {
+  focusId: string|null; lotFilledIds?: Set<string>;
+  onReload?: (fn:()=>void)=>void; lotPanel?: React.ReactNode;
+  onSelectionChange?: (b:boolean)=>void; onNewCases?: (c:ToastCase[])=>void;
+}) {
+  const [rows, setRows]             = useState<UsinageResineRow[]>([]);
+  const [newRowIds, setNewRowIds]   = useState<Set<string>>(new Set());
+  const [hasUnsorted, setHasUnsorted] = useState(false);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState<string|null>(null);
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
+  const [batchPending, setBatchPending] = useState(false);
+  const [batchResult, setBatchResult]   = useState<BatchResult|null>(null);
+  const [searchNotFound, setSearchNotFound] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string|null>(null);
+  const [editingDate, setEditingDate] = useState<{caseId:string;column:string;value:string;rect:DOMRect}|null>(null);
+  const [isEditing, setIsEditing]   = useState(false);
+  const onNewCasesRef = useRef(onNewCases); onNewCasesRef.current = onNewCases;
+
+  const load = useCallback(async (silent = false) => {
+    if (!silent) { setLoading(true); setError(null); }
+    try {
+      const fresh = (await loadUsinageResineRowsAction()) ?? [];
+      if (silent) {
+        setRows(prev => {
+          const prevIds = new Set(prev.map(r => String(r.id)));
+          const incoming = fresh.filter(r => !prevIds.has(String(r.id)));
+          if (incoming.length > 0) {
+            onNewCasesRef.current?.(incoming.map(r => ({ id: String(r.id), case_number: r.case_number, date_expedition: r.date_expedition, nature_du_travail: r.nature_du_travail })));
+            setNewRowIds(ids => { const n = new Set(ids); incoming.forEach(r => n.add(String(r.id))); setTimeout(() => setNewRowIds(new Set()), 2500); return n; });
+            setHasUnsorted(true);
+          }
+          const updated = prev.map(r => fresh.find(f => String(f.id) === String(r.id)) ?? null).filter(Boolean) as UsinageResineRow[];
+          return [...updated, ...incoming];
+        });
+      } else { setRows(sortByExp(fresh)); setHasUnsorted(false); }
+    } catch (e: any) { if (!silent) setError(e.message); }
+    finally { if (!silent) setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => { onReload?.(() => load(true)); }, [load, onReload]);
+  useEffect(() => { onSelectionChange?.(checkedIds.size > 0 || editingDate !== null || isEditing); }, [checkedIds, editingDate, isEditing, onSelectionChange]);
+  useEffect(() => {
+    if (!focusId || loading || rows.length === 0) return;
+    const found = rows.find(r => r.case_number === focusId);
+    if (!found) { setSearchNotFound(true); return; }
+    setSearchNotFound(false);
+    setTimeout(() => document.getElementById(`card-ur-${found.id}`)?.scrollIntoView({ behavior:"smooth", block:"center" }), 100);
+  }, [focusId, loading, rows]);
+
+  function patchRow(caseId: string, sector: "ur"|"case", column: string, value: any) {
+    setRows(prev => prev.map(r => {
+      if (String(r.id) !== caseId) return r;
+      if (sector === "ur") return { ...r, sector_usinage_resine: { ...(r as any).sector_usinage_resine, [column]: value } };
+      return { ...r, [column]: value };
+    }));
+  }
+
+  async function saveCell(caseId: string, column: string, value: any) {
+    const fd = new FormData(); fd.set("case_id", caseId); fd.set("column", column);
+    if (column === "usinage_with_reception") { fd.set("kind", "json"); fd.set("value", String(value)); }
+    else { fd.set("kind", typeof value === "boolean" ? "boolean" : "text"); fd.set("value", String(value ?? "")); }
+    await saveUsinageResineCellAction(fd);
+  }
+
+  async function handleBatch() {
+    if (checkedIds.size === 0 || batchPending) return;
+    setBatchPending(true);
+    const fd = new FormData(); checkedIds.forEach(id => fd.append("case_ids", id));
+    const result = await completeUsinageResineBatchAction(null, fd);
+    setBatchResult(result); setBatchPending(false);
+    if (result.okIds.length > 0 && result.errors.length === 0) setTimeout(() => setBatchResult(null), 4000);
+    if (result.okIds.length > 0) {
+      // ── Impression Zebra automatique pour chaque cas validé ──
+      for (const okId of result.okIds) {
+        const row = rows.find(r => String(r.id) === okId);
+        if (!row) continue;
+        const ur = (row as any).sector_usinage_resine ?? {};
+        const dr = (row as any).sector_design_resine  ?? {};
+        const dm = (row as any).sector_design_metal   ?? {};
+        printUrLabelAction({
+          caseNumber: row.case_number ?? okId,
+          teinte:  ur.teintes_override ?? dr.teintes_associees ?? dm.teintes_associees ?? null,
+          machine: ur.identite_machine ?? null,
+          disque:  ur.numero_disque    ?? null,
+          nbBlocs: ur.nb_blocs_override ?? dr.nb_blocs_de_dents ?? null,
+
+        }).catch(e => console.error("[Zebra]", e));
+      }
+      setRows(prev => prev.filter(r => !result.okIds.includes(String(r.id))));
+      setCheckedIds(prev => { const n = new Set(prev); result.okIds.forEach(id => n.delete(id)); return n; });
+    }
+  }
+
+  async function handleDelete(caseId: string) {
+    const fd = new FormData(); fd.set("case_id", caseId);
+    await deleteCaseAction(fd);
+    setRows(prev => prev.filter(r => String(r.id) !== caseId));
+    setConfirmDeleteId(null);
+  }
+
+  if (loading) return <div style={{ padding:32, color:"#555", fontSize:13 }}>Chargement…</div>;
+  if (error) return <div style={{ padding:20 }}><div style={{ color:"#f87171", fontSize:13 }}>Erreur : {error}</div><button onClick={() => load()} style={{ marginTop:8, border:"1px solid #f87171", background:"none", color:"#f87171", padding:"4px 10px", cursor:"pointer", borderRadius:4, fontSize:12 }}>Réessayer</button></div>;
+
+  const grid2: React.CSSProperties = { display:"grid", gridTemplateColumns:"1fr 1fr", padding:"6px 14px", gap:"0 12px", alignItems:"center", justifyItems:"center", minHeight:28 };
+  const grid3: React.CSSProperties = { display:"grid", gridTemplateColumns:"1fr 1fr 1fr", padding:"6px 14px", gap:"0 10px", alignItems:"center", justifyItems:"center", minHeight:28 };
+  const vals2: React.CSSProperties = { display:"grid", gridTemplateColumns:"1fr 1fr", padding:"5px 14px 7px", gap:"0 12px", alignItems:"center", justifyItems:"center" };
+  const vals3: React.CSSProperties = { display:"grid", gridTemplateColumns:"1fr 1fr 1fr", padding:"5px 14px 7px", gap:"0 10px", alignItems:"center", justifyItems:"center" };
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100%", minHeight:0, background:"#111" }}>
+      <style dangerouslySetInnerHTML={{ __html: CARD_KEYFRAMES }} />
+      {editingDate && (
+        <MiniCalendar value={editingDate.value} rect={editingDate.rect}
+          onSelect={date => { patchRow(editingDate.caseId,"ur",editingDate.column,date||null); saveCell(editingDate.caseId,editingDate.column,date||null); setEditingDate(null); }}
+          onClose={() => setEditingDate(null)} />
+      )}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, zIndex:10, background:"#111", padding:"0 8px 10px 8px", borderBottom:"1px solid #1e1e1e", flexShrink:0 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          {!searchNotFound && <span style={{ fontSize:12, color:"#ccc", padding:"4px 14px", background:"#1e1e1e", border:"1px solid #2e2e2e", borderRadius:20, fontWeight:600 }}>{rows.length} dossier{rows.length>1?"s":""}</span>}
+          {searchNotFound && focusId && <div style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 12px", background:"#1a0f0f", border:"1px solid rgba(239,68,68,0.4)", borderRadius:7 }}><span style={{ fontSize:12, color:"#f87171" }}>Cas <strong style={{ color:"white" }}>"{focusId}"</strong> introuvable</span><button onClick={() => setSearchNotFound(false)} style={{ background:"none", border:"none", color:"#555", cursor:"pointer", fontSize:14 }}>×</button></div>}
+          {hasUnsorted && <button onClick={() => { setRows(p => sortByExp(p)); setHasUnsorted(false); setNewRowIds(new Set()); }} style={{ display:"flex", alignItems:"center", gap:6, padding:"5px 12px", borderRadius:7, cursor:"pointer", background:"rgba(74,222,128,0.08)", border:"1px solid rgba(74,222,128,0.3)", color:"#4ade80", fontSize:12, fontWeight:700 }} onMouseEnter={e => e.currentTarget.style.background="rgba(74,222,128,0.15)"} onMouseLeave={e => e.currentTarget.style.background="rgba(74,222,128,0.08)"}>↕ Trier par expédition</button>}
+          {batchResult?.okIds.length ? <span style={{ fontSize:12, color:"#4ade80", padding:"5px 12px", background:"rgba(74,222,128,0.06)", border:"1px solid rgba(74,222,128,0.2)", borderRadius:7 }}>✓ {batchResult.okIds.length} envoyé{batchResult.okIds.length>1?"s":""}</span> : null}
+        </div>
+        <button onClick={handleBatch} disabled={batchPending||checkedIds.size===0}
+          style={{ padding:"8px 18px", border:checkedIds.size===0?"1px solid #3a3a3a":"1px solid #4ade80", background:checkedIds.size===0?"#1e1e1e":"rgba(74,222,128,0.08)", color:checkedIds.size===0?"#e0e0e0":"#4ade80", cursor:checkedIds.size===0?"not-allowed":"pointer", borderRadius:8, fontWeight:700, fontSize:13, transition:"all 160ms" }}>
+          {batchPending?"Validation...":checkedIds.size===0?"Sélectionner des dossiers":`Valider ${checkedIds.size} dossier${checkedIds.size>1?"s":""}`}
+        </button>
+      </div>
+      <div style={{ overflowY:"auto", flex:1, minHeight:0, padding:"12px 8px 16px" }}>
+        {rows.length===0 && <div style={{ color:"#333", fontSize:13, textAlign:"center", paddingTop:40 }}>Aucun dossier en cours.</div>}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(360px, 1fr))", gap:10 }}>
+          {rows.map(row => {
+            const ur = (row as any).sector_usinage_resine ?? {};
+            const dr = (row as any).sector_design_resine  ?? {};
+            const dm = (row as any).sector_design_metal   ?? {};
+            const nat = row.nature_du_travail ?? "";
+            const natColor = NATURE_META[nat]?.color ?? "#666";
+            const isChecked = checkedIds.has(String(row.id));
+            const isFocused = focusId === row.case_number;
+            const isNew = newRowIds.has(String(row.id));
+            const isLotFilled = lotFilledIds?.has(String(row.id)) ?? false;
+            const isDone = Boolean(ur.usinage_dents_resine);
+            const effectiveTD = ur.type_de_dents_override ?? dr.type_de_dents ?? dm.type_de_dents ?? "";
+            const dt = fmtDT(dr.design_dents_resine_at);
+            return (
+              <div key={row.id} id={`card-ur-${row.id}`} data-nav-row={String(row.id)} style={{ background:BG_CARD, border:`1px solid ${isChecked?"#2d4d3a":isDone?"#2d3d35":isLotFilled?"#2d2b4a":"#272727"}`, borderRadius:12, overflow:"hidden", animation:isFocused?"card-found 2s ease forwards":isNew?"card-new 2.5s ease forwards":"none", transition:"border-color 150ms" }}>
+                <div style={{ height:3, background:natColor, opacity:0.8 }} />
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 14px", borderBottom:"2px solid #2a2a2a" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                    <span style={{ fontSize:22, fontWeight:800, color:"white", lineHeight:1 }}>{row.case_number}</span>
+                    {nat && <span style={{ display:"inline-flex", padding:"2px 9px", borderRadius:5, fontSize:10, fontWeight:700, background:`${natColor}18`, border:`1px solid ${natColor}40`, color:natColor, whiteSpace:"nowrap" }}>{nat}</span>}
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                    <div style={{ textAlign:"right" }}><span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"#e0e0e0", display:"block", marginBottom:2 }}>Expédition</span><span style={{ fontSize:13, color:"#e0e0e0", fontWeight:700 }}>{fmtDate(row.date_expedition)}</span></div>
+                    <span style={{ width:9, height:9, borderRadius:"50%", background:isDone?"#4ade80":"#2a2a2a", border:isDone?"none":"1px solid #3a3a3a", display:"inline-block", flexShrink:0 }} />
+                    <input type="checkbox" checked={isChecked} onChange={e => { const id=String(row.id); setCheckedIds(prev => { const n=new Set(prev); e.target.checked?n.add(id):n.delete(id); return n; }); }} style={{ width:15, height:15, cursor:"pointer", accentColor:"#4ade80", flexShrink:0 }} />
+                  </div>
+                </div>
+                <div style={{ ...grid2, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl>Date de création</Lbl><Lbl>Type de dents</Lbl></div>
+                <div style={{ ...vals2, background:BG_VAL_ROW, borderBottom:BD_MED }}><Val>{fmtDate(row.created_at)}</Val><span style={{ display:"inline-flex", padding:"3px 10px", borderRadius:6, background:(TYPE_DENTS_OPTIONS.find(o=>o.value===effectiveTD)?.color??"#555")+"18", border:`1px solid ${(TYPE_DENTS_OPTIONS.find(o=>o.value===effectiveTD)?.color??"#555")}44`, color:TYPE_DENTS_OPTIONS.find(o=>o.value===effectiveTD)?.color??"#555", fontSize:12, fontWeight:700 }}>{effectiveTD||"—"}</span></div>
+                <div style={{ ...grid3, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl>Design résine</Lbl><Lbl>Date &amp; heure</Lbl><Lbl>Modèle</Lbl></div>
+                <div style={{ ...vals3, background:BG_VAL_ROW, borderBottom:BD_MED }}>{dr.design_dents_resine?<OuiBadge/>:<Val muted>—</Val>}<TimeBadge dt={dt}/>{(nat==="Provisoire Résine"?true:dm.modele_a_faire_ok)?<OuiBadge/>:<Val muted>—</Val>}</div>
+                <div style={{ ...grid2, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl color="#4ade80">Blocs</Lbl><Lbl color="#4ade80">Teinte</Lbl></div>
+                <div style={{ ...vals2, background:"#1b1b1b", borderBottom:BD_STRONG }}>
+                  <InlineText value={ur.nb_blocs_override??dr.nb_blocs_de_dents??null} onFocusChange={setIsEditing} navAttr={`${row.id}_col_1`} onSave={v => { patchRow(String(row.id),"ur","nb_blocs_override",v||null); saveCell(String(row.id),"nb_blocs_override",v||null); }} />
+                  <InlineText value={ur.teintes_override??dr.teintes_associees??dm.teintes_associees??null} onFocusChange={setIsEditing} navAttr={`${row.id}_col_2`} onSave={v => { patchRow(String(row.id),"ur","teintes_override",v||null); saveCell(String(row.id),"teintes_override",v||null); }} />
+                </div>
+                <div style={{ ...grid2, background:BG_LABEL_SAISIE, borderBottom:BD_LIGHT }}><Lbl color="#4ade80">Production</Lbl><Lbl color="#4ade80">Réception</Lbl></div>
+                <div style={{ ...vals2, background:BG_VAL_SAISIE, borderBottom:BD_MED }}>
+                  <button onClick={() => { const newVal=!isDone; patchRow(String(row.id),"ur","usinage_dents_resine",newVal); if(newVal){const j1=addBusinessDays(new Date(),1).toISOString().split("T")[0];patchRow(String(row.id),"ur","reception_resine_at",j1);saveCell(String(row.id),"usinage_with_reception",JSON.stringify({usinage_dents_resine:true,reception_resine_at:j1}));}else{patchRow(String(row.id),"ur","reception_resine_at",null);saveCell(String(row.id),"usinage_with_reception",JSON.stringify({usinage_dents_resine:false,reception_resine_at:null}));} }} style={{ background:isDone?"rgba(74,222,128,0.15)":"#232323", border:isDone?"1px solid rgba(74,222,128,0.4)":"1px solid #333", color:isDone?"#4ade80":"#555", padding:"3px 0", borderRadius:5, cursor:"pointer", fontWeight:700, fontSize:12, transition:"all 150ms", width:"90%", textAlign:"center" as const }}>{isDone?"✓ Usiné":"—"}</button>
+                  <button onClick={e => { const rect=e.currentTarget.getBoundingClientRect(); setEditingDate({caseId:String(row.id),column:"reception_resine_at",value:ur.reception_resine_at?.slice(0,10)??"",rect}); }} style={{ background:"#1a1a1a", border:"1px solid #2a2a2a", borderRadius:5, color:ur.reception_resine_at?"#d0d0d0":"#3a3a3a", fontSize:12, cursor:"pointer", padding:"3px 0", width:"90%", textAlign:"center" as const, transition:"background 100ms" }} onMouseEnter={e => e.currentTarget.style.background="#222"} onMouseLeave={e => e.currentTarget.style.background="#1a1a1a"}>{ur.reception_resine_at?fmtDate(ur.reception_resine_at.slice(0,10)):"—"}</button>
+                </div>
+                <div style={{ ...grid2, background:BG_LABEL_SAISIE, borderBottom:BD_LIGHT }}><Lbl color="#818cf8">Machine</Lbl><Lbl color="#818cf8">N° disque</Lbl></div>
+                <div style={{ ...vals2, background:BG_VAL_SAISIE }}>
+                  <SelectMachine value={ur.identite_machine??""} onChange={v => { patchRow(String(row.id),"ur","identite_machine",v||null); saveCell(String(row.id),"identite_machine",v||null); }} />
+                  <DisqueLookupInput
+                    value={ur.numero_disque??null}
+                    onFocusChange={setIsEditing}
+                    navAttr={`${row.id}_col_4`}
+                    onSave={(v, lotPmma) => {
+                      patchRow(String(row.id),"ur","numero_disque",v||null);
+                      saveCell(String(row.id),"numero_disque",v||null);
+                      if (lotPmma !== null) {
+                        patchRow(String(row.id),"ur","numero_lot_pmma",lotPmma);
+                        saveCell(String(row.id),"numero_lot_pmma",lotPmma);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}

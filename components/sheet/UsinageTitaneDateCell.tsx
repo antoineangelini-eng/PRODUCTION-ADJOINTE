@@ -1,0 +1,51 @@
+"use client";
+
+import * as React from "react";
+import { saveUsinageTitaneCellAction } from "@/app/app/usinage-titane/actions";
+
+function toYmd(value: string | null): string {
+  if (!value) return "";
+  if (value.includes("T")) return value.split("T")[0];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  return "";
+}
+
+export function UsinageTitaneDateCell(props: {
+  caseId: string;
+  column: string;
+  defaultValue: string | null;
+}) {
+  const { caseId, column, defaultValue } = props;
+
+  const initial = toYmd(defaultValue);
+  const [value, setValue] = React.useState(initial);
+  const lastSentRef = React.useRef(initial);
+
+  async function commit() {
+    if (value === lastSentRef.current) return;
+    await saveUsinageTitaneCellAction(caseId, column, value === "" ? null : value);
+    lastSentRef.current = value;
+  }
+
+  return (
+    <input
+      type="date"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => void commit()}
+      onFocus={(e) => {
+        const anyEl = e.currentTarget as any;
+        if (typeof anyEl.showPicker === "function") {
+          try { anyEl.showPicker(); } catch {}
+        }
+      }}
+      style={{
+        width: 140,
+        background: "transparent",
+        color: "white",
+        border: "1px solid #333",
+        padding: "6px 8px",
+      }}
+    />
+  );
+}

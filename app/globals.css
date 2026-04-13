@@ -1,0 +1,164 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+/* --- Sidebar hover-expand --- */
+.pa-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 64px;                 /* fermé */
+  transition: width 160ms ease;
+  background: rgba(0, 0, 0, 0.35);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  z-index: 20;
+}
+
+.pa-sidebar:hover {
+  width: 240px;                /* ouvert */
+}
+
+.pa-sidebar-inner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 10px;
+  gap: 12px;
+}
+
+.pa-sidebar-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.pa-sidebar-title-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pa-sidebar-title-text {
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 160ms ease, transform 160ms ease;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.pa-sidebar:hover .pa-sidebar-title-text {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.pa-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pa-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.pa-sidebar-link:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.pa-sidebar-link.is-active {
+  background: rgba(74, 222, 128, 0.12);
+  border-color: rgba(74, 222, 128, 0.28);
+}
+
+.pa-sidebar-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  flex: 0 0 auto;
+}
+
+.pa-sidebar-text {
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 160ms ease, transform 160ms ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pa-sidebar:hover .pa-sidebar-text {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* ─── Scrollbar ultra-fine & fondue ─── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+*:hover {
+  scrollbar-color: rgba(255,255,255,0.10) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+*:hover::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.10);
+}
+*:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.22);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}

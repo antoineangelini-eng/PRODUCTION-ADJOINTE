@@ -1,0 +1,10 @@
+ADMIN : sauvegarder changement secteur réaliser / améliorer visuellement le choix des secteurs
+DM :  Bloquer la colonne modèle à faire dans DR si validé par DM
+DR : /
+UT : UT recoit bien les cas definitif résine mais il doivent arriver quand DM valide et non DR / dans l'historique mettre à jour le fais qu'il peut y avoir plusieurs machine, N° de calcul et N° de brut donc il faut que l'historique l'affiche aussi
+UR : /
+Finition : barre de scroll à améliorer / enlever couleur jaune reception complet
+
+Pour UT UR et finition trier les cas par date d'expédition avec les cas délais court en premier et mettre une sorte de bandeau " 1 cas en attente par exemple et leur tableau s'actualise quand ils ont valider la selection et fait partir leur cas dans un autre secteur si pas d'activité sur le tableau pendant 5 min on actualise le tableau 
+
+Pour la side bar rentre plus visuel les initial AD DM DR … plus blanc / marqué / visible
