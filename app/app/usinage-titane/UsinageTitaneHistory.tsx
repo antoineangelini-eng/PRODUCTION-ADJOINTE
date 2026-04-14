@@ -3,6 +3,42 @@ import React, { useEffect, useState, useCallback } from "react";
 import { loadUtHistoryAction, reopenUtCaseAction, type UtHistoryRow } from "./ut-history-actions";
 import { fmtDate, Txt, Field, ReopenModal, CardShell, NATURE_META, Check, Bool } from "@/components/history/history-shared";
 
+function HBRow({ label, simple, h, b }: { label: string; simple: string | null; h: string | null; b: string | null }) {
+  const hasSimple = simple && String(simple).trim() !== "";
+  const hasH = h && String(h).trim() !== "";
+  const hasB = b && String(b).trim() !== "";
+  if (!hasSimple && !hasH && !hasB) return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+      <div style={{ fontSize: 9, fontWeight: 700, color: "#666", textTransform: "uppercase" as const, letterSpacing: "0.06em", minWidth: 68 }}>{label}</div>
+      <span style={{ color: "#444", fontSize: 11 }}>—</span>
+    </div>
+  );
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+      <div style={{ fontSize: 9, fontWeight: 700, color: "#666", textTransform: "uppercase" as const, letterSpacing: "0.06em", minWidth: 68 }}>{label}</div>
+      <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+        {hasSimple && (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 5, background: "#fb923c12", border: "1px solid #fb923c33", fontSize: 11 }}>
+            <span style={{ color: "#e0e0e0", fontWeight: 600 }}>{simple}</span>
+          </span>
+        )}
+        {hasH && (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 5, background: "#22d3ee12", border: "1px solid #22d3ee44", fontSize: 11 }}>
+            <span style={{ color: "#22d3ee", fontWeight: 800, fontSize: 9 }}>HAUT</span>
+            <span style={{ color: "#e0e0e0", fontWeight: 600 }}>{h}</span>
+          </span>
+        )}
+        {hasB && (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 5, background: "#fb923c12", border: "1px solid #fb923c44", fontSize: 11 }}>
+            <span style={{ color: "#fb923c", fontWeight: 800, fontSize: 9 }}>BAS</span>
+            <span style={{ color: "#e0e0e0", fontWeight: 600 }}>{b}</span>
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function UtCard({ row, onReopen }: { row: UtHistoryRow; onReopen: () => void }) {
   const [open, setOpen] = useState(false);
   return (
@@ -15,8 +51,8 @@ function UtCard({ row, onReopen }: { row: UtHistoryRow; onReopen: () => void }) 
           {row.envoye_usinage_at && (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ fontSize: 9, fontWeight: 600, textTransform: "uppercase" as const, color: "#999", letterSpacing: "0.05em" }}>Envoyé usinage</div>
-              <span style={{ fontSize: 11, color: "#fb923c", fontWeight: 600 }}>{fmtDate(row.envoye_usinage_at)}</span>
-              <span style={{ fontSize: 10, color: "#fb923c88", fontWeight: 600 }}>{new Date(row.envoye_usinage_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
+              <span style={{ fontSize: 11, color: "#e0e0e0", fontWeight: 600 }}>{fmtDate(row.envoye_usinage_at)}</span>
+              <span style={{ fontSize: 13, color: "#e0e0e0", fontWeight: 700 }}>{new Date(row.envoye_usinage_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
             </div>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -26,47 +62,15 @@ function UtCard({ row, onReopen }: { row: UtHistoryRow; onReopen: () => void }) 
         </div>
       }
     >
-      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-        <div style={{ flex: 1 }}><Field label="N° calcul"><Txt val={row.numero_calcul ?? row.numero_calcul_h} /></Field></div>
-        <div style={{ flex: 1 }}><Field label="Modèle à faire"><Bool val={row.modele_a_faire_ok} /></Field></div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 110 }}><Field label="Modèle à faire"><Bool val={row.modele_a_faire_ok} /></Field></div>
+        <div style={{ flex: 1, minWidth: 110 }}><Field label="Design châssis"><Bool val={row.design_chassis} /></Field></div>
+        <div style={{ flex: 1, minWidth: 140 }}><Field label="Date design châssis"><Txt val={fmtDate(row.design_chassis_at)} /></Field></div>
       </div>
-      {/* Machine + Brut */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-        <div style={{ flex: 1 }}><Field label="Machine"><Txt val={row.machine_ut} /></Field></div>
-        <div style={{ flex: 1 }}><Field label="Brut"><Txt val={row.nombre_brut ?? row.nombre_brut_h} /></Field></div>
-      </div>
-      {/* Champs H/B si renseignés — affichés seulement si présents */}
-      {(row.machine_ut_h || row.machine_ut_b || row.numero_calcul_h || row.numero_calcul_b || row.nombre_brut_h || row.nombre_brut_b) && (
-        <div style={{ display: "flex", gap: 8, padding: "8px 10px", background: "rgba(255,255,255,0.02)", borderRadius: 6, border: "1px solid #222", marginBottom: 8 }}>
-          {(row.machine_ut_h || row.machine_ut_b) && (
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: "#555", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 4 }}>Machine H/B</div>
-              <div style={{ display: "flex", flexDirection: "column" as const, gap: 2 }}>
-                {row.machine_ut_h && <span style={{ fontSize: 11 }}><span style={{ color: "#22d3ee", fontWeight: 700, marginRight: 4 }}>H</span>{row.machine_ut_h}</span>}
-                {row.machine_ut_b && <span style={{ fontSize: 11 }}><span style={{ color: "#fb923c", fontWeight: 700, marginRight: 4 }}>B</span>{row.machine_ut_b}</span>}
-              </div>
-            </div>
-          )}
-          {(row.numero_calcul_h || row.numero_calcul_b) && (
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: "#555", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 4 }}>N° calcul H/B</div>
-              <div style={{ display: "flex", flexDirection: "column" as const, gap: 2 }}>
-                {row.numero_calcul_h && <span style={{ fontSize: 11 }}><span style={{ color: "#22d3ee", fontWeight: 700, marginRight: 4 }}>H</span>{row.numero_calcul_h}</span>}
-                {row.numero_calcul_b && <span style={{ fontSize: 11 }}><span style={{ color: "#fb923c", fontWeight: 700, marginRight: 4 }}>B</span>{row.numero_calcul_b}</span>}
-              </div>
-            </div>
-          )}
-          {(row.nombre_brut_h || row.nombre_brut_b) && (
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: "#555", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 4 }}>Brut H/B</div>
-              <div style={{ display: "flex", flexDirection: "column" as const, gap: 2 }}>
-                {row.nombre_brut_h && <span style={{ fontSize: 11 }}><span style={{ color: "#22d3ee", fontWeight: 700, marginRight: 4 }}>H</span>{row.nombre_brut_h}</span>}
-                {row.nombre_brut_b && <span style={{ fontSize: 11 }}><span style={{ color: "#fb923c", fontWeight: 700, marginRight: 4 }}>B</span>{row.nombre_brut_b}</span>}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Machine / N° calcul / Brut — toujours affichés, H & B distincts */}
+      <HBRow label="Machine"   simple={row.machine_ut}    h={row.machine_ut_h}    b={row.machine_ut_b} />
+      <HBRow label="N° calcul" simple={row.numero_calcul} h={row.numero_calcul_h} b={row.numero_calcul_b} />
+      <HBRow label="Brut"      simple={row.nombre_brut}   h={row.nombre_brut_h}   b={row.nombre_brut_b} />
     </CardShell>
   );
 }

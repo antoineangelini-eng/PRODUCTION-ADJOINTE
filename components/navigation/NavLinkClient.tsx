@@ -48,11 +48,12 @@ export default function NavLinkClient({ href, icon, children, expanded = true }:
           alignItems: "center",
           justifyContent: "center",
           borderRadius: 8,
-          background: isActive ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.03)",
+          background: isActive ? "rgba(255,255,255,0.14)" : hovered ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.06)",
+          border: isActive ? "1px solid rgba(255,255,255,0.18)" : "1px solid rgba(255,255,255,0.08)",
           flexShrink: 0,
           flexGrow: 0,
-          color: isActive ? "#fff" : "#777",
-          transition: "color 140ms, background 140ms",
+          color: isActive ? "#ffffff" : "#e8e8e8",
+          transition: "color 140ms, background 140ms, border-color 140ms",
           boxSizing: "border-box",
         }}>
           {icon}

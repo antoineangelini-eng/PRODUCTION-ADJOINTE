@@ -25,6 +25,7 @@ export type AdminCaseRow = {
   dr_design_dents_resine_at: string | null;
   dr_nb_blocs_de_dents: string | null;
   dr_teintes_associees: string | null;
+  dr_modele_a_realiser_ok: boolean | null;
   // Usinage Titane
   ut_envoye_usinage: boolean | null;
   ut_envoye_usinage_at: string | null;
@@ -97,7 +98,7 @@ export async function loadAllCasesAction(): Promise<AdminCaseRow[]> {
       "case_id, design_chassis, design_chassis_at, dentall_case_number, envoye_dentall, reception_metal_date, type_de_dents, modele_a_faire_ok, teintes_associees"
     ).in("case_id", caseIds),
     supabase.from("sector_design_resine").select(
-      "case_id, type_de_dents, design_dents_resine, design_dents_resine_at, nb_blocs_de_dents, teintes_associees"
+      "case_id, type_de_dents, design_dents_resine, design_dents_resine_at, nb_blocs_de_dents, teintes_associees, modele_a_realiser_ok"
     ).in("case_id", caseIds),
     supabase.from("sector_usinage_titane").select("*").in("case_id", caseIds),
     supabase.from("sector_usinage_resine").select(
@@ -161,6 +162,7 @@ export async function loadAllCasesAction(): Promise<AdminCaseRow[]> {
       dr_nb_blocs_de_dents:      dr.nb_blocs_de_dents       ?? null,
       // Teintes DR : priorité DR, fallback DM
       dr_teintes_associees:      dr.teintes_associees ?? dm.teintes_associees ?? null,
+      dr_modele_a_realiser_ok:   dr.modele_a_realiser_ok ?? null,
       // UT — noms exacts des colonnes de sector_usinage_titane
       ut_envoye_usinage:       ut.envoye_usinage       ?? null,
       ut_envoye_usinage_at:    ut.envoye_usinage_at    ?? null,
@@ -199,7 +201,6 @@ export async function loadUsersAction(): Promise<AdminUser[]> {
   // 1. Récupérer TOUS les utilisateurs de Supabase Auth
   let authUsers: { id: string; email?: string }[] = [];
   try {
-    // listUsers pagine par défaut à 50, on boucle pour tout récupérer
     let page = 1;
     let hasMore = true;
     while (hasMore) {
@@ -207,7 +208,10 @@ export async function loadUsersAction(): Promise<AdminUser[]> {
         page,
         perPage: 100,
       });
-      if (authError || !authData?.users?.length) {
+      if (authError) {
+        console.error("[loadUsersAction] auth.admin.listUsers error:", authError);
+        hasMore = false;
+      } else if (!authData?.users?.length) {
         hasMore = false;
       } else {
         authUsers.push(...authData.users.map(u => ({ id: u.id, email: u.email })));
@@ -215,15 +219,33 @@ export async function loadUsersAction(): Promise<AdminUser[]> {
         page++;
       }
     }
-  } catch {
-    // Si l'API admin n'est pas dispo, on fallback sur profiles uniquement
+  } catch (e) {
+    console.error("[loadUsersAction] auth listing exception:", e);
   }
+  console.log("[loadUsersAction] authUsers.length =", authUsers.length);
 
-  // 2. Récupérer les profils existants
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("user_id, sector, sectors, email, password_hint")
-    .order("email", { ascending: true });
+  // 2. Récupérer les profils existants — on essaie d'abord avec email, fallback sans
+  let profiles: any[] | null = null;
+  {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("user_id, sector, sectors, email, password_hint");
+    if (error) {
+      console.error("[loadUsersAction] profiles select error (with email):", error);
+      // Retry sans email (au cas où la colonne n'existe pas)
+      const { data: data2, error: error2 } = await supabase
+        .from("profiles")
+        .select("user_id, sector, sectors, password_hint");
+      if (error2) {
+        console.error("[loadUsersAction] profiles select error (without email):", error2);
+      } else {
+        profiles = data2;
+      }
+    } else {
+      profiles = data;
+    }
+  }
+  console.log("[loadUsersAction] profiles.length =", profiles?.length ?? 0);
 
   const profileMap = new Map<string, any>();
   for (const p of profiles ?? []) {
@@ -233,16 +255,48 @@ export async function loadUsersAction(): Promise<AdminUser[]> {
   // 3. Créer les profils manquants pour les utilisateurs Auth sans profil
   const missing = authUsers.filter(u => !profileMap.has(u.id));
   for (const u of missing) {
-    const newProfile = {
+    const newProfile: any = {
       user_id: u.id,
-      email: u.email ?? "",
-      sector: "design_metal", // secteur par défaut
+      sector: "design_metal",
       sectors: ["design_metal"],
       password_hint: null,
     };
-    await supabase.from("profiles").insert(newProfile);
-    profileMap.set(u.id, newProfile);
+    const { error: insertError } = await supabase.from("profiles").insert(newProfile);
+    // Enrichir en mémoire pour l'affichage même si l'email n'est pas en DB
+    newProfile.email = u.email ?? "";
+    if (!insertError) {
+      profileMap.set(u.id, newProfile);
+    } else {
+      console.error("[loadUsersAction] insert profile error for", u.email, ":", insertError);
+      // Le profil existe peut-être déjà — le récupérer
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("user_id, sector, sectors, password_hint")
+        .eq("user_id", u.id)
+        .single();
+      if (existingProfile) {
+        profileMap.set(u.id, { ...existingProfile, email: u.email ?? "" });
+      } else {
+        // Fallback ultime : au moins afficher l'utilisateur auth
+        profileMap.set(u.id, {
+          user_id: u.id,
+          email: u.email ?? "",
+          sector: "design_metal",
+          sectors: ["design_metal"],
+          password_hint: null,
+        });
+      }
+    }
   }
+
+  // Enrichir les profils existants avec l'email auth si manquant
+  for (const u of authUsers) {
+    const p = profileMap.get(u.id);
+    if (p && !p.email && u.email) {
+      profileMap.set(u.id, { ...p, email: u.email });
+    }
+  }
+  console.log("[loadUsersAction] profileMap.size =", profileMap.size);
 
   // 4. Construire la liste finale à partir des profils (maintenant synchronisés)
   const allProfiles = Array.from(profileMap.values());
@@ -276,14 +330,56 @@ export async function createUserAction(
   email: string, sectors: string[], password: string
 ): Promise<{ ok: boolean; error?: string }> {
   const supabase = createAdminClient();
+  let userId: string | null = null;
+
   const { data, error } = await supabase.auth.admin.createUser({
     email, password, email_confirm: true,
   });
-  if (error || !data?.user) return { ok: false, error: error?.message ?? "Erreur" };
-  const { error: profileError } = await supabase.from("profiles").insert({
-    user_id: data.user.id, sector: sectors[0] ?? "design_metal", sectors, email, password_hint: password,
-  });
+
+  if (data?.user) {
+    userId = data.user.id;
+  } else if (error && /already been registered|already exists/i.test(error.message)) {
+    // L'utilisateur existe déjà dans Auth (ex: échec profil au 1er essai)
+    // On le retrouve et on met à jour son mot de passe
+    let page = 1;
+    let found: { id: string } | null = null;
+    while (!found) {
+      const { data: list } = await supabase.auth.admin.listUsers({ page, perPage: 100 });
+      if (!list?.users?.length) break;
+      const match = list.users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+      if (match) { found = { id: match.id }; break; }
+      if (list.users.length < 100) break;
+      page++;
+    }
+    if (!found) return { ok: false, error: "Utilisateur existe dans Auth mais introuvable" };
+    userId = found.id;
+    // Aligner le mot de passe
+    await supabase.auth.admin.updateUserById(userId, { password });
+  } else {
+    return { ok: false, error: error?.message ?? "Erreur" };
+  }
+
+  // Upsert du profil (insert si absent, update si déjà là)
+  const baseProfile = { user_id: userId, sector: sectors[0] ?? "design_metal", sectors, password_hint: password };
+  let profileError: any = null;
+  {
+    // Essai avec email
+    const { error } = await supabase
+      .from("profiles")
+      .upsert({ ...baseProfile, email }, { onConflict: "user_id" });
+    if (error) {
+      // Retry sans email
+      const { error: error2 } = await supabase
+        .from("profiles")
+        .upsert(baseProfile, { onConflict: "user_id" });
+      profileError = error2;
+    }
+  }
   if (profileError) return { ok: false, error: profileError.message };
+
+  // Garantie explicite de la sauvegarde du hint (cas triggers DB ou upsert partiel)
+  await supabase.from("profiles").update({ password_hint: password }).eq("user_id", userId);
+
   revalidatePath("/app/admin");
   return { ok: true };
 }
@@ -293,11 +389,23 @@ export async function updatePasswordHintAction(userId: string, newPassword: stri
   await supabase.from("profiles").update({ password_hint: newPassword }).eq("user_id", userId);
 }
 
+const PROTECTED_ADMIN_EMAIL = "antoine.angelini@labo-argoat.fr";
+
+async function isProtectedUser(userId: string): Promise<boolean> {
+  const supabase = createAdminClient();
+  const { data } = await supabase.from("profiles").select("email").eq("user_id", userId).maybeSingle();
+  return (data?.email ?? "").toLowerCase() === PROTECTED_ADMIN_EMAIL;
+}
+
 export async function updateUserSectorsAction(userId: string, sectors: string[]): Promise<{ ok: boolean; error?: string }> {
   const supabase = createAdminClient();
+  let finalSectors = sectors;
+  if (await isProtectedUser(userId) && !sectors.includes("admin")) {
+    finalSectors = [...sectors, "admin"];
+  }
   const { error } = await supabase
     .from("profiles")
-    .update({ sectors, sector: sectors[0] ?? "design_metal" })
+    .update({ sectors: finalSectors, sector: finalSectors[0] ?? "design_metal" })
     .eq("user_id", userId);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/app/admin");
@@ -312,6 +420,9 @@ export async function updateUserSectorAction(userId: string, sector: string): Pr
 }
 
 export async function deleteUserAction(userId: string): Promise<{ ok: boolean; error?: string }> {
+  if (await isProtectedUser(userId)) {
+    return { ok: false, error: "Ce compte administrateur est protégé et ne peut pas être supprimé." };
+  }
   const supabase = createAdminClient();
   const { error } = await supabase.auth.admin.deleteUser(userId);
   if (error) return { ok: false, error: error.message };

@@ -20,7 +20,6 @@ function UrCard({ row, onReopen }: { row: UrHistoryRow; onReopen: () => void }) 
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
         <div style={{ flex: 1 }}><Field label="Machine"><Txt val={row.identite_machine} color="#c084fc" /></Field></div>
         <div style={{ flex: 1 }}><Field label="N° disque"><Txt val={row.numero_disque} /></Field></div>
-        <div style={{ flex: 1 }}><Field label="N° lot PMMA"><Txt val={row.numero_lot_pmma} /></Field></div>
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         <div style={{ flex: 1 }}><Field label="Type de dents"><Txt val={row.type_de_dents} color="#818cf8" /></Field></div>

@@ -117,18 +117,33 @@ function DateTimeCell({value}:{value:string|null}){
 function BoolReadOnly({value}:{value:boolean|null}){
   return <button disabled style={{background:value?"rgba(74,222,128,0.15)":"transparent",border:value?"1px solid rgba(74,222,128,0.4)":"1px solid #ffffff",padding:"3px 8px",cursor:"not-allowed",color:value?"#4ade80":"transparent",width:36,height:26,borderRadius:6,fontWeight:700,fontSize:13,opacity:value?1:0.35}}>{value?"✓":""}</button>;
 }
-function ModeleIndicator({ok,onToggle}:{ok:boolean|null;onToggle?:()=>void}){
+function ModeleIndicator({ok,onToggle,locked=false}:{ok:boolean|null;onToggle?:()=>void;locked?:boolean}){
   if(ok===null||ok===undefined)return <span style={{color:"#555"}}>—</span>;
-  return <button onClick={e=>{e.stopPropagation();onToggle?.();}} style={{display:"inline-flex",padding:"3px 10px",borderRadius:6,background:ok?"rgba(74,222,128,0.12)":"rgba(239,68,68,0.1)",border:ok?"1px solid rgba(74,222,128,0.35)":"1px solid rgba(239,68,68,0.3)",color:ok?"#4ade80":"#f87171",fontWeight:700,fontSize:11,cursor:"pointer",transition:"all 150ms"}}>{ok?"Oui":"Non"}</button>;
+  return <button
+    disabled={locked}
+    onClick={e=>{if(locked)return;e.stopPropagation();onToggle?.();}}
+    title={locked?"Validé par DM — verrouillé":undefined}
+    style={{display:"inline-flex",alignItems:"center",gap:4,padding:"3px 10px",borderRadius:6,background:ok?"rgba(74,222,128,0.12)":"rgba(239,68,68,0.1)",border:ok?"1px solid rgba(74,222,128,0.35)":"1px solid rgba(239,68,68,0.3)",color:ok?"#4ade80":"#f87171",fontWeight:700,fontSize:11,cursor:locked?"not-allowed":"pointer",opacity:locked?0.85:1,transition:"all 150ms"}}>
+    {locked && <span style={{fontSize:9,opacity:0.9}}>🔒</span>}
+    {ok?"Oui":"Non"}
+  </button>;
 }
-function SelectCustom({value,onChange,options,color}:{value:string;onChange:(v:string)=>void;options:{value:string;label:string;color?:string}[];color:string}){
+function SelectCustom({value,onChange,options,color,locked=false,showChevron=true}:{value:string;onChange:(v:string)=>void;options:{value:string;label:string;color?:string}[];color:string;locked?:boolean;showChevron?:boolean}){
+  if(locked){
+    return (
+      <div title="Déjà défini en amont — non modifiable" style={{display:"inline-flex",alignItems:"center",gap:4,padding:"4px 10px",border:`1px solid ${color}40`,background:color+"10",color:color||"#888",fontSize:12,fontWeight:600,borderRadius:6,minWidth:100,justifyContent:"center",cursor:"not-allowed",opacity:0.85}}>
+        <span style={{fontSize:9,opacity:0.7}}>🔒</span>
+        <span>{value||"—"}</span>
+      </div>
+    );
+  }
   return (
     <div style={{position:"relative",display:"inline-flex",alignItems:"center"}}>
-      <select value={value} onChange={e=>onChange(e.target.value)} style={{padding:"4px 28px 4px 10px",border:`1px solid ${color}50`,background:color+"15",color:color||"#888",fontSize:12,fontWeight:600,borderRadius:6,cursor:"pointer",outline:"none",appearance:"none",WebkitAppearance:"none",minWidth:100}}>
+      <select value={value} onChange={e=>onChange(e.target.value)} style={{padding:showChevron?"4px 28px 4px 10px":"4px 10px",border:`1px solid ${color}50`,background:color+"15",color:color||"#888",fontSize:12,fontWeight:600,borderRadius:6,cursor:"pointer",outline:"none",appearance:"none",WebkitAppearance:"none",minWidth:100}}>
         <option value="" style={{background:"#111",color:"#555"}}>—</option>
         {options.map(o=><option key={o.value} value={o.value} style={{background:"#111",color:o.color??color,fontWeight:600}}>{o.label}</option>)}
       </select>
-      <svg viewBox="0 0 10 6" width="10" height="10" style={{position:"absolute",right:9,pointerEvents:"none",opacity:0.7}} fill="none" stroke={color||"#555"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1l4 4 4-4"/></svg>
+      {showChevron&&<svg viewBox="0 0 10 6" width="10" height="10" style={{position:"absolute",right:9,pointerEvents:"none",opacity:0.7}} fill="none" stroke={color||"#555"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1l4 4 4-4"/></svg>}
     </div>
   );
 }
@@ -204,8 +219,32 @@ export function DesignResineTable({focusId}:{focusId:string|null}){
     if((r as any)?.error){alert((r as any).error);return;}
     setConfirmDeleteId(null);await load();
   }
+  function validateDrRow(row:any):string[]{
+    const dr=row.sector_design_resine??{};
+    const dm=row.sector_design_metal??{};
+    const isProv=row.nature_du_travail==="Provisoire Résine";
+    const typeDents=dr.type_de_dents??dm.type_de_dents;
+    const missing:string[]=[];
+    if(!dr.design_dents_resine)    missing.push("Design dents résine");
+    if(!dr.design_dents_resine_at) missing.push("Date design dents résine");
+    if(!dr.nb_blocs_de_dents)      missing.push("Nb blocs de dents");
+    if(!typeDents)                 missing.push("Type de dents");
+    const modeleOk=dr.modele_a_realiser_ok!==null&&dr.modele_a_realiser_ok!==undefined?dr.modele_a_realiser_ok:(isProv?true:dm.modele_a_faire_ok);
+    if(modeleOk===null||modeleOk===undefined) missing.push("Modèle à réaliser");
+    const teintes=dr.teintes_associees??dm.teintes_associees;
+    if(!teintes)                   missing.push("Teintes");
+    return missing;
+  }
   async function handleBatch(){
     if(checkedIds.size===0||batchPending)return;
+    const blockers:{case_id:string|null;error_message:string}[]=[];
+    for(const id of checkedIds){
+      const row=rows.find(r=>String(r.id)===id);
+      if(!row)continue;
+      const miss=validateDrRow(row);
+      if(miss.length>0) blockers.push({case_id:id,error_message:`Cas ${row.case_number} — champs manquants : ${miss.join(", ")}`});
+    }
+    if(blockers.length>0){setBatchResult({okIds:[],errors:blockers});return;}
     setBatchPending(true);
     const fd=new FormData();for(const id of checkedIds)fd.append("case_ids",id);
     setBatchResult(await completeDesignResineBatchAction(null,fd));
@@ -225,6 +264,18 @@ export function DesignResineTable({focusId}:{focusId:string|null}){
           {!searchNotFound&&<div style={{fontSize:12,color:"white",padding:"4px 10px",background:"transparent",border:"1px solid rgba(255,255,255,0.2)",borderRadius:6}}>{rows.length} dossier{rows.length>1?"s":""}</div>}
           {searchNotFound&&focusId&&<div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 12px",background:"#1a0f0f",border:"1px solid rgba(239,68,68,0.4)",borderRadius:6}}><span style={{fontSize:12,color:"#f87171"}}>Cas <strong style={{color:"white"}}>"{focusId}"</strong> introuvable</span><button onClick={()=>setSearchNotFound(false)} style={{background:"none",border:"none",color:"#555",cursor:"pointer",fontSize:14}}>×</button></div>}
           {batchResult?.okIds.length?<div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:6}}><span style={{color:"white",fontSize:13}}>✓</span><span style={{color:"white",fontSize:12,fontWeight:600}}>{batchResult.okIds.length} envoyé{batchResult.okIds.length>1?"s":""}</span></div>:null}
+          {batchResult?.errors.length?(
+            <div style={{display:"flex",flexDirection:"column" as const,gap:4,maxWidth:560,padding:"8px 12px",background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.3)",borderRadius:8}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+                <span style={{fontSize:12,color:"#f87171",fontWeight:700}}>✕ {batchResult.errors.length} validation{batchResult.errors.length>1?"s":""} bloquée{batchResult.errors.length>1?"s":""}</span>
+                <button onClick={()=>setBatchResult(null)} style={{background:"none",border:"none",color:"#f87171",cursor:"pointer",fontSize:14,padding:0}}>×</button>
+              </div>
+              {batchResult.errors.slice(0,4).map((e,i)=>(
+                <div key={i} style={{fontSize:11,color:"#fca5a5",lineHeight:1.4}}>{e.error_message}</div>
+              ))}
+              {batchResult.errors.length>4&&<div style={{fontSize:10,color:"#f87171",fontStyle:"italic"}}>… et {batchResult.errors.length-4} autre{batchResult.errors.length-4>1?"s":""}</div>}
+            </div>
+          ):null}
         </div>
         <button onClick={handleBatch} disabled={batchPending||checkedIds.size===0} style={{padding:"9px 18px",border:checkedIds.size===0?"1px solid #555":"1px solid #4ade80",background:checkedIds.size===0?"transparent":"rgba(74,222,128,0.08)",color:checkedIds.size===0?"white":"#4ade80",cursor:batchPending||checkedIds.size===0?"not-allowed":"pointer",borderRadius:8,fontWeight:700,fontSize:13,transition:"all 160ms ease"}}>
           {batchPending?"Validation...":checkedIds.size===0?"Sélectionner des dossiers":`Valider ${checkedIds.size} dossier${checkedIds.size>1?"s":""}`}
@@ -295,7 +346,8 @@ export function DesignResineTable({focusId}:{focusId:string|null}){
                     <SelectCustom key={`td-${row.id}-${effectiveTypeDents}`} value={effectiveTypeDents}
                       onChange={v=>{patchRow(String(row.id),"sector_design_resine","type_de_dents",v);saveText(String(row.id),"type_de_dents",v);}}
                       options={TYPE_DENTS_OPTIONS.map(o=>({value:o.value,label:o.value,color:o.color}))}
-                      color={typeMeta.color}/>
+                      color={typeMeta.color}
+                      locked={Boolean(dm.type_de_dents)}/>
                   </td>
 
                   <td style={tdCard}>
@@ -307,7 +359,11 @@ export function DesignResineTable({focusId}:{focusId:string|null}){
 
                   <td style={tdCard}><DateTimeCell value={dr.design_dents_resine_at??null}/></td>
                   <td style={tdCard} onClick={e=>e.stopPropagation()}><TextInput value={dr.nb_blocs_de_dents??null} onSave={v=>{patchRow(String(row.id),"sector_design_resine","nb_blocs_de_dents",v||null);saveText(String(row.id),"nb_blocs_de_dents",v);}} width={60}/></td>
-                  <td style={tdCard}><ModeleIndicator ok={modeleOk} onToggle={()=>{const newVal=!modeleOk;patchRow(String(row.id),"sector_design_resine","modele_a_realiser_ok",newVal);const fd=new FormData();fd.set("case_id",String(row.id));fd.set("column","modele_a_realiser_ok");fd.set("kind","boolean");fd.set("current",String(modeleOk));saveDesignResineCellAction(fd);}}/></td>
+                  <td style={tdCard}><ModeleIndicator
+                    ok={modeleOk}
+                    locked={!isProvisoire}
+                    onToggle={()=>{const newVal=!modeleOk;patchRow(String(row.id),"sector_design_resine","modele_a_realiser_ok",newVal);const fd=new FormData();fd.set("case_id",String(row.id));fd.set("column","modele_a_realiser_ok");fd.set("kind","boolean");fd.set("current",String(modeleOk));saveDesignResineCellAction(fd);}}
+                  /></td>
                   <td style={tdCard} onClick={e=>e.stopPropagation()}><TextInput value={teintes} onSave={v=>{const val=v||dm.teintes_associees||null;patchRow(String(row.id),"sector_design_resine","teintes_associees",val);saveText(String(row.id),"teintes_associees",val??"");}} width={52}/></td>
 
                   <td style={tdCard} onClick={e=>e.stopPropagation()}>

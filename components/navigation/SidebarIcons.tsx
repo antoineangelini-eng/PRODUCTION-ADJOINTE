@@ -1,10 +1,12 @@
 /** Initiales pour la sidebar */
 
 const base: React.CSSProperties = {
-  fontSize: 11,
-  fontWeight: 700,
-  letterSpacing: "0.02em",
+  fontSize: 12,
+  fontWeight: 800,
+  letterSpacing: "0.04em",
   lineHeight: 1,
+  color: "#f5f5f5",
+  textShadow: "0 1px 2px rgba(0,0,0,0.4)",
   userSelect: "none",
 };
 

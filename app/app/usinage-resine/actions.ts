@@ -97,6 +97,8 @@ export async function saveUsinageResineCellAction(formData: FormData) {
   }
 
   await supabase.rpc("rpc_update_usinage_resine", { p_case_id: caseId, p_patch: patch });
+  revalidatePath("/app/usinage-resine");
+  revalidatePath("/app/finition");
 }
 
 export async function completeUsinageResineBatchAction(
@@ -120,6 +122,7 @@ export async function completeUsinageResineBatchAction(
   }
 
   revalidatePath("/app/usinage-resine");
+  revalidatePath("/app/finition");
   return { okIds, errors };
 }
 

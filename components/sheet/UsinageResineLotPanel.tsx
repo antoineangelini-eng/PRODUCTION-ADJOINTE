@@ -67,7 +67,6 @@ type LotFields = {
   usinage: boolean;
   machine: string;
   disque: string;
-  lot_pmma: string;
 };
 
 function caseToFields(c: LotCaseUR): LotFields {
@@ -78,7 +77,6 @@ function caseToFields(c: LotCaseUR): LotFields {
     usinage:       c.ur_usinage_dents_resine    ?? false,
     machine:       c.ur_identite_machine        ?? "",
     disque:        c.ur_numero_disque           ?? "",
-    lot_pmma:      c.ur_numero_lot_pmma         ?? "",
   };
 }
 
@@ -137,7 +135,6 @@ export function UsinageResineLotPanel({ onSaved }: { onSaved?: (savedIds: string
         usinage_dents_resine: f.usinage,
         identite_machine: f.machine || null,
         numero_disque: f.disque || null,
-        numero_lot_pmma: f.lot_pmma || null,
       };
     });
     const res = await saveUsinageResineLotAction(rows);
@@ -195,7 +192,6 @@ export function UsinageResineLotPanel({ onSaved }: { onSaved?: (savedIds: string
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10 }}>
                       <FieldSelectMachine label="Machine"     value={globalFields.machine  ?? ""} onChange={v => applyGlobalField("machine", v)} />
                       <FieldInput         label="N° disque"   value={globalFields.disque   ?? ""} onChange={v => applyGlobalField("disque", v)} />
-                      <FieldInput         label="N° lot PMMA" value={globalFields.lot_pmma ?? ""} onChange={v => applyGlobalField("lot_pmma", v)} />
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: 0 }}>
@@ -221,7 +217,6 @@ export function UsinageResineLotPanel({ onSaved }: { onSaved?: (savedIds: string
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10 }}>
                               <FieldSelectMachine label="Machine"     value={f.machine}   onChange={v => updateCaseField(c.id, "machine", v)} />
                               <FieldInput         label="N° disque"   value={f.disque}    onChange={v => updateCaseField(c.id, "disque", v)} />
-                              <FieldInput         label="N° lot PMMA" value={f.lot_pmma}  onChange={v => updateCaseField(c.id, "lot_pmma", v)} />
                             </div>
                           </div>
                         );

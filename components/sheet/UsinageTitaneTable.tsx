@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import ReactDOM from "react-dom";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import {
   loadUsinageTitaneRowsAction,
   saveUsinageTitaneCellAction,
@@ -27,6 +27,10 @@ const MACHINE_UT_OPTIONS = [
 ];
 
 const SEARCH_KEYFRAMES = `
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
 @keyframes row-found {
   0%   { background: transparent; box-shadow: inset 0 0 0 2px transparent; }
   8%   { background: rgba(74,222,128,0.35); box-shadow: inset 0 0 0 2px rgba(74,222,128,0.9); }
@@ -394,6 +398,55 @@ export function UsinageTitaneTable({ focusId }: { focusId: string | null }) {
 
   useEffect(() => { load(); }, [load]);
 
+  // Auto-refresh après 5 min d'inactivité
+  const lastActivityRef = useRef(Date.now());
+  useEffect(() => {
+    const onActivity = () => { lastActivityRef.current = Date.now(); };
+    window.addEventListener("mousemove", onActivity);
+    window.addEventListener("keydown", onActivity);
+    window.addEventListener("click", onActivity);
+    return () => {
+      window.removeEventListener("mousemove", onActivity);
+      window.removeEventListener("keydown", onActivity);
+      window.removeEventListener("click", onActivity);
+    };
+  }, []);
+  useEffect(() => {
+    const itv = setInterval(() => {
+      if (Date.now() - lastActivityRef.current > 5 * 60 * 1000) {
+        lastActivityRef.current = Date.now();
+        load();
+      }
+    }, 30_000);
+    return () => clearInterval(itv);
+  }, [load]);
+
+  // Tri par date d'expédition — les plus urgents (proches) d'abord
+  const sortedRows = useMemo(() => {
+    return [...rows].sort((a, b) => {
+      const da = a.date_expedition ? new Date(a.date_expedition).getTime() : Number.POSITIVE_INFINITY;
+      const db = b.date_expedition ? new Date(b.date_expedition).getTime() : Number.POSITIVE_INFINITY;
+      return da - db;
+    });
+  }, [rows]);
+
+  // Cas en attente : cas actifs en BDD pour ce secteur qui ne sont PAS encore
+  // dans le tableau affiché (le tableau se rafraîchira automatiquement dans
+  // ≤5 min ou à la prochaine validation).
+  const [pendingCount, setPendingCount] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const tick = async () => {
+      const { countSectorActiveAction } = await import("./pending-count-action");
+      const c = await countSectorActiveAction("usinage_titane");
+      if (alive) setPendingCount(Math.max(0, c - rows.length));
+    };
+    tick();
+    const itv = setInterval(tick, 30_000);
+    return () => { alive = false; clearInterval(itv); };
+  }, [rows.length]);
+  const urgentCount = pendingCount;
+
   useEffect(() => {
     if (!focusId || loading || rows.length === 0) return;
     const found = rows.find(r => r.case_number === focusId);
@@ -419,8 +472,43 @@ export function UsinageTitaneTable({ focusId }: { focusId: string | null }) {
     await saveUsinageTitaneCellAction(fd);
   }
 
+  function validateUtRow(row: any): string[] {
+    const ut = row.sector_usinage_titane ?? {};
+    const missing: string[] = [];
+    if (!ut.envoye_usinage)       missing.push("Envoyé usinage");
+    if (!ut.envoye_usinage_at)    missing.push("Date envoyé usinage");
+    if (ut.mode_hb_machine) {
+      if (!ut.machine_ut_h)       missing.push("Machine HAUT");
+      if (!ut.machine_ut_b)       missing.push("Machine BAS");
+    } else if (!ut.machine_ut)    missing.push("Machine");
+    if (ut.mode_hb_calcul) {
+      if (!ut.numero_calcul_h)    missing.push("N° calcul HAUT");
+      if (!ut.numero_calcul_b)    missing.push("N° calcul BAS");
+    } else if (!ut.numero_calcul) missing.push("N° calcul");
+    if (ut.mode_hb_brut) {
+      if (!ut.nombre_brut_h)      missing.push("Brut HAUT");
+      if (!ut.nombre_brut_b)      missing.push("Brut BAS");
+    } else if (!ut.nombre_brut)   missing.push("Brut");
+    if (!ut.reception_metal_at)   missing.push("Réception métal");
+    return missing;
+  }
+
   async function handleBatch() {
     if (checkedIds.size === 0 || batchPending) return;
+    // Pré-validation : tous les champs requis doivent être remplis
+    const blockers: { case_id: string | null; error_message: string }[] = [];
+    for (const id of checkedIds) {
+      const row = rows.find(r => String(r.id) === id);
+      if (!row) continue;
+      const miss = validateUtRow(row);
+      if (miss.length > 0) {
+        blockers.push({ case_id: id, error_message: `Cas ${row.case_number} — champs manquants : ${miss.join(", ")}` });
+      }
+    }
+    if (blockers.length > 0) {
+      setBatchResult({ okIds: [], errors: blockers });
+      return;
+    }
     setBatchPending(true);
     const fd = new FormData(); checkedIds.forEach(id => fd.append("case_ids", id));
     const result = await completeUsinageTitaneBatchAction(null, fd);
@@ -461,6 +549,12 @@ export function UsinageTitaneTable({ focusId }: { focusId: string | null }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "sticky", top: 0, zIndex: 10, background: "#111", padding: "0 8px 10px 8px", borderBottom: "1px solid #1e1e1e", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: 2 }}>
           {!searchNotFound && <span style={{ fontSize: 12, color: "#bdbdbd", padding: "4px 14px", background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 20, fontWeight: 600 }}>{rows.length} dossier{rows.length > 1 ? "s" : ""}</span>}
+          {urgentCount > 0 && (
+            <span style={{ fontSize: 12, color: "#fb923c", padding: "4px 12px", background: "rgba(251,146,60,0.08)", border: "1px solid rgba(251,146,60,0.4)", borderRadius: 20, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#fb923c", boxShadow: "0 0 8px #fb923c", animation: "pulse 2s infinite" }} />
+              {urgentCount} cas en attente
+            </span>
+          )}
           {searchNotFound && focusId && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", background: "#1a0f0f", border: "1px solid rgba(239,68,68,0.4)", borderRadius: 7 }}>
               <span style={{ fontSize: 12, color: "#f87171" }}>Cas <strong style={{ color: "white" }}>"{focusId}"</strong> introuvable</span>
@@ -468,7 +562,18 @@ export function UsinageTitaneTable({ focusId }: { focusId: string | null }) {
             </div>
           )}
           {batchResult?.okIds.length ? <span style={{ fontSize: 12, color: "#4ade80", padding: "5px 12px", background: "rgba(74,222,128,0.06)", border: "1px solid rgba(74,222,128,0.2)", borderRadius: 7 }}>✓ {batchResult.okIds.length} envoyé{batchResult.okIds.length > 1 ? "s" : ""}</span> : null}
-          {batchResult?.errors.length ? <span style={{ fontSize: 12, color: "#f87171", padding: "5px 12px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 7 }}>✕ {batchResult.errors.length} erreur{batchResult.errors.length > 1 ? "s" : ""}</span> : null}
+          {batchResult?.errors.length ? (
+            <div style={{ display:"flex", flexDirection:"column" as const, gap:4, maxWidth:560, padding:"8px 12px", background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.3)", borderRadius:8 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:12, color:"#f87171", fontWeight:700 }}>✕ {batchResult.errors.length} validation{batchResult.errors.length>1?"s":""} bloquée{batchResult.errors.length>1?"s":""}</span>
+                <button onClick={()=>setBatchResult(null)} style={{ background:"none", border:"none", color:"#f87171", cursor:"pointer", fontSize:14, padding:0 }}>×</button>
+              </div>
+              {batchResult.errors.slice(0,4).map((e,i)=>(
+                <div key={i} style={{ fontSize:11, color:"#fca5a5", lineHeight:1.4 }}>{e.error_message}</div>
+              ))}
+              {batchResult.errors.length>4 && <div style={{ fontSize:10, color:"#f87171", fontStyle:"italic" }}>… et {batchResult.errors.length-4} autre{batchResult.errors.length-4>1?"s":""}</div>}
+            </div>
+          ) : null}
         </div>
         <button onClick={handleBatch} disabled={batchPending || checkedIds.size === 0}
           style={{ padding: "8px 18px", border: checkedIds.size === 0 ? "1px solid #3a3a3a" : "1px solid #4ade80", background: checkedIds.size === 0 ? "#1e1e1e" : "rgba(74,222,128,0.08)", color: checkedIds.size === 0 ? "#e0e0e0" : "#4ade80", cursor: checkedIds.size === 0 ? "not-allowed" : "pointer", borderRadius: 8, fontWeight: 700, fontSize: 13, transition: "all 160ms" }}>
@@ -510,7 +615,7 @@ export function UsinageTitaneTable({ focusId }: { focusId: string | null }) {
               <tr><td colSpan={17} style={{ padding: 32, color: "#333", fontSize: 13, textAlign: "center" }}>Aucun dossier en cours.</td></tr>
             )}
 
-            {rows.map(row => {
+            {sortedRows.map(row => {
               const ut = (row as any).sector_usinage_titane ?? {};
               const dm = (row as any).sector_design_metal ?? {};
               const nat      = row.nature_du_travail ?? "";

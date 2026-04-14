@@ -12,6 +12,8 @@ export type UtHistoryRow = {
   envoye_usinage: boolean | null;
   numero_lot_metal: string | null;
   envoye_usinage_at: string | null;
+  design_chassis: boolean | null;
+  design_chassis_at: string | null;
   machine_ut: string | null;
   machine_ut_h: string | null;
   machine_ut_b: string | null;
@@ -31,8 +33,8 @@ export async function loadUtHistoryAction(): Promise<UtHistoryRow[]> {
     .from("case_assignments")
     .select(`updated_at, cases:case_id (
       id, case_number, created_at, date_expedition, nature_du_travail,
-      sector_usinage_titane ( envoye_usinage, envoye_usinage_at, machine_ut, machine_ut_h, machine_ut_b, numero_calcul, numero_calcul_h, numero_calcul_b, nombre_brut, nombre_brut_h, nombre_brut_b, reception_metal_at ),
-      sector_design_metal ( modele_a_faire_ok )
+      sector_usinage_titane ( envoye_usinage, envoye_usinage_at, numero_lot_metal, machine_ut, machine_ut_h, machine_ut_b, numero_calcul, numero_calcul_h, numero_calcul_b, nombre_brut, nombre_brut_h, nombre_brut_b, reception_metal_at ),
+      sector_design_metal ( modele_a_faire_ok, design_chassis, design_chassis_at )
     )`)
     .eq("sector_code", "usinage_titane")
     .eq("status", "done")
@@ -61,6 +63,8 @@ export async function loadUtHistoryAction(): Promise<UtHistoryRow[]> {
       nombre_brut_b:    ut.nombre_brut_b    ?? null,
       reception_metal_at: ut.reception_metal_at ?? null,
       modele_a_faire_ok: dm.modele_a_faire_ok ?? null,
+      design_chassis: dm.design_chassis ?? null,
+      design_chassis_at: dm.design_chassis_at ?? null,
     };
   });
 }

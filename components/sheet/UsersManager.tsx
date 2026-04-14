@@ -10,6 +10,8 @@ import {
   type AdminUser,
 } from "@/app/app/admin/actions";
 
+const PROTECTED_ADMIN_EMAIL = "antoine.angelini@labo-argoat.fr";
+
 const SECTORS = [
   { code: "design_metal",   label: "Design Métal",   short: "DM", color: "#4ade80" },
   { code: "design_resine",  label: "Design Résine",  short: "DR", color: "#818cf8" },
@@ -69,7 +71,7 @@ function SectorChips({
   const isSmall = size === "small";
 
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: isSmall ? 4 : 6 }}>
+    <div style={{ display: "flex", flexWrap: "wrap", gap: isSmall ? 5 : 6 }}>
       {SECTORS.map((s) => {
         const active = selected.includes(s.code);
         const isLocked = locked.includes(s.code);
@@ -77,40 +79,49 @@ function SectorChips({
           <button
             key={s.code}
             onClick={() => toggle(s.code)}
+            title={s.label}
             style={{
-              display: "flex",
+              display: "inline-flex",
               alignItems: "center",
-              gap: isSmall ? 4 : 6,
-              padding: isSmall ? "3px 8px" : "5px 12px",
-              borderRadius: 6,
-              border: `1px solid ${active ? s.color + "60" : "#2a2a2a"}`,
-              background: active ? s.color + "15" : "transparent",
-              color: active ? s.color : "#555",
+              justifyContent: "center",
+              gap: 6,
+              padding: isSmall ? "4px 10px" : "5px 12px",
+              minWidth: isSmall ? 42 : "auto",
+              borderRadius: isSmall ? 999 : 6,
+              border: `1px solid ${active ? s.color + "55" : "#262626"}`,
+              background: active ? s.color + "12" : "transparent",
+              color: active ? s.color : "#4a4a4a",
               fontSize: isSmall ? 10 : 11,
               fontWeight: 700,
+              letterSpacing: "0.04em",
               cursor: isLocked ? "not-allowed" : "pointer",
               opacity: isLocked ? 0.6 : 1,
               transition: "all 150ms",
               outline: "none",
             }}
           >
-            <span style={{
-              width: isSmall ? 16 : 20,
-              height: isSmall ? 16 : 20,
-              borderRadius: 4,
-              background: active ? s.color + "25" : "rgba(255,255,255,0.03)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: isSmall ? 8 : 9,
-              fontWeight: 800,
-              color: active ? s.color : "#444",
-              transition: "all 150ms",
-            }}>
-              {s.short}
-            </span>
-            {!isSmall && s.label}
-            {isSmall && s.short}
+            {isSmall ? (
+              s.short
+            ) : (
+              <>
+                <span style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: 4,
+                  background: active ? s.color + "25" : "rgba(255,255,255,0.03)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 9,
+                  fontWeight: 800,
+                  color: active ? s.color : "#444",
+                  transition: "all 150ms",
+                }}>
+                  {s.short}
+                </span>
+                {s.label}
+              </>
+            )}
           </button>
         );
       })}
@@ -186,7 +197,6 @@ export function UsersManager() {
     setError(null);
     try {
       const data = await loadUsersAction();
-      console.log("LOADED USERS:", data.map(u => ({ email: u.email, sectors: u.sectors })));
       setUsers(data);
     } catch (e: any) {
       console.error("Erreur Users:", e);
@@ -370,6 +380,7 @@ export function UsersManager() {
               const ini = initials(user.email);
               const isResetting = resetId === user.user_id;
               const name = displayNameFromEmail(user.email, user.user_id);
+              const isProtected = user.email?.toLowerCase() === PROTECTED_ADMIN_EMAIL;
 
               return (
                 <div key={user.user_id}>
@@ -403,7 +414,9 @@ export function UsersManager() {
                         <PasswordCell password={user.password_hint} onReset={() => (isResetting ? setResetId(null) : openReset(user.user_id))} />
                       </div>
 
-                      {confirmDeleteId === user.user_id ? (
+                      {isProtected ? (
+                        <span title="Compte administrateur protégé — non supprimable" style={{ flexShrink: 0, fontSize: 10, color: "#4ade80", padding: "3px 8px", border: "1px solid rgba(74,222,128,0.3)", borderRadius: 5, background: "rgba(74,222,128,0.06)", fontWeight: 700, letterSpacing: "0.04em" }}>🔒 Admin</span>
+                      ) : confirmDeleteId === user.user_id ? (
                         <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
                           <span style={{ fontSize: 10, color: "#f87171" }}>Supprimer ?</span>
                           <button onClick={() => handleDelete(user.user_id)} style={{ padding: "3px 8px", border: "1px solid #f87171", background: "rgba(239,68,68,0.15)", color: "#f87171", cursor: "pointer", fontSize: 10, fontWeight: 700, borderRadius: 4 }}>Oui</button>
@@ -425,11 +438,11 @@ export function UsersManager() {
                       )}
                     </div>
 
-                    {/* Chips des secteurs — "admin" verrouillé pour les admins */}
+                    {/* Chips des secteurs — "admin" verrouillé uniquement pour le compte protégé */}
                     <SectorChips
                       selected={user.sectors?.length ? user.sectors : [user.sector]}
                       onChange={(newSectors) => handleSectorsChange(user.user_id, newSectors)}
-                      locked={user.sectors?.includes("admin") ? ["admin"] : []}
+                      locked={isProtected ? ["admin"] : []}
                       size="small"
                     />
                   </div>

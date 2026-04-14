@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { loadFinitionRowsAction, validateFinitionBatchAction, type FinitionRow } from "@/app/app/finition/actions";
 import { CaseDetailModal } from "@/components/sheet/CaseDetailModal";
 
@@ -48,14 +48,10 @@ function NatureBadge({ nature }: { nature: string | null }) {
   return <span style={{ display:"inline-flex", padding:"3px 10px", borderRadius:6, fontSize:11, fontWeight:700, background:meta.color+"18", border:`1px solid ${meta.color}50`, color:meta.color }}>{nature}</span>;
 }
 
-function SelectReadOnly({ value, options, color }: { value:string; options:{value:string;color?:string}[]; color:string }) {
+function SelectReadOnly({ value, color }: { value:string; options?:{value:string;color?:string}[]; color:string }) {
   return (
-    <div style={{ position:"relative", display:"inline-flex", alignItems:"center" }}>
-      <select value={value} disabled style={{ padding:"4px 28px 4px 10px", border:`1px solid ${color}50`, background:color+"15", color:color||"white", fontSize:12, fontWeight:600, borderRadius:6, cursor:"default", outline:"none", appearance:"none", WebkitAppearance:"none", minWidth:130 }}>
-        <option value="" style={{ background:"#111", color:"white" }}>—</option>
-        {options.map(o => <option key={o.value} value={o.value} style={{ background:"#111", color:o.color??color, fontWeight:600 }}>{o.value}</option>)}
-      </select>
-      <svg viewBox="0 0 10 6" width="10" height="10" style={{ position:"absolute", right:9, pointerEvents:"none", opacity:0.7 }} fill="none" stroke={color||"white"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1l4 4 4-4"/></svg>
+    <div style={{ display:"inline-flex", alignItems:"center", padding:"4px 10px", border:`1px solid ${color}40`, background:color+"12", color:color||"white", fontSize:12, fontWeight:600, borderRadius:6, minWidth:130, justifyContent:"center", cursor:"default" }}>
+      {value||"—"}
     </div>
   );
 }
@@ -90,13 +86,56 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
   useEffect(() => { load(); }, [load]);
   useEffect(() => { onReload?.(() => load(true)); }, [load, onReload]);
 
+  // Auto-refresh après 5 min d'inactivité
+  const lastActivityRef = useRef(Date.now());
+  useEffect(() => {
+    const onActivity = () => { lastActivityRef.current = Date.now(); };
+    window.addEventListener("mousemove", onActivity);
+    window.addEventListener("keydown", onActivity);
+    window.addEventListener("click", onActivity);
+    return () => {
+      window.removeEventListener("mousemove", onActivity);
+      window.removeEventListener("keydown", onActivity);
+      window.removeEventListener("click", onActivity);
+    };
+  }, []);
+  useEffect(() => {
+    const itv = setInterval(() => {
+      if (Date.now() - lastActivityRef.current > 5 * 60 * 1000) {
+        lastActivityRef.current = Date.now();
+        load(true);
+      }
+    }, 30_000);
+    return () => clearInterval(itv);
+  }, [load]);
+
   // Bloque le refresh si sélection active OU modal ouvert
   useEffect(() => {
     onSelectionChange?.(checkedIds.size > 0 || detailCaseId !== null);
   }, [checkedIds, detailCaseId, onSelectionChange]);
 
+  function validateFinRow(row: any): string[] {
+    const fin = row.sector_finition ?? {};
+    const missing: string[] = [];
+    if (!fin.validation) missing.push("Validation");
+    return missing;
+  }
+
   async function handleBatch() {
     if (checkedIds.size === 0 || batchPending) return;
+    const blockers: { id: string; msg: string }[] = [];
+    for (const id of checkedIds) {
+      const row = rows.find(r => String(r.id) === id);
+      if (!row) continue;
+      const miss = validateFinRow(row);
+      if (miss.length > 0) {
+        blockers.push({ id, msg: `Cas ${row.case_number} — champs manquants : ${miss.join(", ")}` });
+      }
+    }
+    if (blockers.length > 0) {
+      setBatchResult({ ok: [], errors: blockers });
+      return;
+    }
     setBatchPending(true);
     const toValidate = rows
       .filter(r => checkedIds.has(String(r.id)))
@@ -116,14 +155,32 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
   const today    = toDateStr(new Date());
   const tomorrow = toDateStr(new Date(Date.now() + 86400000));
 
-  const filtered = rows.filter(row => {
-    if (!filter || filter === "all") return true;
-    const exp = row.date_expedition?.slice(0,10);
-    if (filter === "today")    return exp === today;
-    if (filter === "tomorrow") return exp === tomorrow;
-    if (filter === "late")     return exp !== undefined && exp !== null && exp < today;
-    return true;
-  });
+  const filtered = useMemo(() => {
+    const base = rows.filter(row => {
+      if (!filter || filter === "all") return true;
+      const exp = row.date_expedition?.slice(0,10);
+      if (filter === "today")    return exp === today;
+      if (filter === "tomorrow") return exp === tomorrow;
+      if (filter === "late")     return exp !== undefined && exp !== null && exp < today;
+      return true;
+    });
+    // Tri par date d'expédition (urgents d'abord)
+    return [...base].sort((a, b) => (a.date_expedition ?? "9999").localeCompare(b.date_expedition ?? "9999"));
+  }, [rows, filter, today, tomorrow]);
+
+  const [pendingCount, setPendingCount] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const tick = async () => {
+      const { countSectorActiveAction } = await import("./pending-count-action");
+      const c = await countSectorActiveAction("finition");
+      if (alive) setPendingCount(Math.max(0, c - rows.length));
+    };
+    tick();
+    const itv = setInterval(tick, 30_000);
+    return () => { alive = false; clearInterval(itv); };
+  }, [rows.length]);
+  const urgentCount = pendingCount;
 
   const emptyMessage = () => {
     if (filter === "today")    return "Aucun cas prévu aujourd'hui.";
@@ -147,6 +204,12 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
           <div style={{ fontSize:12, color:"white", padding:"4px 10px", border:"1px solid rgba(255,255,255,0.2)", borderRadius:6 }}>
             {filtered.length} dossier{filtered.length > 1 ? "s" : ""}
           </div>
+          {urgentCount > 0 && (
+            <span style={{ fontSize: 12, color: "#fb923c", padding: "4px 12px", background: "rgba(251,146,60,0.08)", border: "1px solid rgba(251,146,60,0.4)", borderRadius: 6, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#fb923c", boxShadow: "0 0 8px #fb923c" }} />
+              {urgentCount} cas en attente
+            </span>
+          )}
           {batchResult && batchResult.ok.length > 0 && (
             <div style={{ display:"flex", alignItems:"center", gap:6, padding:"4px 12px", background:"rgba(74,222,128,0.08)", border:"1px solid rgba(74,222,128,0.2)", borderRadius:6 }}>
               <span style={{ color:"#4ade80", fontSize:13 }}>✓</span>
@@ -154,8 +217,15 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
             </div>
           )}
           {batchResult && batchResult.errors.length > 0 && (
-            <div style={{ display:"flex", alignItems:"center", gap:6, padding:"4px 12px", background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.3)", borderRadius:6 }}>
-              <span style={{ color:"#f87171", fontSize:12, fontWeight:600 }}>{batchResult.errors.length} erreur{batchResult.errors.length > 1 ? "s" : ""}</span>
+            <div style={{ display:"flex", flexDirection:"column" as const, gap:4, maxWidth:560, padding:"8px 12px", background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.3)", borderRadius:8 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:12, color:"#f87171", fontWeight:700 }}>✕ {batchResult.errors.length} validation{batchResult.errors.length>1?"s":""} bloquée{batchResult.errors.length>1?"s":""}</span>
+                <button onClick={()=>setBatchResult(null)} style={{ background:"none", border:"none", color:"#f87171", cursor:"pointer", fontSize:14, padding:0 }}>×</button>
+              </div>
+              {batchResult.errors.slice(0,4).map((e,i)=>(
+                <div key={i} style={{ fontSize:11, color:"#fca5a5", lineHeight:1.4 }}>{e.msg}</div>
+              ))}
+              {batchResult.errors.length>4 && <div style={{ fontSize:10, color:"#f87171", fontStyle:"italic" }}>… et {batchResult.errors.length-4} autre{batchResult.errors.length-4>1?"s":""}</div>}
             </div>
           )}
         </div>

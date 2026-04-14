@@ -484,7 +484,7 @@ export function GlobalView() {
                       </td>
                       {/* Modèle — valeur DM (transmise à UT aussi) */}
                       <td style={{ ...tdS(L.modele), textAlign: "center" as const }}>
-                        <Bool val={row.dm_modele_a_faire_ok} />
+                        <Bool val={row.dm_modele_a_faire_ok ?? row.dr_modele_a_realiser_ok ?? null} />
                       </td>
                       {/* Teinte — DR en priorité, fallback DM */}
                       <td style={{ ...tdS(L.teinte), textAlign: "center" as const }}>

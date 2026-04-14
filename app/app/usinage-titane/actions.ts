@@ -22,11 +22,21 @@ export type UsinageTitaneRow = {
   sector_usinage_titane: {
     envoye_usinage: boolean | null;
     envoye_usinage_at: string | null;
+    numero_lot_metal: string | null;
     numero_lot_metal_h: string | null;
     numero_lot_metal_b: string | null;
     machine_ut: string | null;
+    machine_ut_h: string | null;
+    machine_ut_b: string | null;
     nombre_brut: string | null;
+    nombre_brut_h: string | null;
+    nombre_brut_b: string | null;
     numero_calcul: string | null;
+    numero_calcul_h: string | null;
+    numero_calcul_b: string | null;
+    mode_hb_machine: boolean | null;
+    mode_hb_calcul: boolean | null;
+    mode_hb_brut: boolean | null;
     delai_j1_date: string | null;
     reception_metal_at: string | null;
   } | null;
@@ -42,8 +52,11 @@ export async function loadUsinageTitaneRowsAction(): Promise<UsinageTitaneRow[]>
         sector_design_metal ( design_chassis, design_chassis_at, reception_metal_date, modele_a_faire_ok ),
         sector_usinage_titane (
           envoye_usinage, envoye_usinage_at,
-          numero_lot_metal_h, numero_lot_metal_b,
-          machine_ut, nombre_brut, numero_calcul,
+          numero_lot_metal, numero_lot_metal_h, numero_lot_metal_b,
+          machine_ut, machine_ut_h, machine_ut_b,
+          nombre_brut, nombre_brut_h, nombre_brut_b,
+          numero_calcul, numero_calcul_h, numero_calcul_b,
+          mode_hb_machine, mode_hb_calcul, mode_hb_brut,
           delai_j1_date, reception_metal_at
         )
       )
@@ -71,8 +84,11 @@ export async function saveUsinageTitaneCellAction(formData: FormData) {
 
   const allowed = [
     "envoye_usinage", "envoye_usinage_at",
-    "numero_lot_metal_h", "numero_lot_metal_b",
-    "machine_ut", "nombre_brut", "numero_calcul",
+    "numero_lot_metal", "numero_lot_metal_h", "numero_lot_metal_b",
+    "machine_ut", "machine_ut_h", "machine_ut_b",
+    "numero_calcul", "numero_calcul_h", "numero_calcul_b",
+    "nombre_brut", "nombre_brut_h", "nombre_brut_b",
+    "mode_hb_machine", "mode_hb_calcul", "mode_hb_brut",
     "delai_j1_date", "reception_metal_at",
   ];
 

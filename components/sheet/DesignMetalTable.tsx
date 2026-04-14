@@ -565,8 +565,34 @@ export function DesignMetalTable({
     await updateCaseInfoAction(fd);
   }
 
+  function validateDmRow(row: any): string[] {
+    const dm = row.sector_design_metal ?? {};
+    const missing: string[] = [];
+    if (!dm.design_chassis)        missing.push("Design châssis");
+    if (!dm.design_chassis_at)     missing.push("Date design châssis");
+    if (!dm.envoye_dentall)        missing.push("Envoyé DentAll");
+    if (!dm.reception_metal_date)  missing.push("Réception métal");
+    if (!dm.type_de_dents)         missing.push("Type de dents");
+    if (dm.modele_a_faire_ok === null || dm.modele_a_faire_ok === undefined) missing.push("Modèle à faire");
+    if (!dm.teintes_associees)     missing.push("Teintes");
+    return missing;
+  }
+
   async function handleBatch() {
     if (checkedIds.size === 0 || batchPending) return;
+    const blockers: { case_id: string | null; error_message: string }[] = [];
+    for (const id of checkedIds) {
+      const row = rows.find(r => String(r.id) === id);
+      if (!row) continue;
+      const miss = validateDmRow(row);
+      if (miss.length > 0) {
+        blockers.push({ case_id: id, error_message: `Cas ${row.case_number} — champs manquants : ${miss.join(", ")}` });
+      }
+    }
+    if (blockers.length > 0) {
+      setBatchResult({ okIds: [], errors: blockers });
+      return;
+    }
     setBatchPending(true);
     const fd = new FormData();
     checkedIds.forEach((id) => fd.append("case_ids", id));

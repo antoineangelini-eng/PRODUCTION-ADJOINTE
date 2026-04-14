@@ -78,7 +78,6 @@ export type LotSaveRow = {
   usinage_dents_resine: boolean;
   identite_machine: string | null;
   numero_disque: string | null;
-  numero_lot_pmma: string | null;
 };
 
 export type LotSaveResult = {
@@ -97,7 +96,6 @@ export async function saveUsinageResineLotAction(rows: LotSaveRow[]): Promise<Lo
       usinage_dents_resine:   row.usinage_dents_resine,
       identite_machine:       row.identite_machine || null,
       numero_disque:          row.numero_disque || null,
-      numero_lot_pmma:        row.numero_lot_pmma || null,
       type_de_dents_override: row.type_de_dents_override || null,
       nb_blocs_override:      row.nb_blocs_override || null,
       teintes_override:       row.teintes_override || null,
@@ -118,5 +116,6 @@ export async function saveUsinageResineLotAction(rows: LotSaveRow[]): Promise<Lo
   }
 
   revalidatePath("/app/usinage-resine");
+  revalidatePath("/app/finition");
   return results;
 }

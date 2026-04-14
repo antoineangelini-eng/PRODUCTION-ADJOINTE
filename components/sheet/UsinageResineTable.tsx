@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import ReactDOM from "react-dom";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import {
   loadUsinageResineRowsAction,
   saveUsinageResineCellAction,
@@ -11,7 +11,6 @@ import {
   type BatchResult,
 } from "@/app/app/usinage-resine/actions";
 import { printUrLabelAction } from "@/app/app/usinage-resine/print-actions";
-import { lookupDisqueAction } from "@/app/app/usinage-resine/ur-sheet-lookup-actions";
 import type { ToastCase } from "@/components/sheet/CaseToast";
 
 const NATURE_META: Record<string, { color: string }> = {
@@ -202,65 +201,25 @@ function SelectTypeDents({ value, onChange, navAttr }: { value:string; onChange:
   return <div style={{ position:"relative", display:"inline-flex", width:"auto", maxWidth:150 }}><select data-nav={navAttr} value={value} onChange={e => onChange(e.target.value)} onKeyDown={navKeyDown} style={{ padding:"3px 22px 3px 8px", border:`1px solid ${color}40`, background:value?`${color}15`:"#1a1a1a", color:value?color:"#3a3a3a", fontSize:11, fontWeight:600, borderRadius:5, cursor:"pointer", outline:"none", appearance:"none", WebkitAppearance:"none", width:"100%" }}><option value="" style={{ background:"#111", color:"#555" }}>—</option>{TYPE_DENTS_OPTIONS.map(o => <option key={o.value} value={o.value} style={{ background:"#111", color:o.color, fontWeight:600 }}>{o.value}</option>)}</select><svg viewBox="0 0 10 6" width="9" height="9" style={{ position:"absolute", right:6, top:"50%", transform:"translateY(-50%)", pointerEvents:"none", opacity:0.7 }} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1l4 4 4-4" /></svg></div>;
 }
 
-// ─── Champ N° disque avec lookup Google Sheets ───────────────────────────────
+// ─── Champ N° disque (saisie libre) ──────────────────────────────────────────
 
-function DisqueLookupInput({ value, onSave, onFocusChange, navAttr }: {
+function DisqueInput({ value, onSave, onFocusChange, navAttr }: {
   value: string | null;
-  onSave: (v: string, lotPmma: string | null) => void;
+  onSave: (v: string) => void;
   onFocusChange?: (f: boolean) => void;
   navAttr?: string;
 }) {
   const [focused, setFocused] = React.useState(false);
   const [local, setLocal] = React.useState(value ?? "");
-  const [status, setStatus] = React.useState<"idle" | "loading" | "ok" | "notfound" | "error">("idle");
-  const [msg, setMsg] = React.useState("");
-  const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
   React.useEffect(() => { setLocal(value ?? ""); }, [value]);
-
-  async function doLookup(v: string) {
-    if (!v.trim()) { onSave("", null); setStatus("idle"); return; }
-    setStatus("loading");
-    try {
-      const res = await lookupDisqueAction(v.trim());
-      if (res.ok && res.valeurC !== undefined) {
-        onSave(v.trim(), res.valeurC);
-        setStatus("ok");
-        setMsg(res.valeurC);
-      } else {
-        onSave(v.trim(), null);
-        setStatus("notfound");
-        setMsg(res.error ?? "Non trouvé");
-      }
-    } catch {
-      onSave(v.trim(), null);
-      setStatus("error");
-      setMsg("Erreur réseau");
-    }
-  }
-
-  function handleChange(v: string) {
-    setLocal(v);
-    setStatus("idle");
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (!v.trim()) { onSave("", null); return; }
-    debounceRef.current = setTimeout(() => doLookup(v), 400);
-  }
 
   function handleBlur() {
     setFocused(false);
     onFocusChange?.(false);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    // Sauvegarde le disque même sans lookup réussi
-    if (local.trim()) onSave(local.trim(), null);
+    onSave(local.trim());
   }
 
-  const borderColor = focused
-    ? "1px solid #4ade80"
-    : status === "ok"       ? "1px solid rgba(74,222,128,0.5)"
-    : status === "notfound" ? "1px solid rgba(248,113,113,0.5)"
-    : status === "error"    ? "1px solid rgba(248,113,113,0.5)"
-    : "1px solid #2a2a2a";
+  const borderColor = focused ? "1px solid #4ade80" : "1px solid #2a2a2a";
 
   return (
     <div style={{ position: "relative", display: "inline-flex", alignItems: "center", width: "90%" }}>
@@ -269,9 +228,9 @@ function DisqueLookupInput({ value, onSave, onFocusChange, navAttr }: {
         value={local}
         placeholder={focused ? "" : "—"}
         onFocus={() => { setFocused(true); onFocusChange?.(true); }}
-        onChange={e => handleChange(e.target.value)}
+        onChange={e => setLocal(e.target.value)}
         onKeyDown={e => {
-          if (e.key === "Enter") { e.preventDefault(); if (debounceRef.current) clearTimeout(debounceRef.current); doLookup(local); e.currentTarget.blur(); return; }
+          if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); return; }
           if (!navAttr) return;
           const el = e.currentTarget;
           if (e.key === "ArrowRight" && el.selectionEnd === el.value.length) { e.preventDefault(); focusNav(el, "right"); }
@@ -282,9 +241,6 @@ function DisqueLookupInput({ value, onSave, onFocusChange, navAttr }: {
         onBlur={handleBlur}
         style={{ padding: "3px 7px", border: borderColor, background: focused ? "rgba(74,222,128,0.06)" : "#1a1a1a", color: "white", fontSize: 12, borderRadius: 5, outline: "none", transition: "border-color 150ms", width: "100%", boxSizing: "border-box" as const, display: "block", textAlign: "center" }}
       />
-      {status === "loading"  && <span style={{ position: "absolute", right: 5, fontSize: 10, color: "#fb923c", pointerEvents: "none" }}>…</span>}
-      {status === "ok"       && <span style={{ position: "absolute", right: 5, fontSize: 10, color: "#4ade80", pointerEvents: "none" }} title={`Lot: ${msg}`}>✓</span>}
-      {(status === "notfound" || status === "error") && <span style={{ position: "absolute", right: 5, fontSize: 10, color: "#f87171", pointerEvents: "none" }} title={msg}>✕</span>}
     </div>
   );
 }
@@ -331,6 +287,43 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { onReload?.(() => load(true)); }, [load, onReload]);
+
+  // Auto-refresh après 5 min d'inactivité
+  const lastActivityRef = useRef(Date.now());
+  useEffect(() => {
+    const onActivity = () => { lastActivityRef.current = Date.now(); };
+    window.addEventListener("mousemove", onActivity);
+    window.addEventListener("keydown", onActivity);
+    window.addEventListener("click", onActivity);
+    return () => {
+      window.removeEventListener("mousemove", onActivity);
+      window.removeEventListener("keydown", onActivity);
+      window.removeEventListener("click", onActivity);
+    };
+  }, []);
+  useEffect(() => {
+    const itv = setInterval(() => {
+      if (Date.now() - lastActivityRef.current > 5 * 60 * 1000) {
+        lastActivityRef.current = Date.now();
+        load();
+      }
+    }, 30_000);
+    return () => clearInterval(itv);
+  }, [load]);
+
+  const [pendingCount, setPendingCount] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const tick = async () => {
+      const { countSectorActiveAction } = await import("./pending-count-action");
+      const c = await countSectorActiveAction("usinage_resine");
+      if (alive) setPendingCount(Math.max(0, c - rows.length));
+    };
+    tick();
+    const itv = setInterval(tick, 30_000);
+    return () => { alive = false; clearInterval(itv); };
+  }, [rows.length]);
+  const urgentCount = pendingCount;
   useEffect(() => { onSelectionChange?.(checkedIds.size > 0 || editingDate !== null || isEditing); }, [checkedIds, editingDate, isEditing, onSelectionChange]);
   useEffect(() => {
     if (!focusId || loading || rows.length === 0) return;
@@ -355,8 +348,31 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
     await saveUsinageResineCellAction(fd);
   }
 
+  function validateUrRow(row: any): string[] {
+    const ur = row.sector_usinage_resine ?? {};
+    const missing: string[] = [];
+    if (!ur.usinage_dents_resine) missing.push("Usinage dents résine");
+    if (!ur.identite_machine)     missing.push("Machine");
+    if (!ur.numero_disque)        missing.push("N° disque");
+    if (!ur.reception_resine_at)  missing.push("Réception résine");
+    return missing;
+  }
+
   async function handleBatch() {
     if (checkedIds.size === 0 || batchPending) return;
+    const blockers: { case_id: string | null; error_message: string }[] = [];
+    for (const id of checkedIds) {
+      const row = rows.find(r => String(r.id) === id);
+      if (!row) continue;
+      const miss = validateUrRow(row);
+      if (miss.length > 0) {
+        blockers.push({ case_id: id, error_message: `Cas ${row.case_number} — champs manquants : ${miss.join(", ")}` });
+      }
+    }
+    if (blockers.length > 0) {
+      setBatchResult({ okIds: [], errors: blockers });
+      return;
+    }
     setBatchPending(true);
     const fd = new FormData(); checkedIds.forEach(id => fd.append("case_ids", id));
     const result = await completeUsinageResineBatchAction(null, fd);
@@ -410,9 +426,27 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, zIndex:10, background:"#111", padding:"0 8px 10px 8px", borderBottom:"1px solid #1e1e1e", flexShrink:0 }}>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           {!searchNotFound && <span style={{ fontSize:12, color:"#ccc", padding:"4px 14px", background:"#1e1e1e", border:"1px solid #2e2e2e", borderRadius:20, fontWeight:600 }}>{rows.length} dossier{rows.length>1?"s":""}</span>}
+          {urgentCount > 0 && (
+            <span style={{ fontSize: 12, color: "#fb923c", padding: "4px 12px", background: "rgba(251,146,60,0.08)", border: "1px solid rgba(251,146,60,0.4)", borderRadius: 20, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#fb923c", boxShadow: "0 0 8px #fb923c" }} />
+              {urgentCount} cas en attente
+            </span>
+          )}
           {searchNotFound && focusId && <div style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 12px", background:"#1a0f0f", border:"1px solid rgba(239,68,68,0.4)", borderRadius:7 }}><span style={{ fontSize:12, color:"#f87171" }}>Cas <strong style={{ color:"white" }}>"{focusId}"</strong> introuvable</span><button onClick={() => setSearchNotFound(false)} style={{ background:"none", border:"none", color:"#555", cursor:"pointer", fontSize:14 }}>×</button></div>}
           {hasUnsorted && <button onClick={() => { setRows(p => sortByExp(p)); setHasUnsorted(false); setNewRowIds(new Set()); }} style={{ display:"flex", alignItems:"center", gap:6, padding:"5px 12px", borderRadius:7, cursor:"pointer", background:"rgba(74,222,128,0.08)", border:"1px solid rgba(74,222,128,0.3)", color:"#4ade80", fontSize:12, fontWeight:700 }} onMouseEnter={e => e.currentTarget.style.background="rgba(74,222,128,0.15)"} onMouseLeave={e => e.currentTarget.style.background="rgba(74,222,128,0.08)"}>↕ Trier par expédition</button>}
           {batchResult?.okIds.length ? <span style={{ fontSize:12, color:"#4ade80", padding:"5px 12px", background:"rgba(74,222,128,0.06)", border:"1px solid rgba(74,222,128,0.2)", borderRadius:7 }}>✓ {batchResult.okIds.length} envoyé{batchResult.okIds.length>1?"s":""}</span> : null}
+          {batchResult?.errors.length ? (
+            <div style={{ display:"flex", flexDirection:"column" as const, gap:4, maxWidth:560, padding:"8px 12px", background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.3)", borderRadius:8 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:12, color:"#f87171", fontWeight:700 }}>✕ {batchResult.errors.length} validation{batchResult.errors.length>1?"s":""} bloquée{batchResult.errors.length>1?"s":""}</span>
+                <button onClick={()=>setBatchResult(null)} style={{ background:"none", border:"none", color:"#f87171", cursor:"pointer", fontSize:14, padding:0 }}>×</button>
+              </div>
+              {batchResult.errors.slice(0,4).map((e,i)=>(
+                <div key={i} style={{ fontSize:11, color:"#fca5a5", lineHeight:1.4 }}>{e.error_message}</div>
+              ))}
+              {batchResult.errors.length>4 && <div style={{ fontSize:10, color:"#f87171", fontStyle:"italic" }}>… et {batchResult.errors.length-4} autre{batchResult.errors.length-4>1?"s":""}</div>}
+            </div>
+          ) : null}
         </div>
         <button onClick={handleBatch} disabled={batchPending||checkedIds.size===0}
           style={{ padding:"8px 18px", border:checkedIds.size===0?"1px solid #3a3a3a":"1px solid #4ade80", background:checkedIds.size===0?"#1e1e1e":"rgba(74,222,128,0.08)", color:checkedIds.size===0?"#e0e0e0":"#4ade80", cursor:checkedIds.size===0?"not-allowed":"pointer", borderRadius:8, fontWeight:700, fontSize:13, transition:"all 160ms" }}>
@@ -466,17 +500,13 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
                 <div style={{ ...grid2, background:BG_LABEL_SAISIE, borderBottom:BD_LIGHT }}><Lbl color="#818cf8">Machine</Lbl><Lbl color="#818cf8">N° disque</Lbl></div>
                 <div style={{ ...vals2, background:BG_VAL_SAISIE }}>
                   <SelectMachine value={ur.identite_machine??""} onChange={v => { patchRow(String(row.id),"ur","identite_machine",v||null); saveCell(String(row.id),"identite_machine",v||null); }} />
-                  <DisqueLookupInput
+                  <DisqueInput
                     value={ur.numero_disque??null}
                     onFocusChange={setIsEditing}
                     navAttr={`${row.id}_col_4`}
-                    onSave={(v, lotPmma) => {
+                    onSave={(v) => {
                       patchRow(String(row.id),"ur","numero_disque",v||null);
                       saveCell(String(row.id),"numero_disque",v||null);
-                      if (lotPmma !== null) {
-                        patchRow(String(row.id),"ur","numero_lot_pmma",lotPmma);
-                        saveCell(String(row.id),"numero_lot_pmma",lotPmma);
-                      }
                     }}
                   />
                 </div>
