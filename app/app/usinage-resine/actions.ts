@@ -134,3 +134,27 @@ export async function deleteCaseAction(formData: FormData) {
   if (error) return { error: error.message };
   return { ok: true };
 }
+
+/** Retire le cas uniquement du secteur Usinage Résine (les autres secteurs restent intacts). */
+export async function removeCaseFromUsinageResineAction(formData: FormData) {
+  const supabase = await createClient();
+  const caseId = String(formData.get("case_id") ?? "").trim();
+  if (!caseId) return { error: "ID manquant" };
+
+  // Retire l'assignation UR
+  const { error: err1 } = await supabase
+    .from("case_assignments")
+    .delete()
+    .eq("case_id", caseId)
+    .eq("sector_code", "usinage_resine");
+  if (err1) return { error: err1.message };
+
+  // Supprime la ligne sector_usinage_resine
+  const { error: err2 } = await supabase
+    .from("sector_usinage_resine")
+    .delete()
+    .eq("case_id", caseId);
+  if (err2) return { error: err2.message };
+
+  return { ok: true };
+}

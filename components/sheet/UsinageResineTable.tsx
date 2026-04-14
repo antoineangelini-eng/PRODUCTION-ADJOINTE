@@ -7,6 +7,7 @@ import {
   saveUsinageResineCellAction,
   completeUsinageResineBatchAction,
   deleteCaseAction,
+  removeCaseFromUsinageResineAction,
   type UsinageResineRow,
   type BatchResult,
 } from "@/app/app/usinage-resine/actions";
@@ -402,7 +403,11 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
 
   async function handleDelete(caseId: string) {
     const fd = new FormData(); fd.set("case_id", caseId);
-    await deleteCaseAction(fd);
+    const res = await removeCaseFromUsinageResineAction(fd);
+    if ((res as any)?.error) {
+      alert(`Erreur: ${(res as any).error}`);
+      return;
+    }
     setRows(prev => prev.filter(r => String(r.id) !== caseId));
     setConfirmDeleteId(null);
   }
@@ -474,7 +479,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
                 <div style={{ height:3, background:natColor, opacity:0.8 }} />
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 14px", borderBottom:"2px solid #2a2a2a" }}>
                   <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                    <span style={{ fontSize:22, fontWeight:800, color:"white", lineHeight:1 }}>{row.case_number}</span>
+                    <span style={{ fontSize:18, fontWeight:800, color:"white", lineHeight:1 }}>{row.case_number}</span>
                     {nat && <span style={{ display:"inline-flex", padding:"2px 9px", borderRadius:5, fontSize:10, fontWeight:700, background:`${natColor}18`, border:`1px solid ${natColor}40`, color:natColor, whiteSpace:"nowrap" }}>{nat}</span>}
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:12 }}>
@@ -538,7 +543,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
                 )}
               </div>
               <p style={{ fontSize:12, color:"#888", margin:"0 0 20px 0", lineHeight:1.5 }}>
-                Cette action est irréversible. Le cas sera supprimé de tous les secteurs.
+                Le cas sera retiré de Usinage Résine uniquement. Les autres secteurs ne sont pas affectés.
               </p>
               <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
                 <button
