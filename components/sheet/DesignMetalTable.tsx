@@ -567,11 +567,15 @@ export function DesignMetalTable({
 
   function validateDmRow(row: any): string[] {
     const dm = row.sector_design_metal ?? {};
+    const nature = row.nature_du_travail ?? "";
     const missing: string[] = [];
     if (!dm.design_chassis)        missing.push("Design châssis");
     if (!dm.design_chassis_at)     missing.push("Date design châssis");
-    if (!dm.envoye_dentall)        missing.push("Envoyé DentAll");
-    if (!dm.reception_metal_date)  missing.push("Réception métal");
+    // Les champs DentAll ne s'appliquent qu'aux natures qui passent par DentAll
+    if (nature !== "Chassis Argoat") {
+      if (!dm.envoye_dentall)        missing.push("Envoyé DentAll");
+      if (!dm.reception_metal_date)  missing.push("Réception métal");
+    }
     if (!dm.type_de_dents)         missing.push("Type de dents");
     if (dm.modele_a_faire_ok === null || dm.modele_a_faire_ok === undefined) missing.push("Modèle à faire");
     if (!dm.teintes_associees)     missing.push("Teintes");
