@@ -449,13 +449,9 @@ export async function saveWorkingDaysAction(nature: string, days: number): Promi
 }
 
 export async function adminResetSectorsAction(sectors: string[] | null) {
+  // Utilise le client user-scoped pour que auth.uid() fonctionne dans la RPC
   const supabase = await createClient();
-  if (sectors === null) {
-    await supabase.rpc("rpc_admin_reset_all");
-  } else {
-    for (const s of sectors) {
-      await supabase.rpc("rpc_admin_reset_sector", { p_sector_code: s });
-    }
-  }
+  const { error } = await supabase.rpc("rpc_admin_reset_sectors", { p_sectors: sectors });
+  if (error) throw new Error(`rpc_admin_reset_sectors: ${error.message}`);
   revalidatePath("/app/admin");
 }
