@@ -481,14 +481,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
                     <div style={{ textAlign:"right" }}><span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"#e0e0e0", display:"block", marginBottom:2 }}>Expédition</span><span style={{ fontSize:13, color:"#e0e0e0", fontWeight:700 }}>{fmtDate(row.date_expedition)}</span></div>
                     <span style={{ width:9, height:9, borderRadius:"50%", background:isDone?"#4ade80":"#2a2a2a", border:isDone?"none":"1px solid #3a3a3a", display:"inline-block", flexShrink:0 }} />
                     <input type="checkbox" checked={isChecked} onChange={e => { const id=String(row.id); setCheckedIds(prev => { const n=new Set(prev); e.target.checked?n.add(id):n.delete(id); return n; }); }} style={{ width:15, height:15, cursor:"pointer", accentColor:"#4ade80", flexShrink:0 }} />
-                    {confirmDeleteId === String(row.id) ? (
-                      <div style={{ display:"flex", gap:3, alignItems:"center" }}>
-                        <button onClick={() => handleDelete(String(row.id))} title="Confirmer la suppression" style={{ padding:"3px 8px", border:"1px solid #f87171", background:"rgba(239,68,68,0.15)", color:"#f87171", cursor:"pointer", fontSize:14, borderRadius:4, fontWeight:700, lineHeight:1 }}>✓</button>
-                        <button onClick={() => setConfirmDeleteId(null)} title="Annuler" style={{ padding:"3px 8px", border:"1px solid #333", background:"transparent", color:"#aaa", cursor:"pointer", fontSize:14, borderRadius:4, lineHeight:1 }}>✕</button>
-                      </div>
-                    ) : (
-                      <button onClick={() => setConfirmDeleteId(String(row.id))} title="Supprimer le cas" style={{ background:"none", border:"none", color:"#f87171", cursor:"pointer", fontSize:14, padding:4, opacity:0.6, transition:"opacity 150ms" }} onMouseEnter={e => e.currentTarget.style.opacity="1"} onMouseLeave={e => e.currentTarget.style.opacity="0.6"}>🗑</button>
-                    )}
+                    <button onClick={() => setConfirmDeleteId(String(row.id))} title="Supprimer le cas" style={{ background:"none", border:"none", color:"#f87171", cursor:"pointer", fontSize:14, padding:4, opacity:0.6, transition:"opacity 150ms" }} onMouseEnter={e => e.currentTarget.style.opacity="1"} onMouseLeave={e => e.currentTarget.style.opacity="0.6"}>🗑</button>
                   </div>
                 </div>
                 <div style={{ ...grid2, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl>Date de création</Lbl><Lbl>Type de dents</Lbl></div>
@@ -523,6 +516,48 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
           })}
         </div>
       </div>
+
+      {/* Modal de confirmation de suppression */}
+      {confirmDeleteId && (() => {
+        const row = rows.find(r => String(r.id) === confirmDeleteId);
+        if (!row) return null;
+        return (
+          <div
+            onClick={e => { if (e.target === e.currentTarget) setConfirmDeleteId(null); }}
+            style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", zIndex:2000, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}
+          >
+            <div style={{ background:"#111", border:"1px solid #2a2a2a", borderRadius:12, padding:"24px 28px", minWidth:320, maxWidth:420, boxShadow:"0 20px 60px rgba(0,0,0,0.5)" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
+                <span style={{ fontSize:22 }}>🗑</span>
+                <span style={{ fontSize:15, fontWeight:700, color:"white" }}>Supprimer le cas ?</span>
+              </div>
+              <div style={{ background:"#0b0b0b", border:"1px solid #1e1e1e", borderRadius:8, padding:"12px 14px", marginBottom:18, display:"flex", alignItems:"center", gap:10 }}>
+                <span style={{ fontSize:20, fontWeight:800, color:"white" }}>{row.case_number}</span>
+                {row.nature_du_travail && (
+                  <span style={{ fontSize:11, fontWeight:600, padding:"3px 9px", borderRadius:5, background:"rgba(255,255,255,0.05)", color:"#aaa" }}>{row.nature_du_travail}</span>
+                )}
+              </div>
+              <p style={{ fontSize:12, color:"#888", margin:"0 0 20px 0", lineHeight:1.5 }}>
+                Cette action est irréversible. Le cas sera supprimé de tous les secteurs.
+              </p>
+              <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
+                <button
+                  onClick={() => setConfirmDeleteId(null)}
+                  style={{ padding:"9px 18px", border:"1px solid #333", background:"transparent", color:"#aaa", cursor:"pointer", fontSize:13, fontWeight:600, borderRadius:7 }}
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={() => handleDelete(confirmDeleteId)}
+                  style={{ padding:"9px 18px", border:"1px solid #f87171", background:"rgba(239,68,68,0.12)", color:"#f87171", cursor:"pointer", fontSize:13, fontWeight:700, borderRadius:7 }}
+                >
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
