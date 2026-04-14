@@ -244,7 +244,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
         </div>
       </div>
 
-      <div style={{ overflowX:"auto", overflowY:"auto", flex:1, minHeight:0 }}>
+      <div style={{ overflowX:"auto", overflowY:"auto", flex:1, minHeight:0, paddingBottom:80 }}>
         <table style={{ borderCollapse:"collapse", width:"100%", tableLayout:"auto" }}>
           <thead style={{ position:"sticky", top:0, zIndex:2, background:"#111" }}>
             <tr>

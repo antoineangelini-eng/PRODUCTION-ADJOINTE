@@ -453,7 +453,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
           {batchPending?"Validation...":checkedIds.size===0?"Sélectionner des dossiers":`Valider ${checkedIds.size} dossier${checkedIds.size>1?"s":""}`}
         </button>
       </div>
-      <div style={{ overflowY:"auto", flex:1, minHeight:0, padding:"12px 8px 16px" }}>
+      <div style={{ overflowY:"auto", flex:1, minHeight:0, padding:"12px 8px 80px" }}>
         {rows.length===0 && <div style={{ color:"#333", fontSize:13, textAlign:"center", paddingTop:40 }}>Aucun dossier en cours.</div>}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(360px, 1fr))", gap:10 }}>
           {rows.map(row => {

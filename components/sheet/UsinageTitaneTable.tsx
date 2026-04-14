@@ -582,7 +582,7 @@ export function UsinageTitaneTable({ focusId }: { focusId: string | null }) {
       </div>
 
       {/* Tableau */}
-      <div style={{ overflowX: "auto", overflowY: "auto", flex: 1, minHeight: 0, padding: "0 8px 14px 8px" }}>
+      <div style={{ overflowX: "auto", overflowY: "auto", flex: 1, minHeight: 0, padding: "0 8px 80px 8px" }}>
         <table style={{ borderCollapse: "separate", borderSpacing: "0 8px", width: "100%", tableLayout: "auto" }}>
           <thead style={{ position: "sticky", top: 0, zIndex: 5, background: TH_BG }}>
             <tr>

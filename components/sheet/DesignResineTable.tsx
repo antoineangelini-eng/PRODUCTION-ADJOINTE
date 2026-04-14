@@ -283,7 +283,7 @@ export function DesignResineTable({focusId}:{focusId:string|null}){
       </div>
 
       {/* Table */}
-      <div style={{overflowX:"auto",overflowY:"auto",minHeight:0}}>
+      <div style={{overflowX:"auto",overflowY:"auto",minHeight:0,paddingBottom:80}}>
         <table style={{borderCollapse:"separate",borderSpacing:"0 8px",width:"100%",tableLayout:"auto"}}>
           <thead style={{position:"sticky",top:0,zIndex:2,background:"#111"}}>
             <tr>
