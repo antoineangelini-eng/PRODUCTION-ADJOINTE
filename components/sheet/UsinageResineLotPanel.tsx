@@ -81,8 +81,13 @@ function caseToFields(c: LotCaseUR): LotFields {
   };
 }
 
-export function UsinageResineLotPanel({ onSaved }: { onSaved?: (savedIds: string[]) => void }) {
-  const [open, setOpen]           = useState(false);
+export function UsinageResineLotPanel({ onSaved, open: openProp, onOpenChange }: { onSaved?: (savedIds: string[]) => void; open?: boolean; onOpenChange?: (open: boolean) => void }) {
+  const [openState, setOpenState] = useState(false);
+  const open = openProp !== undefined ? openProp : openState;
+  const setOpen = (v: boolean) => {
+    if (openProp === undefined) setOpenState(v);
+    onOpenChange?.(v);
+  };
   const [scanVal, setScanVal]     = useState("");
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanning, setScanning]   = useState(false);
@@ -178,9 +183,12 @@ export function UsinageResineLotPanel({ onSaved }: { onSaved?: (savedIds: string
 
   return (
     <>
-      <button onClick={() => setOpen(true)} style={{ padding: "9px 18px", border: "1px solid #7c8196", background: "transparent", color: "#7c8196", cursor: "pointer", fontSize: 13, fontWeight: 700, letterSpacing: "0.03em", borderRadius: 8, display: "flex", alignItems: "center", gap: 6, transition: "all 150ms" }} onMouseEnter={e => { e.currentTarget.style.background = "rgba(129,140,248,0.08)"; }} onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
-        Saisie en lot
-      </button>
+      {/* Bouton interne affiché uniquement si le panel n'est pas contrôlé depuis l'extérieur */}
+      {openProp === undefined && (
+        <button onClick={() => setOpen(true)} style={{ padding: "9px 18px", border: "1px solid #7c8196", background: "transparent", color: "#7c8196", cursor: "pointer", fontSize: 13, fontWeight: 700, letterSpacing: "0.03em", borderRadius: 8, display: "flex", alignItems: "center", gap: 6, transition: "all 150ms" }} onMouseEnter={e => { e.currentTarget.style.background = "rgba(129,140,248,0.08)"; }} onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+          Saisie en lot
+        </button>
+      )}
 
       {open && (
         <div onMouseDown={e => { mouseDownOnPanel.current = e.target !== e.currentTarget; }} onClick={e => { if (e.target === e.currentTarget && !mouseDownOnPanel.current) setOpen(false); }} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1000, display: "flex", justifyContent: "flex-end" }}>

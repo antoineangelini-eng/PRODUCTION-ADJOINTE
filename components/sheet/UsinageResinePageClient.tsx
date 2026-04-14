@@ -153,11 +153,15 @@ export function UsinageResinePageClient({ focusId }: { focusId: string | null; h
       <RealtimeBanner hasPending={false} isBusy={isBusy} onRefresh={() => reloadRef.current?.()} />
 
       {/* ── Lot panel ────────────────────────────────────────────────────────── */}
-      {lotOpen && (
-        <UsinageResineLotPanel
-          onSaved={(ids: string[]) => setLotFilledIds(prev => new Set([...prev, ...ids]))}
-        />
-      )}
+      <UsinageResineLotPanel
+        open={lotOpen}
+        onOpenChange={setLotOpen}
+        onSaved={(ids: string[]) => {
+          setLotFilledIds(prev => new Set([...prev, ...ids]));
+          // Recharge le tableau pour que les pancartes affichent les valeurs saisies en lot
+          reloadRef.current?.();
+        }}
+      />
 
       {/* ── Tableau ──────────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
