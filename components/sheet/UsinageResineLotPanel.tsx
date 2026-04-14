@@ -7,6 +7,7 @@ import {
   type LotSaveRow,
   type LotSaveResult,
 } from "@/app/app/usinage-resine/lot-actions";
+import { deleteCaseAction } from "@/app/app/usinage-resine/actions";
 
 const MACHINE_OPTIONS = [
   { value: "PM1", color: "#7c8196" },
@@ -122,6 +123,28 @@ export function UsinageResineLotPanel({ onSaved }: { onSaved?: (savedIds: string
     setFields(prev => { const n = { ...prev }; delete n[caseId]; return n; });
   }
 
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  async function handleDeleteCase(caseId: string) {
+    setDeletingIds(prev => new Set(prev).add(caseId));
+    try {
+      const fd = new FormData();
+      fd.set("case_id", caseId);
+      const res = await deleteCaseAction(fd);
+      if ((res as any)?.error) {
+        alert(`Erreur: ${(res as any).error}`);
+      } else {
+        removeCase(caseId);
+      }
+    } catch (e: any) {
+      alert(`Erreur: ${e.message ?? "suppression impossible"}`);
+    } finally {
+      setDeletingIds(prev => { const n = new Set(prev); n.delete(caseId); return n; });
+      setConfirmDeleteId(null);
+    }
+  }
+
   async function handleSave() {
     if (cases.length === 0 || saving) return;
     setSaving(true);
@@ -212,7 +235,20 @@ export function UsinageResineLotPanel({ onSaved }: { onSaved?: (savedIds: string
                                 {res?.ok && <span style={{ fontSize: 11, color: "#4ade80" }}>✓ Sauvegardé</span>}
                                 {res && !res.ok && <span style={{ fontSize: 11, color: "#f87171" }}>✕ {res.error}</span>}
                               </div>
-                              <button onClick={() => removeCase(c.id)} style={{ background: "none", border: "none", color: "white", cursor: "pointer", fontSize: 16, padding: 4 }}>×</button>
+                              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                                {confirmDeleteId === c.id ? (
+                                  <>
+                                    <span style={{ fontSize: 11, color: "#f87171", fontWeight: 700 }}>Supprimer ?</span>
+                                    <button onClick={() => handleDeleteCase(c.id)} disabled={deletingIds.has(c.id)} style={{ padding: "3px 10px", border: "1px solid #f87171", background: "rgba(239,68,68,0.1)", color: "#f87171", cursor: "pointer", fontSize: 11, borderRadius: 5, fontWeight: 700 }}>{deletingIds.has(c.id) ? "…" : "Oui"}</button>
+                                    <button onClick={() => setConfirmDeleteId(null)} style={{ padding: "3px 10px", border: "1px solid #333", background: "transparent", color: "#aaa", cursor: "pointer", fontSize: 11, borderRadius: 5 }}>Non</button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button onClick={() => setConfirmDeleteId(c.id)} title="Supprimer le cas" style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 14, padding: 4 }}>🗑</button>
+                                    <button onClick={() => removeCase(c.id)} title="Retirer du lot" style={{ background: "none", border: "none", color: "white", cursor: "pointer", fontSize: 16, padding: 4 }}>×</button>
+                                  </>
+                                )}
+                              </div>
                             </div>
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10 }}>
                               <FieldSelectMachine label="Machine"     value={f.machine}   onChange={v => updateCaseField(c.id, "machine", v)} />
@@ -238,7 +274,20 @@ export function UsinageResineLotPanel({ onSaved }: { onSaved?: (savedIds: string
                           {res?.ok && <span style={{ fontSize: 11, color: "#4ade80" }}>✓ Sauvegardé</span>}
                           {res && !res.ok && <span style={{ fontSize: 11, color: "#f87171" }}>✕ {res.error}</span>}
                         </div>
-                        <button onClick={() => removeCase(c.id)} style={{ background: "none", border: "none", color: "white", cursor: "pointer", fontSize: 16, padding: 4 }}>×</button>
+                        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                          {confirmDeleteId === c.id ? (
+                            <>
+                              <span style={{ fontSize: 11, color: "#f87171", fontWeight: 700 }}>Supprimer ?</span>
+                              <button onClick={() => handleDeleteCase(c.id)} disabled={deletingIds.has(c.id)} style={{ padding: "3px 10px", border: "1px solid #f87171", background: "rgba(239,68,68,0.1)", color: "#f87171", cursor: "pointer", fontSize: 11, borderRadius: 5, fontWeight: 700 }}>{deletingIds.has(c.id) ? "…" : "Oui"}</button>
+                              <button onClick={() => setConfirmDeleteId(null)} style={{ padding: "3px 10px", border: "1px solid #333", background: "transparent", color: "#aaa", cursor: "pointer", fontSize: 11, borderRadius: 5 }}>Non</button>
+                            </>
+                          ) : (
+                            <>
+                              <button onClick={() => setConfirmDeleteId(c.id)} title="Supprimer le cas" style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 14, padding: 4 }}>🗑</button>
+                              <button onClick={() => removeCase(c.id)} title="Retirer du lot" style={{ background: "none", border: "none", color: "white", cursor: "pointer", fontSize: 16, padding: 4 }}>×</button>
+                            </>
+                          )}
+                        </div>
                       </div>
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10 }}>
                         <FieldSelectMachine label="Machine"     value={f.machine}   onChange={v => updateCaseField(c.id, "machine", v)} />
