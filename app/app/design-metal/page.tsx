@@ -29,12 +29,7 @@ async function createCaseAction(formData: FormData) {
   const caseNumber = String(formData.get("case_number") ?? "").trim();
   const nature = String(formData.get("nature_du_travail") ?? "").trim();
   if (!caseNumber || !nature) return;
-
-  // Routing par nature : les cas résine vont dans le flow DR → UR → Finition
-  const isResine = nature === "Définitif Résine" || nature === "Provisoire Résine";
-  const rpcName = isResine ? "rpc_create_case_from_design_resine" : "rpc_create_case_from_design_metal";
-
-  const { data, error } = await supabase.rpc(rpcName, {
+  const { data, error } = await supabase.rpc("rpc_create_case_from_design_metal", {
     p_case_number: caseNumber,
     p_nature_du_travail: nature,
   });
@@ -55,8 +50,8 @@ async function createCaseAction(formData: FormData) {
       p_manual: false,
     });
   }
-  revalidatePath(isResine ? "/app/design-resine" : "/app/design-metal");
-  redirect(isResine ? "/app/design-resine" : "/app/design-metal");
+  revalidatePath("/app/design-metal");
+  redirect("/app/design-metal");
 }
 
 export default async function Page({

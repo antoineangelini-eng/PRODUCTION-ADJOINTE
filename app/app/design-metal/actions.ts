@@ -148,18 +148,6 @@ export async function createCaseAction(formData: FormData) {
   const nature     = String(formData.get("nature_du_travail") ?? "").trim();
   if (!caseNumber || !nature) return;
 
-  // Routing par nature : les cas résine vont dans le flow DR → UR → Finition
-  if (nature === "Définitif Résine" || nature === "Provisoire Résine") {
-    const { data, error } = await supabase.rpc("rpc_create_case_from_design_resine", {
-      p_case_number:       caseNumber,
-      p_nature_du_travail: nature,
-    });
-    if (error) throw new Error(error.message);
-    const caseId = typeof data === "string" ? data : String(data);
-    if (!caseId || caseId === "null") return;
-    redirect("/app/design-resine");
-  }
-
   const { data, error } = await supabase.rpc("rpc_create_case_from_design_metal", {
     p_case_number:       caseNumber,
     p_nature_du_travail: nature,
