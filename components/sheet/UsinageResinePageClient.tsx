@@ -131,7 +131,7 @@ export function UsinageResinePageClient({ focusId }: { focusId: string | null; h
               background: lotOpen ? "rgba(129,140,248,0.15)" : "#1e1e1e",
               border: lotOpen ? "1px solid rgba(129,140,248,0.5)" : "1px solid rgba(129,140,248,0.3)",
               borderRadius: 8,
-              color: "#818cf8",          // ← violet constant (ouvert ou fermé)
+              color: "#7c8196",          // ← violet constant (ouvert ou fermé)
               fontSize: 12,
               fontWeight: 700,
               cursor: "pointer",

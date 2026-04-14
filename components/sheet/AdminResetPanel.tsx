@@ -38,8 +38,8 @@ function ResetButton({
     }
   }
 
-  const borderColor = danger ? "#f87171" : "#fb923c";
-  const bgColor     = danger ? "rgba(239,68,68,0.06)" : "rgba(251,146,60,0.06)";
+  const borderColor = danger ? "#f87171" : "#f59e0b";
+  const bgColor     = danger ? "rgba(239,68,68,0.06)" : "rgba(245,158,11,0.06)";
 
   return (
     <div style={{
@@ -128,7 +128,7 @@ export function AdminResetPanel() {
 
       {/* Reset par secteur */}
       <div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#fb923c", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
           Réinitialisation par secteur
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

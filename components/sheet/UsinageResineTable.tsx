@@ -15,19 +15,19 @@ import type { ToastCase } from "@/components/sheet/CaseToast";
 
 const NATURE_META: Record<string, { color: string }> = {
   "Chassis Argoat":    { color: "#4ade80" },
-  "Chassis Dent All":  { color: "#22d3ee" },
-  "Définitif Résine":  { color: "#f472b6" },
-  "Provisoire Résine": { color: "#c084fc" },
+  "Chassis Dent All":  { color: "#5a9ba8" },
+  "Définitif Résine":  { color: "#a87a90" },
+  "Provisoire Résine": { color: "#9487a8" },
 };
 const MACHINE_OPTIONS = [
-  { value: "PM1", color: "#818cf8" },
-  { value: "PM2", color: "#22d3ee" },
-  { value: "PM3", color: "#f472b6" },
-  { value: "PM4", color: "#fb923c" },
+  { value: "PM1", color: "#7c8196" },
+  { value: "PM2", color: "#5a9ba8" },
+  { value: "PM3", color: "#a87a90" },
+  { value: "PM4", color: "#f59e0b" },
 ];
 const TYPE_DENTS_OPTIONS = [
-  { value: "Dents usiner",      color: "#818cf8" },
-  { value: "Dents du commerce", color: "#fb923c" },
+  { value: "Dents usiner",      color: "#7c8196" },
+  { value: "Dents du commerce", color: "#f59e0b" },
 ];
 const BG_CARD = "#1e1e1e", BG_LABEL_ROW = "#181818", BG_VAL_ROW = "#1e1e1e";
 const BG_LABEL_SAISIE = "#151515", BG_VAL_SAISIE = "#161616";
@@ -427,8 +427,8 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           {!searchNotFound && <span style={{ fontSize:12, color:"#ccc", padding:"4px 14px", background:"#1e1e1e", border:"1px solid #2e2e2e", borderRadius:20, fontWeight:600 }}>{rows.length} dossier{rows.length>1?"s":""}</span>}
           {urgentCount > 0 && (
-            <span style={{ fontSize: 12, color: "#fb923c", padding: "4px 12px", background: "rgba(251,146,60,0.08)", border: "1px solid rgba(251,146,60,0.4)", borderRadius: 20, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#fb923c", boxShadow: "0 0 8px #fb923c" }} />
+            <span style={{ fontSize: 12, color: "#f59e0b", padding: "4px 12px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.4)", borderRadius: 20, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#f59e0b", boxShadow: "0 0 8px #f59e0b" }} />
               {urgentCount} cas en attente
             </span>
           )}
@@ -497,7 +497,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
                   <button onClick={() => { const newVal=!isDone; patchRow(String(row.id),"ur","usinage_dents_resine",newVal); if(newVal){const j1=addBusinessDays(new Date(),1).toISOString().split("T")[0];patchRow(String(row.id),"ur","reception_resine_at",j1);saveCell(String(row.id),"usinage_with_reception",JSON.stringify({usinage_dents_resine:true,reception_resine_at:j1}));}else{patchRow(String(row.id),"ur","reception_resine_at",null);saveCell(String(row.id),"usinage_with_reception",JSON.stringify({usinage_dents_resine:false,reception_resine_at:null}));} }} style={{ background:isDone?"rgba(74,222,128,0.15)":"#232323", border:isDone?"1px solid rgba(74,222,128,0.4)":"1px solid #333", color:isDone?"#4ade80":"#555", padding:"3px 0", borderRadius:5, cursor:"pointer", fontWeight:700, fontSize:12, transition:"all 150ms", width:"90%", textAlign:"center" as const }}>{isDone?"✓ Usiné":"—"}</button>
                   <button onClick={e => { const rect=e.currentTarget.getBoundingClientRect(); setEditingDate({caseId:String(row.id),column:"reception_resine_at",value:ur.reception_resine_at?.slice(0,10)??"",rect}); }} style={{ background:"#1a1a1a", border:"1px solid #2a2a2a", borderRadius:5, color:ur.reception_resine_at?"#d0d0d0":"#3a3a3a", fontSize:12, cursor:"pointer", padding:"3px 0", width:"90%", textAlign:"center" as const, transition:"background 100ms" }} onMouseEnter={e => e.currentTarget.style.background="#222"} onMouseLeave={e => e.currentTarget.style.background="#1a1a1a"}>{ur.reception_resine_at?fmtDate(ur.reception_resine_at.slice(0,10)):"—"}</button>
                 </div>
-                <div style={{ ...grid2, background:BG_LABEL_SAISIE, borderBottom:BD_LIGHT }}><Lbl color="#818cf8">Machine</Lbl><Lbl color="#818cf8">N° disque</Lbl></div>
+                <div style={{ ...grid2, background:BG_LABEL_SAISIE, borderBottom:BD_LIGHT }}><Lbl color="#7c8196">Machine</Lbl><Lbl color="#7c8196">N° disque</Lbl></div>
                 <div style={{ ...vals2, background:BG_VAL_SAISIE }}>
                   <SelectMachine value={ur.identite_machine??""} onChange={v => { patchRow(String(row.id),"ur","identite_machine",v||null); saveCell(String(row.id),"identite_machine",v||null); }} />
                   <DisqueInput

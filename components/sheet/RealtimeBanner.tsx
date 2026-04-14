@@ -16,10 +16,10 @@ export function RealtimeBanner({
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "center",
         padding: "6px 16px", gap: 8,
-        background: "rgba(251,146,60,0.08)",
-        borderBottom: "1px solid rgba(251,146,60,0.2)",
+        background: "rgba(245,158,11,0.08)",
+        borderBottom: "1px solid rgba(245,158,11,0.2)",
       }}>
-        <span style={{ fontSize: 12, color: "#fb923c", fontWeight: 700 }}>
+        <span style={{ fontSize: 12, color: "#f59e0b", fontWeight: 700 }}>
           Cas en attente
         </span>
         <span style={{ fontSize: 11, color: "#aaa" }}>

@@ -4,9 +4,9 @@ import { loadWorkingDaysAction, saveWorkingDaysAction } from "@/app/app/admin/ac
 
 const NATURES = [
   { name: "Chassis Argoat",    color: "#4ade80", default: 5 },
-  { name: "Chassis Dent All",  color: "#22d3ee", default: 5 },
-  { name: "Définitif Résine",  color: "#f472b6", default: 3 },
-  { name: "Provisoire Résine", color: "#c084fc", default: 3 },
+  { name: "Chassis Dent All",  color: "#5a9ba8", default: 5 },
+  { name: "Définitif Résine",  color: "#a87a90", default: 3 },
+  { name: "Provisoire Résine", color: "#9487a8", default: 3 },
 ];
 
 type SaveState = "idle" | "saving" | "saved" | "error";

@@ -98,7 +98,7 @@ export function FinitionScanner({
   }
 
   const pct = totalToday > 0 ? Math.round((validatedToday / totalToday) * 100) : 0;
-  const feedbackColor = lastScan?.status === "ok" ? "#4ade80" : lastScan?.status === "duplicate" ? "#fb923c" : "#f87171";
+  const feedbackColor = lastScan?.status === "ok" ? "#4ade80" : lastScan?.status === "duplicate" ? "#f59e0b" : "#f87171";
   const feedbackText = lastScan
     ? `${lastScan.caseNumber} — ${lastScan.status === "ok" ? "ajouté" : lastScan.status === "duplicate" ? "déjà scanné" : "introuvable"}`
     : "";
@@ -169,7 +169,7 @@ export function FinitionScanner({
           <div style={{
             position:"absolute", right:14, top:"50%", transform:"translateY(-50%)",
             fontSize:10, fontWeight:700, letterSpacing:"0.05em",
-            color: pending ? "#fb923c" : focused ? "#4ade80" : "#aaa",
+            color: pending ? "#f59e0b" : focused ? "#4ade80" : "#aaa",
           }}>
             {pending ? "⟳" : focused ? "ACTIF" : "INACTIF"}
           </div>
@@ -234,10 +234,10 @@ export function FinitionScanner({
                 <div key={i} style={{
                   display:"flex", alignItems:"center", gap:8,
                   padding:"5px 10px", borderRadius:5, fontSize:12,
-                  borderLeft:`2px solid ${e.reason === "duplicate" ? "rgba(251,146,60,0.4)" : "rgba(239,68,68,0.4)"}`,
+                  borderLeft:`2px solid ${e.reason === "duplicate" ? "rgba(245,158,11,0.4)" : "rgba(239,68,68,0.4)"}`,
                   opacity: Math.max(0.3, 1 - i * 0.2),
                 }}>
-                  <span style={{ fontSize:10, color: e.reason === "duplicate" ? "#fb923c" : "#f87171" }}>✕</span>
+                  <span style={{ fontSize:10, color: e.reason === "duplicate" ? "#f59e0b" : "#f87171" }}>✕</span>
                   <span style={{ color:"white" }}>{e.caseNumber}</span>
                   <span style={{ fontSize:10, color:"#aaa" }}>{e.reason === "duplicate" ? "déjà scanné" : "introuvable"}</span>
                 </div>
@@ -249,7 +249,7 @@ export function FinitionScanner({
 
       {/* Légende */}
       <div style={{ padding:"10px 20px", borderTop:"1px solid #1a1a1a", display:"flex", gap:12, flexWrap:"wrap" }}>
-        {[{ color:"#f87171", label:"Retard" }, { color:"#fb923c", label:"Aujourd'hui" }, { color:"#4ade80", label:"Validé" }].map(({ color, label }) => (
+        {[{ color:"#f87171", label:"Retard" }, { color:"#f59e0b", label:"Aujourd'hui" }, { color:"#4ade80", label:"Validé" }].map(({ color, label }) => (
           <div key={label} style={{ display:"flex", alignItems:"center", gap:5, fontSize:10, color:"white" }}>
             <span style={{ width:5, height:5, borderRadius:"50%", background:color, flexShrink:0 }} />
             {label}

@@ -11,7 +11,7 @@ const EVENT_LABELS: Record<string, { label: string; color: string; icon: string 
   USINAGE_RESINE_CELL_UPDATE: { label: "Mise à jour Usinage Résine", color: "#94a3b8", icon: "✎" },
   USINAGE_TITANE_CELL_UPDATE: { label: "Mise à jour Usinage Titane", color: "#94a3b8", icon: "✎" },
   FINITION_CELL_UPDATE:       { label: "Mise à jour Finition",       color: "#94a3b8", icon: "✎" },
-  CASE_COMPLETED:             { label: "Dossier validé ✓",           color: "#facc15", icon: "★" },
+  CASE_COMPLETED:             { label: "Dossier validé ✓",           color: "#f59e0b", icon: "★" },
 };
 
 function fmtDate(value: string) {

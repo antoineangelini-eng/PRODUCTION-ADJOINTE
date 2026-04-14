@@ -3,15 +3,15 @@ import React, { useEffect, useState, useCallback } from "react";
 import { loadAllFeedbackAction, updateFeedbackAction, type FeedbackRow } from "@/app/app/feedback-actions";
 
 const STATUT_META: Record<string, { label: string; color: string; icon: string }> = {
-  ouvert:   { label: "Ouvert",    color: "#818cf8", icon: "📩" },
-  en_cours: { label: "En cours",  color: "#fb923c", icon: "⚙️" },
+  ouvert:   { label: "Ouvert",    color: "#7c8196", icon: "📩" },
+  en_cours: { label: "En cours",  color: "#f59e0b", icon: "⚙️" },
   fait:     { label: "Fait",      color: "#4ade80", icon: "✅" },
   refuse:   { label: "Refusé",    color: "#f87171", icon: "✕" },
 };
 
 const PRIO_META: Record<string, { label: string; color: string }> = {
   faible: { label: "Faible",  color: "#a3a3a3" },
-  normal: { label: "Moyen",   color: "#818cf8" },
+  normal: { label: "Moyen",   color: "#7c8196" },
   haute:  { label: "Urgent",  color: "#f87171" },
 };
 
@@ -113,7 +113,7 @@ export function FeedbackManager({ onCountChange }: { onCountChange?: (n: number)
               <div style={{
                 height: "100%", borderRadius: 2, transition: "width 300ms ease",
                 width: `${progressPct}%`,
-                background: progressPct === 100 ? "#4ade80" : "linear-gradient(90deg, #818cf8, #4ade80)",
+                background: progressPct === 100 ? "#4ade80" : "linear-gradient(90deg, #7c8196, #4ade80)",
               }} />
             </div>
           </div>
@@ -126,7 +126,7 @@ export function FeedbackManager({ onCountChange }: { onCountChange?: (n: number)
               padding: "6px 16px", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer",
               border: viewMode === "actifs" ? "1px solid rgba(129,140,248,0.5)" : "1px solid #2a2a2a",
               background: viewMode === "actifs" ? "rgba(129,140,248,0.1)" : "transparent",
-              color: viewMode === "actifs" ? "#818cf8" : "#555",
+              color: viewMode === "actifs" ? "#7c8196" : "#555",
               transition: "all 150ms",
             }}>
             Actifs ({actifs.length})
@@ -187,7 +187,7 @@ export function FeedbackManager({ onCountChange }: { onCountChange?: (n: number)
                       <span title={new Date(row.created_at).toLocaleString("fr-FR")}>{relativeDate(row.created_at)}</span>
                     </div>
                     {row.note_admin && !isEdit && (
-                      <div style={{ marginTop: 8, fontSize: 11, color: "#818cf8", background: "rgba(129,140,248,0.06)", border: "1px solid rgba(129,140,248,0.15)", borderRadius: 6, padding: "6px 10px", lineHeight: 1.4 }}>
+                      <div style={{ marginTop: 8, fontSize: 11, color: "#7c8196", background: "rgba(129,140,248,0.06)", border: "1px solid rgba(129,140,248,0.15)", borderRadius: 6, padding: "6px 10px", lineHeight: 1.4 }}>
                         Note admin : {row.note_admin}
                       </div>
                     )}

@@ -22,8 +22,8 @@ export default async function FinitionPage({ searchParams }: { searchParams?: Pr
           {[{ key: "production", label: "⚙ Production" }, { key: "historique", label: "📋 Historique" }].map(({ key, label }) => (
             <a key={key} href={`/app/finition?tab=${key}`} style={{
               padding: "8px 22px", fontSize: 12, fontWeight: 700, textDecoration: "none", display: "block",
-              borderBottom: tab === key ? "2px solid #facc15" : "2px solid transparent",
-              color: tab === key ? "#facc15" : "#555", marginBottom: -1, transition: "color 150ms",
+              borderBottom: tab === key ? "2px solid #f59e0b" : "2px solid transparent",
+              color: tab === key ? "#f59e0b" : "#555", marginBottom: -1, transition: "color 150ms",
             }}>{label}</a>
           ))}
         </div>

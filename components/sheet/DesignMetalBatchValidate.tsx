@@ -15,9 +15,9 @@ import { DesignMetalBoolCell } from "@/components/sheet/DesignMetalBoolCell";
 type SectorKey = "design_resine" | "usinage_titane" | "finition";
 
 const SECTOR_META: Record<SectorKey, { label: string; color: string }> = {
-  design_resine:  { label: "Design Résine",  color: "#818cf8" },
-  usinage_titane: { label: "Usinage Titane", color: "#fb923c" },
-  finition:       { label: "Finition",       color: "#facc15" },
+  design_resine:  { label: "Design Résine",  color: "#7c8196" },
+  usinage_titane: { label: "Usinage Titane", color: "#f59e0b" },
+  finition:       { label: "Finition",       color: "#f59e0b" },
 };
 
 function getTargets(nature: string): SectorKey[] {

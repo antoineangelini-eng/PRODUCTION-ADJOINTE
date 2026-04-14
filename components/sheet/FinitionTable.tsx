@@ -18,7 +18,7 @@ function getDelaiStatus(dateExpedition: string | null, validated: boolean) {
 const DELAI_STYLES: Record<string, React.CSSProperties> = {
   done:   { background: "rgba(74,222,128,0.05)",  boxShadow: "inset 3px 0 0 #4ade80" },
   late:   { background: "rgba(239,68,68,0.06)",   boxShadow: "inset 3px 0 0 #f87171" },
-  today:  { background: "rgba(251,146,60,0.06)",  boxShadow: "inset 3px 0 0 #fb923c" },
+  today:  { background: "rgba(245,158,11,0.06)",  boxShadow: "inset 3px 0 0 #f59e0b" },
   normal: { background: "transparent",            boxShadow: "inset 3px 0 0 transparent" },
 };
 
@@ -31,15 +31,15 @@ const tdRead: React.CSSProperties   = { ...tdBase, color:"white" };
 const tdSticky: React.CSSProperties = { ...tdBase, position:"sticky", left:0, zIndex:2, background:"#0b0b0b", textAlign:"left", fontWeight:700, color:"white" };
 
 const TYPE_DENTS_OPTIONS = [
-  { value:"Dents usiner",      color:"#818cf8" },
-  { value:"Dents du commerce", color:"#fb923c" },
+  { value:"Dents usiner",      color:"#7c8196" },
+  { value:"Dents du commerce", color:"#f59e0b" },
 ];
 
 const NATURE_META: Record<string, { color:string }> = {
   "Chassis Argoat":    { color:"#4ade80" },
-  "Chassis Dent All":  { color:"#22d3ee" },
-  "Définitif Résine":  { color:"#f472b6" },
-  "Provisoire Résine": { color:"#c084fc" },
+  "Chassis Dent All":  { color:"#5a9ba8" },
+  "Définitif Résine":  { color:"#a87a90" },
+  "Provisoire Résine": { color:"#9487a8" },
 };
 
 function NatureBadge({ nature }: { nature: string | null }) {
@@ -205,8 +205,8 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
             {filtered.length} dossier{filtered.length > 1 ? "s" : ""}
           </div>
           {urgentCount > 0 && (
-            <span style={{ fontSize: 12, color: "#fb923c", padding: "4px 12px", background: "rgba(251,146,60,0.08)", border: "1px solid rgba(251,146,60,0.4)", borderRadius: 6, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#fb923c", boxShadow: "0 0 8px #fb923c" }} />
+            <span style={{ fontSize: 12, color: "#f59e0b", padding: "4px 12px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.4)", borderRadius: 6, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#f59e0b", boxShadow: "0 0 8px #f59e0b" }} />
               {urgentCount} cas en attente
             </span>
           )}
@@ -309,7 +309,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                   }}>
                     <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                       {status==="late"  && <span style={{ fontSize:10, color:"#f87171" }}>●</span>}
-                      {status==="today" && <span style={{ fontSize:10, color:"#fb923c" }}>●</span>}
+                      {status==="today" && <span style={{ fontSize:10, color:"#f59e0b" }}>●</span>}
                       <button
                         onClick={() => setDetailCaseId(String(row.id))}
                         title="Voir le détail des tâches"
@@ -332,7 +332,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                     {row.created_at ? new Date(row.created_at).toLocaleDateString("fr-FR") : "—"}
                   </td>
 
-                  <td style={{ ...tdRead, color:status==="late"?"#f87171":status==="today"?"#fb923c":"white", fontWeight:status==="late"||status==="today"?700:400 }}>
+                  <td style={{ ...tdRead, color:status==="late"?"#f87171":status==="today"?"#f59e0b":"white", fontWeight:status==="late"||status==="today"?700:400 }}>
                     {row.date_expedition ? new Date(row.date_expedition.slice(0,10)+"T00:00:00").toLocaleDateString("fr-FR") : "—"}
                   </td>
 

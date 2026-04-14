@@ -13,7 +13,7 @@ const TABS: { id: Tab; label: string; color?: string }[] = [
   { id: "global",   label: "Vue globale" },
   { id: "users",    label: "Utilisateurs" },
   { id: "days",     label: "Jours ouvrés" },
-  { id: "feedback", label: "💡 Améliorations", color: "#818cf8" },
+  { id: "feedback", label: "💡 Améliorations", color: "#7c8196" },
   { id: "reset",    label: "Réinitialisation", color: "#f87171" },
 ];
 
@@ -52,7 +52,7 @@ export function AdminPageClient() {
               <span style={{
                 marginLeft: 6, display: "inline-flex", alignItems: "center", justifyContent: "center",
                 minWidth: 17, height: 17, borderRadius: 9, padding: "0 4px",
-                background: "#818cf8",
+                background: "#7c8196",
                 color: "white",
                 fontSize: 10, fontWeight: 800, verticalAlign: "middle",
                 boxShadow: "0 0 0 2px rgba(129,140,248,0.2)",

@@ -35,7 +35,7 @@ export function FinitionPageClient(_props: { hideHeader?: boolean } = {}) {
 
   const TABS: { id: Tab; label: string; count?: number; countColor?: string }[] = [
     { id: "all",      label: "Tous les dossiers" },
-    { id: "today",    label: "Aujourd'hui", count: stats.countToday,    countColor: "#fb923c" },
+    { id: "today",    label: "Aujourd'hui", count: stats.countToday,    countColor: "#f59e0b" },
     { id: "tomorrow", label: "Demain",      count: stats.countTomorrow, countColor: "#4ade80" },
     { id: "late",     label: "En retard",   count: stats.late,          countColor: "#f87171" },
   ];
@@ -51,7 +51,7 @@ export function FinitionPageClient(_props: { hideHeader?: boolean } = {}) {
             const isActive = tab === t.id;
             const isToday  = t.id === "today";
             const isLate   = t.id === "late";
-            const activeColor = isLate ? "#f87171" : isToday ? "#fb923c" : "#4ade80";
+            const activeColor = isLate ? "#f87171" : isToday ? "#f59e0b" : "#4ade80";
             return (
               <button key={t.id} onClick={() => setTab(t.id)} style={{
                 padding:"8px 18px", background:"transparent", border:"none",

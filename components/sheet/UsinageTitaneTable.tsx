@@ -14,16 +14,16 @@ import {
 // ── Constantes ───────────────────────────────────────────────────
 const NATURE_META: Record<string, { color: string }> = {
   "Chassis Argoat":    { color: "#4ade80" },
-  "Chassis Dent All":  { color: "#22d3ee" },
-  "Définitif Résine":  { color: "#f472b6" },
-  "Provisoire Résine": { color: "#c084fc" },
+  "Chassis Dent All":  { color: "#5a9ba8" },
+  "Définitif Résine":  { color: "#a87a90" },
+  "Provisoire Résine": { color: "#9487a8" },
 };
 
 const MACHINE_UT_OPTIONS = [
-  { value: "WM1", color: "#818cf8" },
-  { value: "WM2", color: "#22d3ee" },
-  { value: "WM3", color: "#f472b6" },
-  { value: "WM4", color: "#fb923c" },
+  { value: "WM1", color: "#7c8196" },
+  { value: "WM2", color: "#5a9ba8" },
+  { value: "WM3", color: "#a87a90" },
+  { value: "WM4", color: "#f59e0b" },
 ];
 
 const SEARCH_KEYFRAMES = `
@@ -261,9 +261,9 @@ function HBCell({ active, onToggle, tdStyle, simple, dual }: {
           onClick={e => { e.stopPropagation(); onToggle(); }}
           onDoubleClick={e => e.stopPropagation()}
           title={active ? "Revenir en mode simple" : "Activer Haut / Bas"}
-          style={{ position: "absolute", top: "50%", right: 5, transform: "translateY(-50%)", display: "flex", flexDirection: "column", gap: 1, cursor: "pointer", padding: "3px 2px", borderRadius: 4, background: active ? "rgba(251,146,60,0.08)" : "rgba(255,255,255,0.04)" }}>
-          <svg viewBox="0 0 8 5" width="8" height="5" fill="none" stroke={active ? "rgba(251,146,60,0.7)" : "rgba(255,255,255,0.45)"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4l3-3 3 3"/></svg>
-          <svg viewBox="0 0 8 5" width="8" height="5" fill="none" stroke={active ? "rgba(251,146,60,0.7)" : "rgba(255,255,255,0.45)"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1l3 3 3-3"/></svg>
+          style={{ position: "absolute", top: "50%", right: 5, transform: "translateY(-50%)", display: "flex", flexDirection: "column", gap: 1, cursor: "pointer", padding: "3px 2px", borderRadius: 4, background: active ? "rgba(245,158,11,0.08)" : "rgba(255,255,255,0.04)" }}>
+          <svg viewBox="0 0 8 5" width="8" height="5" fill="none" stroke={active ? "rgba(245,158,11,0.7)" : "rgba(255,255,255,0.45)"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4l3-3 3 3"/></svg>
+          <svg viewBox="0 0 8 5" width="8" height="5" fill="none" stroke={active ? "rgba(245,158,11,0.7)" : "rgba(255,255,255,0.45)"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1l3 3 3-3"/></svg>
         </div>
       )}
     </td>
@@ -310,7 +310,7 @@ function DualMachine({ valueH, valueB, onChangeH, onChangeB }: {
     const value = which === "h" ? valueH : valueB;
     const sel = MACHINE_UT_OPTIONS.find(o => o.value === value);
     const ref = which === "h" ? btnHRef : btnBRef;
-    const labelColor = which === "h" ? "#22d3ee" : "#fb923c";
+    const labelColor = which === "h" ? "#5a9ba8" : "#f59e0b";
     const labelText  = which === "h" ? "Haut" : "Bas";
     return (
       <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "2px 4px 2px 6px", borderRadius: 6, borderLeft: `2px solid ${labelColor}40`, background: "rgba(255,255,255,0.02)" }}>
@@ -363,11 +363,11 @@ function DualText({ valueH, valueB, onSaveH, onSaveB, width = 90 }: {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "2px 4px 2px 6px", borderRadius: 6, borderLeft: "2px solid rgba(34,211,238,0.4)", background: "rgba(255,255,255,0.02)" }}>
-        <span style={{ fontSize: 8, fontWeight: 800, color: "#22d3ee", width: 22, letterSpacing: "0.04em", textTransform: "uppercase" }}>Haut</span>
+        <span style={{ fontSize: 8, fontWeight: 800, color: "#5a9ba8", width: 22, letterSpacing: "0.04em", textTransform: "uppercase" }}>Haut</span>
         <InlineTextInput value={valueH} onSave={onSaveH} width={width} />
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "2px 4px 2px 6px", borderRadius: 6, borderLeft: "2px solid rgba(251,146,60,0.4)", background: "rgba(255,255,255,0.02)" }}>
-        <span style={{ fontSize: 8, fontWeight: 800, color: "#fb923c", width: 22, letterSpacing: "0.04em", textTransform: "uppercase" }}>Bas</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "2px 4px 2px 6px", borderRadius: 6, borderLeft: "2px solid rgba(245,158,11,0.4)", background: "rgba(255,255,255,0.02)" }}>
+        <span style={{ fontSize: 8, fontWeight: 800, color: "#f59e0b", width: 22, letterSpacing: "0.04em", textTransform: "uppercase" }}>Bas</span>
         <InlineTextInput value={valueB} onSave={onSaveB} width={width} />
       </div>
     </div>
@@ -550,8 +550,8 @@ export function UsinageTitaneTable({ focusId }: { focusId: string | null }) {
         <div style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: 2 }}>
           {!searchNotFound && <span style={{ fontSize: 12, color: "#bdbdbd", padding: "4px 14px", background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 20, fontWeight: 600 }}>{rows.length} dossier{rows.length > 1 ? "s" : ""}</span>}
           {urgentCount > 0 && (
-            <span style={{ fontSize: 12, color: "#fb923c", padding: "4px 12px", background: "rgba(251,146,60,0.08)", border: "1px solid rgba(251,146,60,0.4)", borderRadius: 20, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#fb923c", boxShadow: "0 0 8px #fb923c", animation: "pulse 2s infinite" }} />
+            <span style={{ fontSize: 12, color: "#f59e0b", padding: "4px 12px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.4)", borderRadius: 20, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#f59e0b", boxShadow: "0 0 8px #f59e0b", animation: "pulse 2s infinite" }} />
               {urgentCount} cas en attente
             </span>
           )}

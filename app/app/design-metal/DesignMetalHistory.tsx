@@ -4,8 +4,8 @@ import { loadDmHistoryAction, reopenCaseAction, type DmHistoryRow } from "./hist
 
 const NATURE_META: Record<string, { color: string }> = {
   "Chassis Argoat":   { color: "#4ade80" },
-  "Chassis Dent All": { color: "#22d3ee" },
-  "Définitif Résine": { color: "#f472b6" },
+  "Chassis Dent All": { color: "#5a9ba8" },
+  "Définitif Résine": { color: "#a87a90" },
 };
 
 const SECTORS = [
@@ -115,7 +115,7 @@ function ReopenModal({ row, sectorCode, sectorLabel, onClose, onDone }: {
         <div style={{ background: "#141414", border: "1px solid #2a2a2a", borderRadius: 7, padding: "9px 12px", fontSize: 12, color: "#e0e0e0", marginBottom: 12 }}>
           Réinsertion dans <span style={{ color: "#e0e0e0", fontWeight: 600 }}>{sectorLabel}</span>
         </div>
-        <div style={{ background: "rgba(251,146,60,0.06)", border: "1px solid rgba(251,146,60,0.2)", borderRadius: 7, padding: "9px 12px", fontSize: 11, color: "#fb923c", marginBottom: 14 }}>
+        <div style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 7, padding: "9px 12px", fontSize: 11, color: "#f59e0b", marginBottom: 14 }}>
           ⚠ Les données existantes sont conservées. Le cas repassera en actif.
         </div>
         {error && <div style={{ fontSize: 11, color: "#f87171", marginBottom: 8 }}>✕ {error}</div>}
@@ -190,9 +190,9 @@ function HistoryCard({ row, onReopen }: { row: DmHistoryRow; onReopen: () => voi
         {/* Actions */}
         <div style={{ display: "flex", gap: 6 }}>
           <button onClick={e => { e.stopPropagation(); onReopen(); }}
-            style={{ flex: 1, padding: "6px 0", borderRadius: 6, border: "1px solid rgba(251,146,60,0.6)", background: "rgba(251,146,60,0.1)", color: "#fb923c", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(251,146,60,0.2)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(251,146,60,0.1)"; }}>
+            style={{ flex: 1, padding: "6px 0", borderRadius: 6, border: "1px solid rgba(245,158,11,0.6)", background: "rgba(245,158,11,0.1)", color: "#f59e0b", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(245,158,11,0.2)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(245,158,11,0.1)"; }}>
             ↩ Réinsérer
           </button>
           <div style={{ width: 32, display: "flex", alignItems: "center", justifyContent: "center", color: open ? "#ccc" : "#555", fontSize: 10 }}>
@@ -228,7 +228,7 @@ function HistoryCard({ row, onReopen }: { row: DmHistoryRow; onReopen: () => voi
           <div style={{ display: "flex", gap: 8 }}>
             <div style={{ flex: 1 }}>
               <Field label="Type de dents">
-                <Txt val={row.type_de_dents} color="#818cf8" />
+                <Txt val={row.type_de_dents} color="#7c8196" />
               </Field>
             </div>
             <div style={{ flex: 1 }}>

@@ -12,9 +12,9 @@ type ToastItem = ToastCase & { toastId: string; visible: boolean };
 
 const NATURE_META: Record<string, { color: string }> = {
   "Chassis Argoat":    { color: "#4ade80" },
-  "Chassis Dent All":  { color: "#22d3ee" },
-  "Définitif Résine":  { color: "#f472b6" },
-  "Provisoire Résine": { color: "#c084fc" },
+  "Chassis Dent All":  { color: "#5a9ba8" },
+  "Définitif Résine":  { color: "#a87a90" },
+  "Provisoire Résine": { color: "#9487a8" },
 };
 
 export function CaseToastContainer({ toasts, onDismiss }: {

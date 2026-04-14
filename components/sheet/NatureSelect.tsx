@@ -3,8 +3,8 @@ import { useState } from "react";
 
 const OPTIONS = [
   { value: "Chassis Argoat",   color: "#4ade80" },
-  { value: "Chassis Dent All", color: "#22d3ee" },
-  { value: "Définitif Résine", color: "#f472b6" },
+  { value: "Chassis Dent All", color: "#5a9ba8" },
+  { value: "Définitif Résine", color: "#a87a90" },
 ];
 
 export function NatureSelect() {

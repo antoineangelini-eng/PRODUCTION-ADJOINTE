@@ -23,7 +23,7 @@ export function FeedbackButton() {
 
   const PRIO = [
     { value: "faible", label: "Faible",  color: "#a3a3a3" },
-    { value: "normal", label: "Normal",  color: "#818cf8" },
+    { value: "normal", label: "Normal",  color: "#7c8196" },
     { value: "haute",  label: "Urgent",  color: "#f87171" },
   ];
 
@@ -40,7 +40,7 @@ export function FeedbackButton() {
           display: "flex", alignItems: "center", gap: 5,
           transition: "all 150ms",
         }}
-        onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(129,140,248,0.5)"; e.currentTarget.style.color = "#818cf8"; }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(129,140,248,0.5)"; e.currentTarget.style.color = "#7c8196"; }}
         onMouseLeave={e => { e.currentTarget.style.borderColor = "#2e2e2e"; e.currentTarget.style.color = "#666"; }}
       >
         💡 Amélioration
@@ -95,7 +95,7 @@ export function FeedbackButton() {
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                   <button onClick={() => setOpen(false)} style={{ background: "#1e1e1e", border: "1px solid #2e2e2e", color: "#ccc", padding: "7px 14px", borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Annuler</button>
                   <button onClick={submit} disabled={saving || !titre.trim() || !desc.trim()}
-                    style={{ background: !titre.trim() || !desc.trim() ? "#1e1e1e" : "rgba(129,140,248,0.1)", border: !titre.trim() || !desc.trim() ? "1px solid #2e2e2e" : "1px solid rgba(129,140,248,0.4)", color: !titre.trim() || !desc.trim() ? "#555" : "#818cf8", padding: "7px 16px", borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
+                    style={{ background: !titre.trim() || !desc.trim() ? "#1e1e1e" : "rgba(129,140,248,0.1)", border: !titre.trim() || !desc.trim() ? "1px solid #2e2e2e" : "1px solid rgba(129,140,248,0.4)", color: !titre.trim() || !desc.trim() ? "#555" : "#7c8196", padding: "7px 16px", borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
                     {saving ? "…" : "Envoyer"}
                   </button>
                 </div>

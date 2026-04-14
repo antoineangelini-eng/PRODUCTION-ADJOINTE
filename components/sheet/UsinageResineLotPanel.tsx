@@ -9,22 +9,22 @@ import {
 } from "@/app/app/usinage-resine/lot-actions";
 
 const MACHINE_OPTIONS = [
-  { value: "PM1", color: "#818cf8" },
-  { value: "PM2", color: "#22d3ee" },
-  { value: "PM3", color: "#f472b6" },
-  { value: "PM4", color: "#fb923c" },
+  { value: "PM1", color: "#7c8196" },
+  { value: "PM2", color: "#5a9ba8" },
+  { value: "PM3", color: "#a87a90" },
+  { value: "PM4", color: "#f59e0b" },
 ];
 
 const TYPE_DENTS_OPTIONS = [
-  { value: "Dents usiner",      color: "#818cf8" },
-  { value: "Dents du commerce", color: "#fb923c" },
+  { value: "Dents usiner",      color: "#7c8196" },
+  { value: "Dents du commerce", color: "#f59e0b" },
 ];
 
 const NATURE_COLORS: Record<string, string> = {
   "Chassis Argoat":    "#4ade80",
-  "Chassis Dent All":  "#22d3ee",
-  "Définitif Résine":  "#f472b6",
-  "Provisoire Résine": "#c084fc",
+  "Chassis Dent All":  "#5a9ba8",
+  "Définitif Résine":  "#a87a90",
+  "Provisoire Résine": "#9487a8",
 };
 
 const inputStyle = (focused: boolean): React.CSSProperties => ({
@@ -155,7 +155,7 @@ export function UsinageResineLotPanel({ onSaved }: { onSaved?: (savedIds: string
 
   return (
     <>
-      <button onClick={() => setOpen(true)} style={{ padding: "9px 18px", border: "1px solid #818cf8", background: "transparent", color: "#818cf8", cursor: "pointer", fontSize: 13, fontWeight: 700, letterSpacing: "0.03em", borderRadius: 8, display: "flex", alignItems: "center", gap: 6, transition: "all 150ms" }} onMouseEnter={e => { e.currentTarget.style.background = "rgba(129,140,248,0.08)"; }} onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+      <button onClick={() => setOpen(true)} style={{ padding: "9px 18px", border: "1px solid #7c8196", background: "transparent", color: "#7c8196", cursor: "pointer", fontSize: 13, fontWeight: 700, letterSpacing: "0.03em", borderRadius: 8, display: "flex", alignItems: "center", gap: 6, transition: "all 150ms" }} onMouseEnter={e => { e.currentTarget.style.background = "rgba(129,140,248,0.08)"; }} onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
         Saisie en lot
       </button>
 
@@ -186,8 +186,8 @@ export function UsinageResineLotPanel({ onSaved }: { onSaved?: (savedIds: string
                 <>
                   <div style={{ background: "#161620", border: "1px solid rgba(129,140,248,0.25)", borderRadius: 10, padding: "12px 14px", marginBottom: 4 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                      <span style={{ fontSize: 12, fontWeight: 500, color: "#818cf8", letterSpacing: 0.5, textTransform: "uppercase" }}>Appliquer à tous les cas</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#818cf8", border: "1px solid rgba(129,140,248,0.25)", borderRadius: 5, padding: "2px 10px", background: "rgba(129,140,248,0.1)" }}>{cases.length} cas</span>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: "#7c8196", letterSpacing: 0.5, textTransform: "uppercase" }}>Appliquer à tous les cas</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#7c8196", border: "1px solid rgba(129,140,248,0.25)", borderRadius: 5, padding: "2px 10px", background: "rgba(129,140,248,0.1)" }}>{cases.length} cas</span>
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10 }}>
                       <FieldSelectMachine label="Machine"     value={globalFields.machine  ?? ""} onChange={v => applyGlobalField("machine", v)} />

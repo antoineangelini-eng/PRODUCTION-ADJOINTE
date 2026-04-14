@@ -4,9 +4,9 @@ import { getCaseDetailAction, type CaseDetail } from "@/app/app/finition/actions
 
 const NATURE_META: Record<string, { color: string }> = {
   "Chassis Argoat":    { color: "#4ade80" },
-  "Chassis Dent All":  { color: "#22d3ee" },
-  "Définitif Résine":  { color: "#f472b6" },
-  "Provisoire Résine": { color: "#c084fc" },
+  "Chassis Dent All":  { color: "#5a9ba8" },
+  "Définitif Résine":  { color: "#a87a90" },
+  "Provisoire Résine": { color: "#9487a8" },
 };
 
 const ANIM_STYLES = `
@@ -15,9 +15,9 @@ const ANIM_STYLES = `
   to   { opacity: 1; transform: scale(1)    translateY(0);   }
 }
 @keyframes pulse-ring {
-  0%   { box-shadow: 0 0 0 0px rgba(251,146,60,0.5); }
-  70%  { box-shadow: 0 0 0 8px rgba(251,146,60,0);   }
-  100% { box-shadow: 0 0 0 0px rgba(251,146,60,0);   }
+  0%   { box-shadow: 0 0 0 0px rgba(245,158,11,0.5); }
+  70%  { box-shadow: 0 0 0 8px rgba(245,158,11,0);   }
+  100% { box-shadow: 0 0 0 0px rgba(245,158,11,0);   }
 }
 .modal-box { animation: modal-in 220ms cubic-bezier(0.16,1,0.3,1) forwards; }
 .pulse-dot { animation: pulse-ring 1.8s ease-out infinite; }
@@ -53,13 +53,13 @@ function getExpeditionLabel(dateExpedition: string | null) {
   const expDate   = new Date(expStr + "T00:00:00");
   const todayDate = new Date(todayStr + "T00:00:00");
   const dateLabel = expDate.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
-  if (expStr === todayStr) return { label: dateLabel, sublabel: "Aujourd'hui", color: "#fb923c" };
+  if (expStr === todayStr) return { label: dateLabel, sublabel: "Aujourd'hui", color: "#f59e0b" };
   const diff = businessDaysDiff(todayDate, expDate);
   if (diff < 0) {
     const abs = Math.abs(diff);
     return { label: dateLabel, sublabel: `En retard de ${abs} jour${abs > 1 ? "s" : ""} ouvré${abs > 1 ? "s" : ""}`, color: "#f87171" };
   }
-  return { label: dateLabel, sublabel: `Dans ${diff} jour${diff > 1 ? "s" : ""} ouvré${diff > 1 ? "s" : ""}`, color: diff <= 1 ? "#fb923c" : "#4ade80" };
+  return { label: dateLabel, sublabel: `Dans ${diff} jour${diff > 1 ? "s" : ""} ouvré${diff > 1 ? "s" : ""}`, color: diff <= 1 ? "#f59e0b" : "#4ade80" };
 }
 
 type Step = {
@@ -89,7 +89,7 @@ function buildSteps(detail: CaseDetail): Step[] {
   }
   if (detail.design_resine) {
     steps.push({
-      id: "dr_dents", sector: "Design Résine", sectorColor: "#818cf8",
+      id: "dr_dents", sector: "Design Résine", sectorColor: "#7c8196",
       label: "Design dents résine",
       done: Boolean(detail.design_resine?.design_dents_resine),
       at: detail.design_resine?.design_dents_resine_at ?? null,
@@ -98,7 +98,7 @@ function buildSteps(detail: CaseDetail): Step[] {
   }
   if (isChassisArgoat && detail.usinage_titane) {
     steps.push({
-      id: "ut_envoye", sector: "Usinage Titane", sectorColor: "#fb923c",
+      id: "ut_envoye", sector: "Usinage Titane", sectorColor: "#f59e0b",
       label: "Envoyé en usinage",
       done: Boolean(detail.usinage_titane?.envoye_usinage),
       at: detail.usinage_titane?.envoye_usinage_at ?? null,
@@ -107,7 +107,7 @@ function buildSteps(detail: CaseDetail): Step[] {
   }
   if (detail.usinage_resine) {
     steps.push({
-      id: "ur_production", sector: "Usinage Résine", sectorColor: "#818cf8",
+      id: "ur_production", sector: "Usinage Résine", sectorColor: "#7c8196",
       label: "Production",
       done: Boolean(detail.usinage_resine?.usinage_dents_resine),
       at: detail.usinage_resine?.usinage_dents_resine_at ?? null,

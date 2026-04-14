@@ -4,22 +4,22 @@ import { loadAllCasesAction, type AdminCaseRow } from "@/app/app/admin/actions";
 
 const NATURE_META: Record<string, { color: string }> = {
   "Chassis Argoat":    { color: "#4ade80" },
-  "Chassis Dent All":  { color: "#22d3ee" },
-  "Définitif Résine":  { color: "#f472b6" },
-  "Provisoire Résine": { color: "#c084fc" },
+  "Chassis Dent All":  { color: "#5a9ba8" },
+  "Définitif Résine":  { color: "#a87a90" },
+  "Provisoire Résine": { color: "#9487a8" },
 };
 const TYPE_DENTS_COLOR: Record<string, string> = {
-  "Dents usiner":      "#818cf8",
-  "Dents du commerce": "#fb923c",
+  "Dents usiner":      "#7c8196",
+  "Dents du commerce": "#f59e0b",
 };
 const NATURES_RESINE = ["Provisoire Résine", "Définitif Résine"];
 
 const SECTOR_DEFS = [
   { key: "dm",  label: "Design Métal",   color: "#4ade80" },
-  { key: "dr",  label: "Design Résine",  color: "#818cf8" },
-  { key: "ut",  label: "Usinage Titane", color: "#fb923c" },
-  { key: "ur",  label: "Usinage Résine", color: "#c084fc" },
-  { key: "fin", label: "Finition",       color: "#facc15" },
+  { key: "dr",  label: "Design Résine",  color: "#7c8196" },
+  { key: "ut",  label: "Usinage Titane", color: "#f59e0b" },
+  { key: "ur",  label: "Usinage Résine", color: "#9487a8" },
+  { key: "fin", label: "Finition",       color: "#f59e0b" },
 ];
 
 // ─── Colonnes résumé (vue compacte) ──────────────────────────────────────────
@@ -213,14 +213,14 @@ function renderDetail(key: string, row: AdminCaseRow): React.ReactNode[] {
   if (key === "ut") return [
     <Check val={row.ut_envoye_usinage} />,
     <DT val={row.ut_envoye_usinage_at} />,
-    <Txt val={row.ut_machine_ut} color="#fb923c" />,
+    <Txt val={row.ut_machine_ut} color="#f59e0b" />,
     <Txt val={row.ut_numero_calcul ?? row.ut_numero_calcul_h} />,
     <Txt val={row.ut_nombre_brut ?? row.ut_nombre_brut_h} />,
     <Dat val={row.ut_reception_metal_date} />,
   ];
   if (key === "ur") return [
     <Check val={row.ur_usinage_dents_resine} />,
-    <Txt val={row.ur_identite_machine} color="#c084fc" />,
+    <Txt val={row.ur_identite_machine} color="#9487a8" />,
     <Txt val={row.ur_numero_disque} />,
     <Dat val={row.ur_reception_resine_at} />,
   ];
@@ -375,7 +375,7 @@ export function GlobalView() {
                 <th style={thSticky(L.creation)}>Création</th>
                 <th style={thSticky(L.expedition)}>Expédition</th>
                 <th style={thSticky(L.nature)}>Nature</th>
-                <th style={thSticky(L.type, "#818cf8bb")}>Type de dents</th>
+                <th style={thSticky(L.type, "#7c8196bb")}>Type de dents</th>
                 <th style={{ ...thSticky(L.modele, "#aaa"), fontSize: 8 }}>Modèle</th>
                 <th style={{ ...thSticky(L.teinte, "#aaa"), fontSize: 8 }}>Teinte</th>
                 <th style={{ ...thBase, color: "#333", width: 36, minWidth: 36 }}></th>

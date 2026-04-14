@@ -73,7 +73,7 @@ export function Sidebar({ sector, isAdmin }: Props) {
                   <div style={{
                     position: "absolute", top: 5, right: open ? 8 : 5,
                     minWidth: 18, height: 18, borderRadius: 9,
-                    background: "#818cf8", color: "white",
+                    background: "#7c8196", color: "white",
                     fontSize: 10, fontWeight: 800,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     padding: "0 4px", pointerEvents: "none",

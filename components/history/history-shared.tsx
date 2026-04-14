@@ -5,9 +5,9 @@ import React, { useState } from "react";
 
 export const NATURE_META: Record<string, { color: string }> = {
   "Chassis Argoat":    { color: "#4ade80" },
-  "Chassis Dent All":  { color: "#22d3ee" },
-  "Définitif Résine":  { color: "#f472b6" },
-  "Provisoire Résine": { color: "#c084fc" },
+  "Chassis Dent All":  { color: "#5a9ba8" },
+  "Définitif Résine":  { color: "#a87a90" },
+  "Provisoire Résine": { color: "#9487a8" },
 };
 
 export function fmtDate(s: string | null): string {
@@ -93,7 +93,7 @@ export function ReopenModal({ caseNumber, natureDuTravail, dateExpedition, secto
           <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Ex : correction teinte, modèle à revoir…" rows={2}
             style={{ width: "100%", background: "#141414", border: "1px solid #2a2a2a", borderRadius: 6, color: "white", fontSize: 11, padding: "7px 10px", outline: "none", resize: "none" as const, boxSizing: "border-box" as const, fontFamily: "inherit" }} />
         </div>
-        <div style={{ background: "rgba(251,146,60,0.06)", border: "1px solid rgba(251,146,60,0.2)", borderRadius: 7, padding: "8px 12px", fontSize: 11, color: "#fb923c", marginBottom: 14 }}>
+        <div style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 7, padding: "8px 12px", fontSize: 11, color: "#f59e0b", marginBottom: 14 }}>
           ⚠ Les données des autres secteurs sont conservées. Un bandeau apparaîtra sur le cas.
         </div>
         {error && <div style={{ fontSize: 11, color: "#f87171", marginBottom: 8 }}>✕ {error}</div>}
@@ -179,9 +179,9 @@ export function CardShell({ row, accentColor, open, onToggle, onReopen, children
         {/* Actions */}
         <div style={{ display: "flex", gap: 6 }}>
           <button onClick={onReopen}
-            style={{ flex: 1, padding: "6px 0", borderRadius: 6, border: "1px solid rgba(251,146,60,0.6)", background: "rgba(251,146,60,0.1)", color: "#fb923c", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(251,146,60,0.2)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(251,146,60,0.1)"; }}>
+            style={{ flex: 1, padding: "6px 0", borderRadius: 6, border: "1px solid rgba(245,158,11,0.6)", background: "rgba(245,158,11,0.1)", color: "#f59e0b", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(245,158,11,0.2)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(245,158,11,0.1)"; }}>
             ↩ Réinsérer
           </button>
           <div style={{ width: 32, display: "flex", alignItems: "center", justifyContent: "center", color: open ? "#ccc" : "#555", fontSize: 10 }}>

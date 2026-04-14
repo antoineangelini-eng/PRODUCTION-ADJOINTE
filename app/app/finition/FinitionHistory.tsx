@@ -9,7 +9,7 @@ function FinCard({ row, onReopen }: { row: FinHistoryRow; onReopen: () => void }
 
   return (
     <CardShell
-      row={row} accentColor="#facc15" open={open}
+      row={row} accentColor="#f59e0b" open={open}
       onToggle={() => setOpen(o => !o)}
       onReopen={e => { e.stopPropagation(); onReopen(); }}
       summaryExtra={
@@ -33,7 +33,7 @@ function FinCard({ row, onReopen }: { row: FinHistoryRow; onReopen: () => void }
     >
       <div style={{ display: "flex", gap: 8 }}>
         <div style={{ flex: 1 }}><Field label="Validation"><Check val={row.validation} /></Field></div>
-        <div style={{ flex: 1 }}><Field label="Type de dents"><Txt val={row.type_de_dents} color="#818cf8" /></Field></div>
+        <div style={{ flex: 1 }}><Field label="Type de dents"><Txt val={row.type_de_dents} color="#7c8196" /></Field></div>
         <div style={{ flex: 1 }}><Field label="Teintes"><Txt val={row.teintes_associees} /></Field></div>
       </div>
     </CardShell>

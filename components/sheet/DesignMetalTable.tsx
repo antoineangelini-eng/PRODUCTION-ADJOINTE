@@ -13,14 +13,14 @@ import {
 } from "@/app/app/design-metal/actions";
 
 const TYPE_OPTIONS = [
-  { value: "Dents usiner", color: "#818cf8" },
-  { value: "Dents du commerce", color: "#fb923c" },
+  { value: "Dents usiner", color: "#7c8196" },
+  { value: "Dents du commerce", color: "#f59e0b" },
 ];
 
 const NATURE_META: Record<string, { color: string }> = {
   "Chassis Argoat": { color: "#4ade80" },
-  "Chassis Dent All": { color: "#22d3ee" },
-  "Définitif Résine": { color: "#f472b6" },
+  "Chassis Dent All": { color: "#5a9ba8" },
+  "Définitif Résine": { color: "#a87a90" },
 };
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -981,8 +981,8 @@ export function DesignMetalTable({
                               }}
                             >
                               <option value="Chassis Argoat" style={{ background: "#111", color: "#4ade80" }}>Chassis Argoat</option>
-                              <option value="Chassis Dent All" style={{ background: "#111", color: "#22d3ee" }}>Chassis Dent All</option>
-                              <option value="Définitif Résine" style={{ background: "#111", color: "#f472b6" }}>Définitif Résine</option>
+                              <option value="Chassis Dent All" style={{ background: "#111", color: "#5a9ba8" }}>Chassis Dent All</option>
+                              <option value="Définitif Résine" style={{ background: "#111", color: "#a87a90" }}>Définitif Résine</option>
                             </select>
                             <svg viewBox="0 0 10 6" width="9" height="9" style={{ position: "absolute", right: 7, pointerEvents: "none", opacity: 0.7 }} fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1l4 4 4-4" /></svg>
                           </div>

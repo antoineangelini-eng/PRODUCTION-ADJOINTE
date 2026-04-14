@@ -22,7 +22,7 @@ const COLOR_GROUPS: Record<Materiau, string[]> = {
   CAMEO:   ["HT","LT","MO","MT"],
   EMPRESS: ["HT","LT","Multi"],
 };
-const ACC: Record<Materiau, string> = { CAMEO: "#c084fc", EMPRESS: "#facc15" };
+const ACC: Record<Materiau, string> = { CAMEO: "#9487a8", EMPRESS: "#f59e0b" };
 
 function generateZPL(combos: Set<ComboKey>, code: string, mat: Materiau, cg: string, teinte: string) {
   const W = 456;

@@ -18,19 +18,19 @@ function HBRow({ label, simple, h, b }: { label: string; simple: string | null; 
       <div style={{ fontSize: 9, fontWeight: 700, color: "#666", textTransform: "uppercase" as const, letterSpacing: "0.06em", minWidth: 68 }}>{label}</div>
       <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
         {hasSimple && (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 5, background: "#fb923c12", border: "1px solid #fb923c33", fontSize: 11 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 5, background: "#f59e0b12", border: "1px solid #f59e0b33", fontSize: 11 }}>
             <span style={{ color: "#e0e0e0", fontWeight: 600 }}>{simple}</span>
           </span>
         )}
         {hasH && (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 5, background: "#22d3ee12", border: "1px solid #22d3ee44", fontSize: 11 }}>
-            <span style={{ color: "#22d3ee", fontWeight: 800, fontSize: 9 }}>HAUT</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 5, background: "#5a9ba812", border: "1px solid #5a9ba844", fontSize: 11 }}>
+            <span style={{ color: "#5a9ba8", fontWeight: 800, fontSize: 9 }}>HAUT</span>
             <span style={{ color: "#e0e0e0", fontWeight: 600 }}>{h}</span>
           </span>
         )}
         {hasB && (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 5, background: "#fb923c12", border: "1px solid #fb923c44", fontSize: 11 }}>
-            <span style={{ color: "#fb923c", fontWeight: 800, fontSize: 9 }}>BAS</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 5, background: "#f59e0b12", border: "1px solid #f59e0b44", fontSize: 11 }}>
+            <span style={{ color: "#f59e0b", fontWeight: 800, fontSize: 9 }}>BAS</span>
             <span style={{ color: "#e0e0e0", fontWeight: 600 }}>{b}</span>
           </span>
         )}
@@ -43,7 +43,7 @@ function UtCard({ row, onReopen }: { row: UtHistoryRow; onReopen: () => void }) 
   const [open, setOpen] = useState(false);
   return (
     <CardShell
-      row={row} accentColor="#fb923c" open={open}
+      row={row} accentColor="#f59e0b" open={open}
       onToggle={() => setOpen(o => !o)}
       onReopen={e => { e.stopPropagation(); onReopen(); }}
       summaryExtra={

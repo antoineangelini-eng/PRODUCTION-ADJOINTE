@@ -60,8 +60,8 @@ export default async function Page({
             <a key={key} href={`/app/usinage-resine?tab=${key}`} style={{
               padding: "8px 22px", fontSize: 12, fontWeight: 700,
               textDecoration: "none", display: "flex", alignItems: "center", gap: 5,
-              borderBottom: tab === key ? "2px solid #c084fc" : "2px solid transparent",
-              color: tab === key ? "#c084fc" : "#555",
+              borderBottom: tab === key ? "2px solid #9487a8" : "2px solid transparent",
+              color: tab === key ? "#9487a8" : "#555",
               marginBottom: -1, transition: "color 150ms",
             }}>
               {label}

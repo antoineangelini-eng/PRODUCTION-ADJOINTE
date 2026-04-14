@@ -4,8 +4,8 @@ import { useState, useRef } from "react";
 import { saveTypeDeDentsAction } from "@/app/app/design-metal/actions";
 
 const OPTIONS = [
-  { value: "Dents usiner",      color: "#818cf8" },
-  { value: "Dents du commerce", color: "#fb923c" },
+  { value: "Dents usiner",      color: "#7c8196" },
+  { value: "Dents du commerce", color: "#f59e0b" },
 ];
 
 export function TypeDeDentsSelect({ caseId, dbValue }: { caseId: string; dbValue: string | null }) {

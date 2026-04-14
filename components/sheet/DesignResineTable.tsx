@@ -13,23 +13,23 @@ import {
 
 const NATURE_META: Record<string, { color: string }> = {
   "Chassis Argoat":    { color: "#4ade80" },
-  "Chassis Dent All":  { color: "#22d3ee" },
-  "Définitif Résine":  { color: "#f472b6" },
-  "Provisoire Résine": { color: "#c084fc" },
-  "Définitif":         { color: "#fb923c" },
+  "Chassis Dent All":  { color: "#5a9ba8" },
+  "Définitif Résine":  { color: "#a87a90" },
+  "Provisoire Résine": { color: "#9487a8" },
+  "Définitif":         { color: "#f59e0b" },
   "Définitif Bimax":   { color: "#f97316" },
-  "Définitif FD":      { color: "#fbbf24" },
+  "Définitif FD":      { color: "#f59e0b" },
   "Deflex":            { color: "#a78bfa" },
 };
 
 const TYPE_DENTS_OPTIONS = [
-  { value: "Dents usiner",      color: "#818cf8" },
-  { value: "Dents du commerce", color: "#fb923c" },
+  { value: "Dents usiner",      color: "#7c8196" },
+  { value: "Dents du commerce", color: "#f59e0b" },
 ];
 
 const BASE_DENTS_OPTIONS = [
-  { value: "Imprimé", color: "#818cf8" },
-  { value: "Usiné",   color: "#fb923c" },
+  { value: "Imprimé", color: "#7c8196" },
+  { value: "Usiné",   color: "#f59e0b" },
 ];
 
 function autoBaseDents(complet: boolean, nature: string): { base_type: string; dents_type: string } {

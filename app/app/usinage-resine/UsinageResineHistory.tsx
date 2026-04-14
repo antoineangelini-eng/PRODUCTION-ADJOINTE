@@ -7,7 +7,7 @@ function UrCard({ row, onReopen }: { row: UrHistoryRow; onReopen: () => void }) 
   const [open, setOpen] = useState(false);
   return (
     <CardShell
-      row={row} accentColor="#c084fc" open={open}
+      row={row} accentColor="#9487a8" open={open}
       onToggle={() => setOpen(o => !o)}
       onReopen={e => { e.stopPropagation(); onReopen(); }}
       summaryExtra={
@@ -18,11 +18,11 @@ function UrCard({ row, onReopen }: { row: UrHistoryRow; onReopen: () => void }) 
       }
     >
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-        <div style={{ flex: 1 }}><Field label="Machine"><Txt val={row.identite_machine} color="#c084fc" /></Field></div>
+        <div style={{ flex: 1 }}><Field label="Machine"><Txt val={row.identite_machine} color="#9487a8" /></Field></div>
         <div style={{ flex: 1 }}><Field label="N° disque"><Txt val={row.numero_disque} /></Field></div>
       </div>
       <div style={{ display: "flex", gap: 8 }}>
-        <div style={{ flex: 1 }}><Field label="Type de dents"><Txt val={row.type_de_dents} color="#818cf8" /></Field></div>
+        <div style={{ flex: 1 }}><Field label="Type de dents"><Txt val={row.type_de_dents} color="#7c8196" /></Field></div>
         <div style={{ flex: 1 }}><Field label="Nb blocs"><Txt val={row.nb_blocs} /></Field></div>
         <div style={{ flex: 1 }}><Field label="Teintes"><Txt val={row.teintes_associees} /></Field></div>
       </div>

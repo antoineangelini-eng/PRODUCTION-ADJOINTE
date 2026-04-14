@@ -14,10 +14,10 @@ const PROTECTED_ADMIN_EMAIL = "antoine.angelini@labo-argoat.fr";
 
 const SECTORS = [
   { code: "design_metal",   label: "Design Métal",   short: "DM", color: "#4ade80" },
-  { code: "design_resine",  label: "Design Résine",  short: "DR", color: "#818cf8" },
-  { code: "usinage_titane", label: "Usinage Titane", short: "UT", color: "#fb923c" },
-  { code: "usinage_resine", label: "Usinage Résine", short: "UR", color: "#c084fc" },
-  { code: "finition",       label: "Finition",       short: "FI", color: "#facc15" },
+  { code: "design_resine",  label: "Design Résine",  short: "DR", color: "#7c8196" },
+  { code: "usinage_titane", label: "Usinage Titane", short: "UT", color: "#f59e0b" },
+  { code: "usinage_resine", label: "Usinage Résine", short: "UR", color: "#9487a8" },
+  { code: "finition",       label: "Finition",       short: "FI", color: "#f59e0b" },
   { code: "admin",          label: "Admin",          short: "AD", color: "#4ade80" },
 ];
 
@@ -450,14 +450,14 @@ export function UsersManager() {
                   {/* Panel reset password */}
                   {isResetting && (
                     <div style={{ background: "#161616", border: "1px solid #2a2a2a", borderTop: "none", borderRadius: "0 0 10px 10px", padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
-                      <span style={{ fontSize: 10, color: "#fb923c", fontWeight: 700, whiteSpace: "nowrap" }}>Nouveau MDP</span>
-                      <div style={{ flex: 1, background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 6, padding: "5px 10px", fontSize: 14, fontWeight: 700, color: "#fb923c", letterSpacing: "0.06em", fontFamily: "monospace" }}>
+                      <span style={{ fontSize: 10, color: "#f59e0b", fontWeight: 700, whiteSpace: "nowrap" }}>Nouveau MDP</span>
+                      <div style={{ flex: 1, background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 6, padding: "5px 10px", fontSize: 14, fontWeight: 700, color: "#f59e0b", letterSpacing: "0.06em", fontFamily: "monospace" }}>
                         {resetPassword}
                       </div>
                       <button onClick={() => setResetPassword(generatePassword())} style={{ background: "#1e1e1e", border: "1px solid #2a2a2a", color: "#666", fontSize: 10, padding: "5px 9px", borderRadius: 5, cursor: "pointer" }}>↻</button>
-                      <button onClick={() => { navigator.clipboard.writeText(resetPassword); }} style={{ background: "rgba(251,146,60,0.08)", border: "1px solid rgba(251,146,60,0.3)", color: "#fb923c", fontSize: 10, padding: "5px 9px", borderRadius: 5, cursor: "pointer" }}>Copier</button>
+                      <button onClick={() => { navigator.clipboard.writeText(resetPassword); }} style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)", color: "#f59e0b", fontSize: 10, padding: "5px 9px", borderRadius: 5, cursor: "pointer" }}>Copier</button>
                       <button onClick={() => handleResetPassword(user.user_id)} disabled={resetSaving}
-                        style={{ background: resetDone ? "rgba(74,222,128,0.1)" : "rgba(251,146,60,0.1)", border: resetDone ? "1px solid rgba(74,222,128,0.4)" : "1px solid rgba(251,146,60,0.4)", color: resetDone ? "#4ade80" : "#fb923c", fontSize: 11, fontWeight: 700, padding: "5px 14px", borderRadius: 6, cursor: "pointer", whiteSpace: "nowrap" }}>
+                        style={{ background: resetDone ? "rgba(74,222,128,0.1)" : "rgba(245,158,11,0.1)", border: resetDone ? "1px solid rgba(74,222,128,0.4)" : "1px solid rgba(245,158,11,0.4)", color: resetDone ? "#4ade80" : "#f59e0b", fontSize: 11, fontWeight: 700, padding: "5px 14px", borderRadius: 6, cursor: "pointer", whiteSpace: "nowrap" }}>
                         {resetSaving ? "…" : resetDone ? "✓ Appliqué" : "Appliquer"}
                       </button>
                     </div>
