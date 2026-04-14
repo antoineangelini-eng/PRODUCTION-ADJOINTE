@@ -18,7 +18,12 @@ export function DesignResineBoolCell(props: {
     setLoading(true);
     const next = !current;
     try {
-      await saveDesignResineCellAction(caseId, column, next);
+      const fd = new FormData();
+      fd.set("case_id", caseId);
+      fd.set("column", column);
+      fd.set("kind", "boolean");
+      fd.set("current", String(current));
+      await saveDesignResineCellAction(fd);
       setCurrent(next);
     } catch {
       setCurrent(current);

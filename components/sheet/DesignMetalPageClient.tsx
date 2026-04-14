@@ -170,10 +170,10 @@ export function DesignMetalPageClient({ focusId }: { focusId: string | null }) {
             />
           </div>
 
-          {toasts.map(t => (
-            <CaseToastContainer key={t.id} caseData={t}
-              onDismiss={() => setToasts(prev => prev.filter(x => x.id !== t.id))} />
-          ))}
+          <CaseToastContainer
+            toasts={toasts as any}
+            onDismiss={(toastId: string) => setToasts(prev => prev.filter(x => x.id !== toastId))}
+          />
         </>
       )}
 

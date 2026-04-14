@@ -460,8 +460,8 @@ export function UsinageTitaneTable({ focusId }: { focusId: string | null }) {
   function patchRow(caseId: string, field: "ut" | "case", column: string, value: any) {
     setRows(prev => prev.map(r => {
       if (String(r.id) !== caseId) return r;
-      if (field === "ut") return { ...r, sector_usinage_titane: { ...r.sector_usinage_titane, [column]: value } };
-      return { ...r, [column]: value };
+      if (field === "ut") return { ...r, sector_usinage_titane: { ...r.sector_usinage_titane, [column]: value } } as typeof r;
+      return { ...r, [column]: value } as typeof r;
     }));
   }
 

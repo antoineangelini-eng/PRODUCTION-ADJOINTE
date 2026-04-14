@@ -15,7 +15,12 @@ export function UsinageResineTextCell(props: {
 
   async function commit() {
     if (value === lastSentRef.current) return;
-    await saveUsinageResineCellAction(caseId, column, value === "" ? null : value);
+    const fd = new FormData();
+    fd.set("case_id", caseId);
+    fd.set("column", column);
+    fd.set("kind", "text");
+    fd.set("value", value);
+    await saveUsinageResineCellAction(fd);
     lastSentRef.current = value;
   }
 

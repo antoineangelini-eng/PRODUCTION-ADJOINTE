@@ -79,7 +79,7 @@ function toDateStr(d: Date): string {
 export async function createCaseAction(formData: FormData) {
   const supabase = await createClient();
   const caseNumber = String(formData.get("case_number") ?? "").trim();
-  if (!caseNumber) return null;
+  if (!caseNumber) return;
 
   const { data, error } = await supabase.rpc("rpc_create_case_from_design_resine", {
     p_case_number: caseNumber,
@@ -88,7 +88,7 @@ export async function createCaseAction(formData: FormData) {
   if (error) throw new Error(error.message);
 
   const caseId = typeof data === "string" ? data : String(data);
-  if (!caseId || caseId === "null") return null;
+  if (!caseId || caseId === "null") return;
 
   // Calculer la date d'expédition en jours ouvrés (hors weekends)
   const { data: wdConfig } = await supabase

@@ -18,7 +18,12 @@ export function UsinageResineBoolCell(props: {
     setLoading(true);
     const next = !current;
     try {
-      await saveUsinageResineCellAction(caseId, column, next);
+      const fd = new FormData();
+      fd.set("case_id", caseId);
+      fd.set("column", column);
+      fd.set("kind", "boolean");
+      fd.set("value", String(next));
+      await saveUsinageResineCellAction(fd);
       setCurrent(next);
     } catch (e) {
       // revert si erreur

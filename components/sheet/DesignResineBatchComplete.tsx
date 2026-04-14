@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   completeDesignResineBatchAction,
-  type BatchCompleteResult,
+  type BatchResult as BatchCompleteResult,
 } from "@/app/app/design-resine/actions";
 
 export function DesignResineBatchComplete({
@@ -67,7 +67,7 @@ export function DesignResineBatchComplete({
           }}>
             <div style={{ fontWeight: 700, marginBottom: 6, fontSize: 13 }}>Dossiers non envoyés</div>
             <ul style={{ margin: 0, paddingLeft: 16 }}>
-              {state.errors.map((e, i) => (
+              {state.errors.map((e: { case_id: string | null; error_message: string }, i: number) => (
                 <li key={i} style={{ fontSize: 12, marginBottom: 4 }}>
                   <span style={{ fontWeight: 600 }}>
                     {e.case_id ? idToCaseNumber.get(e.case_id) ?? e.case_id : "Sélection"}

@@ -15,7 +15,12 @@ export function UsinageTitaneTextCell(props: {
 
   async function commit() {
     if (value === lastSentRef.current) return;
-    await saveUsinageTitaneCellAction(caseId, column, value === "" ? null : value);
+    const fd = new FormData();
+    fd.set("case_id", caseId);
+    fd.set("column", column);
+    fd.set("kind", "text");
+    fd.set("value", value);
+    await saveUsinageTitaneCellAction(fd);
     lastSentRef.current = value;
   }
 

@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 // ─── Constantes visuelles cohérentes avec UsinageResineTable ─────────────────
 const PAGE_PX = "8px"; // même padding horizontal que le tableau
 
-export function UsinageResinePageClient({ focusId }: { focusId: string | null }) {
+export function UsinageResinePageClient({ focusId }: { focusId: string | null; hideHeader?: boolean }) {
   const router = useRouter();
 
   // Recherche
@@ -150,14 +150,12 @@ export function UsinageResinePageClient({ focusId }: { focusId: string | null })
       </div>
 
       {/* ── Bandeau realtime ─────────────────────────────────────────────────── */}
-      <RealtimeBanner isBusy={isBusy} onRefresh={() => reloadRef.current?.()} />
+      <RealtimeBanner hasPending={false} isBusy={isBusy} onRefresh={() => reloadRef.current?.()} />
 
       {/* ── Lot panel ────────────────────────────────────────────────────────── */}
       {lotOpen && (
         <UsinageResineLotPanel
-          selectedIds={selectedIds}
-          onClose={() => setLotOpen(false)}
-          onFilled={ids => setLotFilledIds(prev => new Set([...prev, ...ids]))}
+          onSaved={(ids: string[]) => setLotFilledIds(prev => new Set([...prev, ...ids]))}
         />
       )}
 
@@ -174,13 +172,10 @@ export function UsinageResinePageClient({ focusId }: { focusId: string | null })
       </div>
 
       {/* ── Toasts nouveaux cas ───────────────────────────────────────────────── */}
-      {toasts.map(t => (
-        <CaseToastContainer
-          key={t.id}
-          caseData={t}
-          onDismiss={() => setToasts(prev => prev.filter(x => x.id !== t.id))}
-        />
-      ))}
+      <CaseToastContainer
+        toasts={toasts as any}
+        onDismiss={(toastId: string) => setToasts(prev => prev.filter(x => x.id !== toastId))}
+      />
     </div>
   );
 }

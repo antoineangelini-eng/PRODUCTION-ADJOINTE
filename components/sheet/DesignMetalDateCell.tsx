@@ -1,7 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { updateDesignMetalDate } from "../../app/app/design-metal/actions";
+import { saveDesignMetalCellAction } from "../../app/app/design-metal/actions";
+
+async function updateDesignMetalDate(caseId: string, column: string, value: string) {
+  const fd = new FormData();
+  fd.set("case_id", caseId);
+  fd.set("column", column);
+  fd.set("kind", "date");
+  fd.set("value", value);
+  await saveDesignMetalCellAction(fd);
+}
 
 function toYmd(value: string | null): string {
   if (!value) return "";

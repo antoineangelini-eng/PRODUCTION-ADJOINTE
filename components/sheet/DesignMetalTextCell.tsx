@@ -1,7 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { updateDesignMetalText } from "@/app/app/design-metal/actions";
+import { saveDesignMetalCellAction } from "@/app/app/design-metal/actions";
+
+async function updateDesignMetalText(caseId: string, column: string, value: string) {
+  const fd = new FormData();
+  fd.set("case_id", caseId);
+  fd.set("column", column);
+  fd.set("kind", "text");
+  fd.set("value", value);
+  await saveDesignMetalCellAction(fd);
+}
 
 export function DesignMetalTextCell(props: {
   caseId: string;

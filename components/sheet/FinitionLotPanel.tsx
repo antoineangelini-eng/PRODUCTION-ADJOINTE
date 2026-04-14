@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { rpcScanCase } from "@/app/actions/rpc-scan-case";
 import {
   validateFinitionBatchAction,
-  resolveCaseForFinitionLot,
   type LotResultFinition,
 } from "@/app/app/finition/actions";
 

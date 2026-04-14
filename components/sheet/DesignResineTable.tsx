@@ -237,7 +237,7 @@ export function DesignResineTable({focusId}:{focusId:string|null}){
   }
   async function handleBatch(){
     if(checkedIds.size===0||batchPending)return;
-    const blockers:{case_id:string|null;error_message:string}[]=[];
+    const blockers:{case_id:string;error_message:string}[]=[];
     for(const id of checkedIds){
       const row=rows.find(r=>String(r.id)===id);
       if(!row)continue;

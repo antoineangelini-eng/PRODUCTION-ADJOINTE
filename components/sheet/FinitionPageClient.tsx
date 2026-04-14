@@ -8,7 +8,7 @@ import { RealtimeBanner } from "@/components/sheet/RealtimeBanner";
 
 type Tab = "all" | "today" | "tomorrow" | "late";
 
-export function FinitionPageClient() {
+export function FinitionPageClient(_props: { hideHeader?: boolean } = {}) {
   const [tab, setTab] = useState<Tab>("all");
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
