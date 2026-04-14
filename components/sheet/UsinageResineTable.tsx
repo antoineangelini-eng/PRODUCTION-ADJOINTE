@@ -467,7 +467,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
             const isNew = newRowIds.has(String(row.id));
             const isLotFilled = lotFilledIds?.has(String(row.id)) ?? false;
             const isDone = Boolean(ur.usinage_dents_resine);
-            const effectiveTD = ur.type_de_dents_override ?? dr.type_de_dents ?? dm.type_de_dents ?? "";
+            const effectiveTD = ur.type_de_dents_override ?? dm.type_de_dents ?? dr.type_de_dents ?? "";
             const dt = fmtDT(dr.design_dents_resine_at);
             return (
               <div key={row.id} id={`card-ur-${row.id}`} data-nav-row={String(row.id)} style={{ background:BG_CARD, border:`1px solid ${isChecked?"#2d4d3a":isDone?"#2d3d35":isLotFilled?"#2d2b4a":"#272727"}`, borderRadius:12, overflow:"hidden", animation:isFocused?"card-found 2s ease forwards":isNew?"card-new 2.5s ease forwards":"none", transition:"border-color 150ms" }}>
@@ -481,6 +481,15 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
                     <div style={{ textAlign:"right" }}><span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"#e0e0e0", display:"block", marginBottom:2 }}>Expédition</span><span style={{ fontSize:13, color:"#e0e0e0", fontWeight:700 }}>{fmtDate(row.date_expedition)}</span></div>
                     <span style={{ width:9, height:9, borderRadius:"50%", background:isDone?"#4ade80":"#2a2a2a", border:isDone?"none":"1px solid #3a3a3a", display:"inline-block", flexShrink:0 }} />
                     <input type="checkbox" checked={isChecked} onChange={e => { const id=String(row.id); setCheckedIds(prev => { const n=new Set(prev); e.target.checked?n.add(id):n.delete(id); return n; }); }} style={{ width:15, height:15, cursor:"pointer", accentColor:"#4ade80", flexShrink:0 }} />
+                    {confirmDeleteId === String(row.id) ? (
+                      <div style={{ display:"flex", gap:4, alignItems:"center" }}>
+                        <span style={{ fontSize:10, color:"#f87171", fontWeight:700 }}>Supprimer ?</span>
+                        <button onClick={() => handleDelete(String(row.id))} style={{ padding:"3px 8px", border:"1px solid #f87171", background:"rgba(239,68,68,0.1)", color:"#f87171", cursor:"pointer", fontSize:10, borderRadius:4, fontWeight:700 }}>Oui</button>
+                        <button onClick={() => setConfirmDeleteId(null)} style={{ padding:"3px 8px", border:"1px solid #333", background:"transparent", color:"#aaa", cursor:"pointer", fontSize:10, borderRadius:4 }}>Non</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setConfirmDeleteId(String(row.id))} title="Supprimer le cas" style={{ background:"none", border:"none", color:"#f87171", cursor:"pointer", fontSize:14, padding:4, opacity:0.6, transition:"opacity 150ms" }} onMouseEnter={e => e.currentTarget.style.opacity="1"} onMouseLeave={e => e.currentTarget.style.opacity="0.6"}>🗑</button>
+                    )}
                   </div>
                 </div>
                 <div style={{ ...grid2, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl>Date de création</Lbl><Lbl>Type de dents</Lbl></div>

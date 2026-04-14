@@ -281,7 +281,8 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
               const isProvisoire  = row.nature_du_travail === "Provisoire Résine";
 
               const teintes   = ur.teintes_override ?? dr.teintes_associees ?? dm.teintes_associees ?? null;
-              const typeDents = ur.type_de_dents_override ?? dr.type_de_dents ?? dm.type_de_dents ?? null;
+              // DM est la source de vérité pour type_de_dents (DR force toujours "Dents usiner")
+              const typeDents = ur.type_de_dents_override ?? dm.type_de_dents ?? dr.type_de_dents ?? null;
               const nbBlocs   = ur.nb_blocs_override ?? dr.nb_blocs_de_dents ?? dr.nb_blocs ?? null;
               const receptionMetalDate  = ut.reception_metal_at ?? dm.reception_metal_date ?? null;
               const receptionResineDate = ur.reception_resine_at ?? null;
