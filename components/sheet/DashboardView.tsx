@@ -1,6 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
-import { loadDashboardDataAction, type DashboardData, type Period } from "@/app/app/admin/dashboard-actions";
+import { loadDashboardDataAction, loadSectorDelaysAction, type DashboardData, type SectorDelays, type Period } from "@/app/app/admin/dashboard-actions";
+import { UserDetailModal } from "@/components/sheet/UserDetailModal";
+
+function fmtDuration(hours: number): string {
+  if (hours < 1) return `${Math.round(hours * 60)} min`;
+  if (hours < 24) return `${hours.toFixed(1)} h`;
+  return `${(hours / 24).toFixed(1)} j`;
+}
 
 function periodLabel(p: Period): string {
   return p === "today" ? "Aujourd'hui" : p === "7d" ? "7 derniers jours" : "30 derniers jours";
@@ -26,15 +33,20 @@ function fmtDate(s: string | null): string {
 export function DashboardView() {
   const [period, setPeriod] = useState<Period>("7d");
   const [data, setData] = useState<DashboardData | null>(null);
+  const [delays, setDelays] = useState<SectorDelays | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
     setError(null);
-    loadDashboardDataAction(period)
-      .then(d => { if (alive) setData(d); })
+    Promise.all([
+      loadDashboardDataAction(period),
+      loadSectorDelaysAction(period),
+    ])
+      .then(([d, del]) => { if (alive) { setData(d); setDelays(del); } })
       .catch(e => { if (alive) setError(e.message ?? "Erreur"); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
@@ -84,7 +96,7 @@ export function DashboardView() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead><tr>
                   <th style={th}>Secteur</th>
-                  <th style={{ ...th, textAlign: "right" }}>Maj</th>
+                  <th style={{ ...th, textAlign: "right" }}>Modifications</th>
                   <th style={{ ...th, textAlign: "right" }}>Validations</th>
                   <th style={{ ...th, textAlign: "right" }}>Total</th>
                 </tr></thead>
@@ -109,15 +121,21 @@ export function DashboardView() {
                   <th style={th}>Utilisateur</th>
                   <th style={th}>Secteur</th>
                   <th style={{ ...th, textAlign: "right" }}>Créés</th>
-                  <th style={{ ...th, textAlign: "right" }}>Maj</th>
-                  <th style={{ ...th, textAlign: "right" }}>Val.</th>
+                  <th style={{ ...th, textAlign: "right" }}>Modifications</th>
+                  <th style={{ ...th, textAlign: "right" }}>Validations</th>
                   <th style={{ ...th, textAlign: "right" }}>Total</th>
                 </tr></thead>
                 <tbody>
                   {data.byUser.length === 0 && <tr><td colSpan={6} style={{ ...td, color: "#666", textAlign: "center" }}>Aucune activité</td></tr>}
                   {data.byUser.slice(0, 20).map(u => (
-                    <tr key={u.id}>
-                      <td style={{ ...td, fontWeight: 600 }}>{u.name}</td>
+                    <tr
+                      key={u.id}
+                      onClick={() => setSelectedUser({ id: u.id, name: u.name })}
+                      style={{ cursor: "pointer", transition: "background 120ms" }}
+                      onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.04)"}
+                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                    >
+                      <td style={{ ...td, fontWeight: 600, color: "#4ade80" }}>{u.name} →</td>
                       <td style={{ ...td, color: "#888" }}>{fmtSector(u.sector)}</td>
                       <td style={{ ...td, textAlign: "right", color: "#60a5fa" }}>{u.created || ""}</td>
                       <td style={{ ...td, textAlign: "right" }}>{u.updates || ""}</td>
@@ -129,6 +147,46 @@ export function DashboardView() {
               </table>
             </div>
           </div>
+
+          {/* ── Délais par secteur ───────────────────────────────────────── */}
+          {delays && (
+            <div style={{ ...card, marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#e0e0e0", marginBottom: 4 }}>
+                Délais moyens par secteur
+              </div>
+              <div style={{ fontSize: 11, color: "#666", marginBottom: 10 }}>
+                Temps qu'un cas passe dans un secteur, de la première action jusqu'à la validation.
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead><tr>
+                  <th style={th}>Secteur</th>
+                  <th style={{ ...th, textAlign: "right" }}>Global (moyenne)</th>
+                  <th style={{ ...th, textAlign: "right" }}>Nb cas (global)</th>
+                  <th style={{ ...th, textAlign: "right" }}>Sur la période</th>
+                  <th style={{ ...th, textAlign: "right" }}>Nb cas (période)</th>
+                </tr></thead>
+                <tbody>
+                  {delays.global.length === 0 && (
+                    <tr><td colSpan={5} style={{ ...td, color: "#666", textAlign: "center" }}>Pas encore assez de données</td></tr>
+                  )}
+                  {delays.global.map(g => {
+                    const p = delays.period.find(x => x.sector === g.sector);
+                    return (
+                      <tr key={g.sector}>
+                        <td style={td}>{fmtSector(g.sector)}</td>
+                        <td style={{ ...td, textAlign: "right", fontWeight: 700, color: "#e0e0e0" }}>{fmtDuration(g.avgHours)}</td>
+                        <td style={{ ...td, textAlign: "right", color: "#888" }}>{g.count}</td>
+                        <td style={{ ...td, textAlign: "right", fontWeight: 700, color: "#4ade80" }}>
+                          {p ? fmtDuration(p.avgHours) : "—"}
+                        </td>
+                        <td style={{ ...td, textAlign: "right", color: "#888" }}>{p?.count ?? 0}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           <div style={card}>
             <div style={{ fontSize: 13, fontWeight: 700, color: "#f87171", marginBottom: 10 }}>
@@ -158,6 +216,14 @@ export function DashboardView() {
             )}
           </div>
         </>
+      )}
+
+      {selectedUser && (
+        <UserDetailModal
+          userId={selectedUser.id}
+          period={period}
+          onClose={() => setSelectedUser(null)}
+        />
       )}
     </div>
   );
