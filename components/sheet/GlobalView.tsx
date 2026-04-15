@@ -482,9 +482,9 @@ export function GlobalView() {
                           ? <span style={{ fontSize: 12, fontWeight: 600, color: typeColor }}>{row.type_de_dents}</span>
                           : <span style={{ color: "#252525" }}>—</span>}
                       </td>
-                      {/* Modèle — valeur DM (transmise à UT aussi) */}
+                      {/* Modèle — Provisoire Résine = N/A (✓), sinon DM puis fallback DR */}
                       <td style={{ ...tdS(L.modele), textAlign: "center" as const }}>
-                        <Bool val={row.dm_modele_a_faire_ok ?? row.dr_modele_a_realiser_ok ?? null} />
+                        <Bool val={row.nature_du_travail === "Provisoire Résine" ? true : (row.dm_modele_a_faire_ok ?? row.dr_modele_a_realiser_ok ?? null)} />
                       </td>
                       {/* Teinte — DR en priorité, fallback DM */}
                       <td style={{ ...tdS(L.teinte), textAlign: "center" as const }}>

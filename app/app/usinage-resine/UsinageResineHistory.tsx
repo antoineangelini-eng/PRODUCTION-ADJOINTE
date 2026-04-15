@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
 import { loadUrHistoryAction, reopenUrCaseAction, type UrHistoryRow } from "./ur-history-actions";
-import { fmtDate, Txt, Field, ReopenModal, HistoryFilters, CardShell } from "@/components/history/history-shared";
+import { fmtDate, Txt, Bool, Field, ReopenModal, HistoryFilters, CardShell } from "@/components/history/history-shared";
 
 function UrCard({ row, onReopen }: { row: UrHistoryRow; onReopen: () => void }) {
   const [open, setOpen] = useState(false);
@@ -21,10 +21,14 @@ function UrCard({ row, onReopen }: { row: UrHistoryRow; onReopen: () => void }) 
         <div style={{ flex: 1 }}><Field label="Machine"><Txt val={row.identite_machine} color="#9487a8" /></Field></div>
         <div style={{ flex: 1 }}><Field label="N° disque"><Txt val={row.numero_disque} /></Field></div>
       </div>
-      <div style={{ display: "flex", gap: 8 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
         <div style={{ flex: 1 }}><Field label="Type de dents"><Txt val={row.type_de_dents} color="#7c8196" /></Field></div>
         <div style={{ flex: 1 }}><Field label="Nb blocs"><Txt val={row.nb_blocs} /></Field></div>
         <div style={{ flex: 1 }}><Field label="Teintes"><Txt val={row.teintes_associees} /></Field></div>
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ flex: 1 }}><Field label="Modèle"><Bool val={row.modele_effectif} /></Field></div>
+        <div style={{ flex: 2 }} />
       </div>
     </CardShell>
   );

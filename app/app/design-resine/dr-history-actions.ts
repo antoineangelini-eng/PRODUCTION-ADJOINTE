@@ -14,6 +14,7 @@ export type DrHistoryRow = {
   design_dents_resine_at: string | null;
   nb_blocs_de_dents: string | null;
   modele_a_realiser_ok: boolean | null;
+  modele_effectif: boolean | null;
   teintes_associees: string | null;
   type_de_dents: string | null;
 };
@@ -24,7 +25,8 @@ export async function loadDrHistoryAction(): Promise<DrHistoryRow[]> {
     .from("case_assignments")
     .select(`updated_at, cases:case_id (
       id, case_number, created_at, date_expedition, nature_du_travail,
-      sector_design_resine ( design_dents_resine, design_dents_resine_at, nb_blocs_de_dents, modele_a_realiser_ok, teintes_associees, type_de_dents )
+      sector_design_resine ( design_dents_resine, design_dents_resine_at, nb_blocs_de_dents, modele_a_realiser_ok, teintes_associees, type_de_dents ),
+      sector_design_metal ( modele_a_faire_ok )
     )`)
     .eq("sector_code", "design_resine")
     .eq("status", "done")
@@ -34,6 +36,9 @@ export async function loadDrHistoryAction(): Promise<DrHistoryRow[]> {
   return ((data ?? []) as any[]).map((r: any) => {
     const c = r.cases ?? {};
     const dr = c.sector_design_resine ?? {};
+    const dm = c.sector_design_metal ?? {};
+    const isProv = c.nature_du_travail === "Provisoire Résine";
+    const modeleEffectif = isProv ? true : (dm.modele_a_faire_ok ?? dr.modele_a_realiser_ok ?? null);
     return {
       id: c.id ?? "", case_number: c.case_number ?? null,
       created_at: c.created_at ?? null, date_expedition: c.date_expedition ?? null,
@@ -42,6 +47,7 @@ export async function loadDrHistoryAction(): Promise<DrHistoryRow[]> {
       design_dents_resine_at: dr.design_dents_resine_at ?? null,
       nb_blocs_de_dents: dr.nb_blocs_de_dents ?? null,
       modele_a_realiser_ok: dr.modele_a_realiser_ok ?? null,
+      modele_effectif: modeleEffectif,
       teintes_associees: dr.teintes_associees ?? null,
       type_de_dents: dr.type_de_dents ?? null,
     };

@@ -17,6 +17,7 @@ export type UrHistoryRow = {
   type_de_dents: string | null;
   teintes_associees: string | null;
   nb_blocs: string | null;
+  modele_effectif: boolean | null;
 };
 
 export async function loadUrHistoryAction(): Promise<UrHistoryRow[]> {
@@ -26,7 +27,8 @@ export async function loadUrHistoryAction(): Promise<UrHistoryRow[]> {
     .select(`updated_at, cases:case_id (
       id, case_number, created_at, date_expedition, nature_du_travail,
       sector_usinage_resine ( usinage_dents_resine, identite_machine, numero_disque, numero_lot_pmma, reception_resine_at, type_de_dents_override, teintes_override, nb_blocs_override ),
-      sector_design_resine ( type_de_dents, teintes_associees, nb_blocs_de_dents )
+      sector_design_resine ( type_de_dents, teintes_associees, nb_blocs_de_dents, modele_a_realiser_ok ),
+      sector_design_metal ( modele_a_faire_ok )
     )`)
     .eq("sector_code", "usinage_resine")
     .eq("status", "done")
@@ -37,6 +39,9 @@ export async function loadUrHistoryAction(): Promise<UrHistoryRow[]> {
     const c = r.cases ?? {};
     const ur = c.sector_usinage_resine ?? {};
     const dr = c.sector_design_resine ?? {};
+    const dm = c.sector_design_metal ?? {};
+    const isProv = c.nature_du_travail === "Provisoire Résine";
+    const modeleEffectif = isProv ? true : (dm.modele_a_faire_ok ?? dr.modele_a_realiser_ok ?? null);
     return {
       id: c.id ?? "", case_number: c.case_number ?? null,
       created_at: c.created_at ?? null, date_expedition: c.date_expedition ?? null,
@@ -49,6 +54,7 @@ export async function loadUrHistoryAction(): Promise<UrHistoryRow[]> {
       type_de_dents: ur.type_de_dents_override ?? dr.type_de_dents ?? null,
       teintes_associees: ur.teintes_override ?? dr.teintes_associees ?? null,
       nb_blocs: ur.nb_blocs_override ?? dr.nb_blocs_de_dents ?? null,
+      modele_effectif: modeleEffectif,
     };
   });
 }

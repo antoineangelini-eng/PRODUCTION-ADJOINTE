@@ -24,7 +24,7 @@ function DrCard({ row, onReopen }: { row: DrHistoryRow; onReopen: () => void }) 
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         <div style={{ flex: 1 }}><Field label="Design"><Check val={row.design_dents_resine} /></Field></div>
-        <div style={{ flex: 1 }}><Field label="Modèle à réaliser"><Bool val={row.modele_a_realiser_ok} /></Field></div>
+        <div style={{ flex: 1 }}><Field label="Modèle à réaliser"><Bool val={row.modele_effectif} /></Field></div>
         <div style={{ flex: 1 }} />
       </div>
     </CardShell>
