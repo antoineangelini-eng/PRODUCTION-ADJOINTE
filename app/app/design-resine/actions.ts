@@ -79,10 +79,22 @@ function toDateStr(d: Date): string {
 
 export async function createCaseAction(formData: FormData) {
   const supabase = await createClient();
-  const caseNumber = String(formData.get("case_number") ?? "").trim();
-  if (!caseNumber) return;
+  const rawCaseNumber = String(formData.get("case_number") ?? "").trim();
+  if (!rawCaseNumber) return;
 
-  // Détection "cas physique" : même n° entré une 2e fois dans les 60 s → marquer physique
+  // ─ Détection "cas physique" ─
+  // 1) chaîne doublée (scanner qui a collé 2 scans : "130172130172" → "130172" + flag physique)
+  // 2) même n° soumis 2 fois < 60 s → on marque le cas existant physique
+  let caseNumber = rawCaseNumber;
+  let forcePhysical = false;
+  if (rawCaseNumber.length >= 4 && rawCaseNumber.length % 2 === 0) {
+    const half = rawCaseNumber.length / 2;
+    if (rawCaseNumber.slice(0, half) === rawCaseNumber.slice(half)) {
+      caseNumber = rawCaseNumber.slice(0, half);
+      forcePhysical = true;
+    }
+  }
+
   const sixtySecAgo = new Date(Date.now() - 60_000).toISOString();
   const { data: recent } = await supabase
     .from("cases")
@@ -130,6 +142,11 @@ export async function createCaseAction(formData: FormData) {
     p_date: dateExp,
     p_manual: false,
   });
+
+  // Si scan doublé détecté (ex "130172130172") → on marque le cas tout juste créé physique
+  if (forcePhysical) {
+    await supabase.rpc("rpc_mark_case_physical", { p_case_id: caseId });
+  }
 
   redirect("/app/design-resine");
 }
