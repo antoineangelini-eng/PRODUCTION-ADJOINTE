@@ -1,33 +1,36 @@
 "use client";
 
 /**
- * Petit badge "P" marron — indique un cas physique (inséré à la main).
- * Design épuré, monochrome, s'intègre discrètement à côté du n° de cas.
+ * Badge "P" — indique un cas physique (inséré à la main).
+ * Pastille circulaire ambrée avec dégradé chaud et finition type jeton.
  */
 export function PhysicalBadge({ size = "sm" }: { size?: "sm" | "md" }) {
-  const h = size === "md" ? 18 : 14;
+  const d = size === "md" ? 18 : 15;
   const fs = size === "md" ? 10 : 9;
   return (
     <span
       title="Cas physique inséré"
+      aria-label="Cas physique"
       style={{
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        height: h,
-        minWidth: h,
-        padding: "0 4px",
-        borderRadius: 3,
-        background: "rgba(139, 90, 43, 0.18)",
-        color: "#c9a47d",
+        width: d,
+        height: d,
+        borderRadius: "50%",
+        background:
+          "radial-gradient(circle at 30% 25%, #e8b87a 0%, #b07a44 55%, #6b3f1d 100%)",
+        color: "#fff4e1",
         fontSize: fs,
-        fontWeight: 700,
+        fontWeight: 800,
         lineHeight: 1,
-        letterSpacing: 0.5,
-        border: "1px solid rgba(139, 90, 43, 0.45)",
+        letterSpacing: 0,
+        boxShadow:
+          "inset 0 1px 0.5px rgba(255,230,190,0.55), inset 0 -1px 1px rgba(0,0,0,0.35), 0 0 0 0.5px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.45)",
         flexShrink: 0,
         userSelect: "none",
-        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+        fontFamily: "ui-sans-serif, system-ui, -apple-system, sans-serif",
+        textShadow: "0 1px 1px rgba(0,0,0,0.35)",
       }}
     >
       P
