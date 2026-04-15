@@ -4,6 +4,23 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+function addBusinessDays(date: Date, days: number): Date {
+  const d = new Date(
+    date.toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })
+      .split("/").reverse().join("-")
+  );
+  let added = 0;
+  while (added < days) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() !== 0 && d.getDay() !== 6) added++;
+  }
+  return d;
+}
+
+function toDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export type BatchResult = {
   okIds: string[];
   errors: { case_id: string | null; error_message: string }[];
@@ -145,12 +162,15 @@ export async function deleteCaseAction(formData: FormData) {
 
 export async function createCaseAction(formData: FormData) {
   const supabase = await createClient();
-  const rawCaseNumber = String(formData.get("case_number")       ?? "").trim();
+  // Nettoyage agressif : whitespace, tabs, newlines, espaces insécables, tout ce qui traîne
+  const rawCaseNumber = String(formData.get("case_number") ?? "")
+    .replace(/[\s\u00A0\u200B-\u200D\uFEFF]+/g, "")
+    .trim();
   const nature        = String(formData.get("nature_du_travail") ?? "").trim();
   if (!rawCaseNumber || !nature) return;
 
   // ─ Détection "cas physique" ─
-  // 1) chaîne doublée (scanner qui a collé 2 scans : "130172130172" → "130172" + flag physique)
+  // 1) chaîne doublée (scanner qui a collé 2 scans : "128540128540" → "128540" + flag physique)
   // 2) même n° soumis 2 fois < 60 s → on marque le cas existant physique
   let caseNumber = rawCaseNumber;
   let forcePhysical = false;
@@ -159,6 +179,7 @@ export async function createCaseAction(formData: FormData) {
     if (rawCaseNumber.slice(0, half) === rawCaseNumber.slice(half)) {
       caseNumber = rawCaseNumber.slice(0, half);
       forcePhysical = true;
+      console.log(`[createCaseAction DM] Double scan détecté : "${rawCaseNumber}" → "${caseNumber}" (physique)`);
     }
   }
 
@@ -188,10 +209,25 @@ export async function createCaseAction(formData: FormData) {
   const caseId = typeof data === "string" ? data : String(data);
   if (!caseId || caseId === "null") return;
 
+  // Calculer la date d'expédition en jours ouvrés
+  const { data: wdConfig } = await supabase
+    .from("working_days_config")
+    .select("days")
+    .eq("nature", nature)
+    .single();
+  const nbDays = wdConfig?.days ?? 5;
+  const dateExp = toDateStr(addBusinessDays(new Date(), nbDays));
+  await supabase.rpc("rpc_update_case_expedition", {
+    p_case_id: caseId,
+    p_date: dateExp,
+    p_manual: false,
+  });
+
   // Si scan doublé détecté (ex "130172130172") → on marque le cas tout juste créé physique
   if (forcePhysical) {
     await supabase.rpc("rpc_mark_case_physical", { p_case_id: caseId });
   }
 
+  revalidatePath("/app/design-metal");
   redirect("/app/design-metal");
 }

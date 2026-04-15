@@ -2,11 +2,11 @@
 
 /**
  * Petit badge "P" marron — indique un cas physique (inséré à la main).
- * S'affiche à côté du n° de cas partout dans l'app.
+ * Design épuré, monochrome, s'intègre discrètement à côté du n° de cas.
  */
 export function PhysicalBadge({ size = "sm" }: { size?: "sm" | "md" }) {
-  const dim = size === "md" ? 18 : 15;
-  const font = size === "md" ? 11 : 10;
+  const h = size === "md" ? 18 : 14;
+  const fs = size === "md" ? 10 : 9;
   return (
     <span
       title="Cas physique inséré"
@@ -14,19 +14,20 @@ export function PhysicalBadge({ size = "sm" }: { size?: "sm" | "md" }) {
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        width: dim,
-        height: dim,
-        borderRadius: "50%",
-        background: "linear-gradient(135deg, #8b5a2b 0%, #6b4423 100%)",
-        color: "#f5e6d3",
-        fontSize: font,
-        fontWeight: 800,
+        height: h,
+        minWidth: h,
+        padding: "0 4px",
+        borderRadius: 3,
+        background: "rgba(139, 90, 43, 0.18)",
+        color: "#c9a47d",
+        fontSize: fs,
+        fontWeight: 700,
         lineHeight: 1,
-        letterSpacing: 0,
-        border: "1px solid #4a2f17",
-        boxShadow: "0 1px 2px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)",
+        letterSpacing: 0.5,
+        border: "1px solid rgba(139, 90, 43, 0.45)",
         flexShrink: 0,
         userSelect: "none",
+        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
       }}
     >
       P

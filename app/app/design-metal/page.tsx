@@ -2,58 +2,10 @@ import { NatureSelect } from "@/components/sheet/NatureSelect";
 import { SearchBar } from "@/components/sheet/SearchBar";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import { DesignMetalTable } from "@/components/sheet/DesignMetalTable";
 import { DesignMetalHistoryWrapper } from "@/app/app/design-metal/DesignMetalHistoryWrapper";
 import { CaseNumberInput } from "@/components/sheet/CaseNumberInput";
-
-function addBusinessDays(date: Date, days: number): Date {
-  const d = new Date(
-    date.toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" })
-      .split("/").reverse().join("-")
-  );
-  let added = 0;
-  while (added < days) {
-    d.setDate(d.getDate() + 1);
-    if (d.getDay() !== 0 && d.getDay() !== 6) added++;
-  }
-  return d;
-}
-
-function toDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-async function createCaseAction(formData: FormData) {
-  "use server";
-  const supabase = await createClient();
-  const caseNumber = String(formData.get("case_number") ?? "").trim();
-  const nature = String(formData.get("nature_du_travail") ?? "").trim();
-  if (!caseNumber || !nature) return;
-  const { data, error } = await supabase.rpc("rpc_create_case_from_design_metal", {
-    p_case_number: caseNumber,
-    p_nature_du_travail: nature,
-  });
-  if (error) throw new Error(error.message);
-  const caseId = typeof data === "string" ? data : String(data);
-  if (caseId && caseId !== "null") {
-    // Récupérer le nombre de jours ouvrés depuis la config
-    const { data: wdConfig } = await supabase
-      .from("working_days_config")
-      .select("days")
-      .eq("nature", nature)
-      .single();
-    const nbDays = wdConfig?.days ?? 5;
-    const dateExp = toDateStr(addBusinessDays(new Date(), nbDays));
-    await supabase.rpc("rpc_update_case_expedition", {
-      p_case_id: caseId,
-      p_date: dateExp,
-      p_manual: false,
-    });
-  }
-  revalidatePath("/app/design-metal");
-  redirect("/app/design-metal");
-}
+import { createCaseAction } from "@/app/app/design-metal/actions";
 
 export default async function Page({
   searchParams,

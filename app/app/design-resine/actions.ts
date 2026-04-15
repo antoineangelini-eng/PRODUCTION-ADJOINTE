@@ -79,11 +79,14 @@ function toDateStr(d: Date): string {
 
 export async function createCaseAction(formData: FormData) {
   const supabase = await createClient();
-  const rawCaseNumber = String(formData.get("case_number") ?? "").trim();
+  // Nettoyage agressif : whitespace, tabs, newlines, espaces insécables, tout ce qui traîne
+  const rawCaseNumber = String(formData.get("case_number") ?? "")
+    .replace(/[\s\u00A0\u200B-\u200D\uFEFF]+/g, "")
+    .trim();
   if (!rawCaseNumber) return;
 
   // ─ Détection "cas physique" ─
-  // 1) chaîne doublée (scanner qui a collé 2 scans : "130172130172" → "130172" + flag physique)
+  // 1) chaîne doublée (scanner qui a collé 2 scans : "128540128540" → "128540" + flag physique)
   // 2) même n° soumis 2 fois < 60 s → on marque le cas existant physique
   let caseNumber = rawCaseNumber;
   let forcePhysical = false;
@@ -92,6 +95,7 @@ export async function createCaseAction(formData: FormData) {
     if (rawCaseNumber.slice(0, half) === rawCaseNumber.slice(half)) {
       caseNumber = rawCaseNumber.slice(0, half);
       forcePhysical = true;
+      console.log(`[createCaseAction DR] Double scan détecté : "${rawCaseNumber}" → "${caseNumber}" (physique)`);
     }
   }
 
