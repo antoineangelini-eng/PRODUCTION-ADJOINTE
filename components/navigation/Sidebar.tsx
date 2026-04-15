@@ -3,7 +3,7 @@ import { useState } from "react";
 import NavLink from "@/components/navigation/NavLinkClient";
 import {
   IconAdmin, IconDesignMetal, IconDesignResine,
-  IconUsinageTitane, IconUsinageResine, IconFinition, IconGlobal,
+  IconUsinageTitane, IconUsinageResine, IconFinition,
 } from "@/components/navigation/SidebarIcons";
 
 type Props = { sector: string; sectors: string[]; isAdmin: boolean };
@@ -72,13 +72,6 @@ export function Sidebar({ sectors, isAdmin }: Props) {
           {userSectorLinks.map((s) => (
             <NavLink key={s.code} href={s.path} icon={s.icon} expanded={open}>{s.label}</NavLink>
           ))}
-
-          {!isAdmin && (
-            <>
-              <div style={{ height: 1, background: "rgba(255,255,255,0.04)", margin: "6px 10px" }} />
-              <NavLink href="/app/admin" icon={<IconGlobal />} expanded={open}>Vue globale</NavLink>
-            </>
-          )}
         </nav>
       </aside>
     </div>
