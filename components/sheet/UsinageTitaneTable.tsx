@@ -375,13 +375,15 @@ function DualText({ valueH, valueB, onSaveH, onSaveB, width = 90 }: {
 }
 
 // ── Composant principal ──────────────────────────────────────────
-export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNewCases }: {
+export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNewCases, onBannerClear }: {
   focusId: string | null;
   onReload?: (fn: () => void) => void;
   onSelectionChange?: (busy: boolean) => void;
   onNewCases?: (cases: { id: string; case_number: string | null; date_expedition: string | null; nature_du_travail: string | null }[]) => void;
+  onBannerClear?: () => void;
 }) {
   const onNewCasesRef = useRef(onNewCases); onNewCasesRef.current = onNewCases;
+  const onBannerClearRef = useRef(onBannerClear); onBannerClearRef.current = onBannerClear;
   const [rows, setRows]               = useState<UsinageTitaneRow[]>([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState<string | null>(null);
@@ -400,6 +402,7 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
     try {
       const fresh = (await loadUsinageTitaneRowsAction()) ?? [];
       if (silent) {
+        // Détection seulement — table inchangée jusqu'au prochain refresh réel.
         setRows(prev => {
           const prevIds = new Set(prev.map(r => String(r.id)));
           const incoming = fresh.filter(r => !prevIds.has(String(r.id)));
@@ -411,10 +414,11 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
               nature_du_travail: r.nature_du_travail,
             })));
           }
-          return fresh;
+          return prev;
         });
       } else {
         setRows(fresh);
+        onBannerClearRef.current?.();
       }
     }
     catch (e: any) { if (!silent) setError(e.message); }
@@ -442,7 +446,7 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
   }, []);
   useEffect(() => {
     const itv = setInterval(() => {
-      if (Date.now() - lastActivityRef.current > 5 * 60 * 1000) {
+      if (Date.now() - lastActivityRef.current > 3 * 60 * 1000) {
         lastActivityRef.current = Date.now();
         load();
       }
@@ -544,8 +548,9 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
     setBatchResult(result); setBatchPending(false);
     if (result.okIds.length > 0 && result.errors.length === 0) setTimeout(() => setBatchResult(null), 4000);
     if (result.okIds.length > 0) {
-      setRows(prev => prev.filter(r => !result.okIds.includes(String(r.id))));
       setCheckedIds(prev => { const n = new Set(prev); result.okIds.forEach(id => n.delete(id)); return n; });
+      // Refresh complet : enlève les cas validés ET fait entrer les nouveaux cas du bandeau
+      load();
     }
   }
 

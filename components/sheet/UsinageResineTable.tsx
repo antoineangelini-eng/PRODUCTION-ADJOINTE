@@ -246,11 +246,13 @@ function DisqueInput({ value, onSave, onFocusChange, navAttr }: {
   );
 }
 
-export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectionChange, onNewCases }: {
+export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectionChange, onNewCases, onBannerClear }: {
   focusId: string|null; lotFilledIds?: Set<string>;
   onReload?: (fn:()=>void)=>void; lotPanel?: React.ReactNode;
   onSelectionChange?: (b:boolean)=>void; onNewCases?: (c:ToastCase[])=>void;
+  onBannerClear?: () => void;
 }) {
+  const onBannerClearRef = useRef(onBannerClear); onBannerClearRef.current = onBannerClear;
   const [rows, setRows]             = useState<UsinageResineRow[]>([]);
   const [newRowIds, setNewRowIds]   = useState<Set<string>>(new Set());
   const [hasUnsorted, setHasUnsorted] = useState(false);
@@ -270,18 +272,21 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
     try {
       const fresh = (await loadUsinageResineRowsAction()) ?? [];
       if (silent) {
+        // Détection seulement — on ne met PAS à jour le tableau,
+        // les cas entreront au prochain refresh réel (action utilisateur ou 3 min d'inactivité).
         setRows(prev => {
           const prevIds = new Set(prev.map(r => String(r.id)));
           const incoming = fresh.filter(r => !prevIds.has(String(r.id)));
           if (incoming.length > 0) {
             onNewCasesRef.current?.(incoming.map(r => ({ id: String(r.id), case_number: r.case_number, date_expedition: r.date_expedition, nature_du_travail: r.nature_du_travail })));
-            setNewRowIds(ids => { const n = new Set(ids); incoming.forEach(r => n.add(String(r.id))); setTimeout(() => setNewRowIds(new Set()), 2500); return n; });
-            setHasUnsorted(true);
           }
-          const updated = prev.map(r => fresh.find(f => String(f.id) === String(r.id)) ?? null).filter(Boolean) as UsinageResineRow[];
-          return [...updated, ...incoming];
+          return prev;
         });
-      } else { setRows(sortByExp(fresh)); setHasUnsorted(false); }
+      } else {
+        setRows(sortByExp(fresh));
+        setHasUnsorted(false);
+        onBannerClearRef.current?.();
+      }
     } catch (e: any) { if (!silent) setError(e.message); }
     finally { if (!silent) setLoading(false); }
   }, []);
@@ -304,7 +309,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
   }, []);
   useEffect(() => {
     const itv = setInterval(() => {
-      if (Date.now() - lastActivityRef.current > 5 * 60 * 1000) {
+      if (Date.now() - lastActivityRef.current > 3 * 60 * 1000) {
         lastActivityRef.current = Date.now();
         load();
       }
@@ -396,8 +401,9 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
 
         }).catch(e => console.error("[Zebra]", e));
       }
-      setRows(prev => prev.filter(r => !result.okIds.includes(String(r.id))));
       setCheckedIds(prev => { const n = new Set(prev); result.okIds.forEach(id => n.delete(id)); return n; });
+      // Refresh complet : enlève les cas validés ET fait entrer les nouveaux cas du bandeau
+      load();
     }
   }
 

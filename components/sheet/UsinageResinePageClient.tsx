@@ -173,6 +173,7 @@ export function UsinageResinePageClient({ focusId }: { focusId: string | null; h
           onReload={handleReload}
           onSelectionChange={busy => setIsBusy(busy)}
           onNewCases={handleNewCases}
+          onBannerClear={dismissAll}
           lotPanel={null}
         />
       </div>

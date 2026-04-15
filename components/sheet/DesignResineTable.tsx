@@ -157,13 +157,15 @@ function TextInput({value,onSave,width=100}:{value:string|null;onSave:(v:string)
     style={{padding:"3px 8px",border:focused?"1px solid #4ade80":"1px solid transparent",background:focused?"rgba(74,222,128,0.06)":"rgba(255,255,255,0.05)",color:"white",width,fontSize:13,textAlign:"center",outline:"none",borderRadius:6,transition:"all 150ms"}}/>;
 }
 
-export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCases}:{
+export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCases, onBannerClear}:{
   focusId:string|null;
   onReload?: (fn: () => void) => void;
   onSelectionChange?: (busy: boolean) => void;
   onNewCases?: (cases: { id: string; case_number: string | null; date_expedition: string | null; nature_du_travail: string | null }[]) => void;
+  onBannerClear?: () => void;
 }){
   const onNewCasesRef = useRef(onNewCases); onNewCasesRef.current = onNewCases;
+  const onBannerClearRef = useRef(onBannerClear); onBannerClearRef.current = onBannerClear;
   const [rows,setRows]=useState<DesignResineRow[]>([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState<string|null>(null);
@@ -183,6 +185,7 @@ export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCa
     try{
       const fresh = await loadDesignResineRowsAction();
       if(silent){
+        // Détection seulement — table inchangée jusqu'au prochain refresh réel.
         setRows(prev=>{
           const prevIds = new Set(prev.map(r=>String(r.id)));
           const incoming = fresh.filter(r=>!prevIds.has(String(r.id)));
@@ -194,10 +197,11 @@ export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCa
               nature_du_travail: r.nature_du_travail,
             })));
           }
-          return fresh;
+          return prev;
         });
       } else {
         setRows(fresh);
+        onBannerClearRef.current?.();
       }
     }
     catch(e:any){if(!silent)setError(e?.message??"Erreur inconnue");}
@@ -206,6 +210,29 @@ export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCa
   useEffect(()=>{load();},[load]);
   useEffect(()=>{ onReload?.(() => load(true)); },[load, onReload]);
   useEffect(()=>{ onSelectionChange?.(checkedIds.size > 0 || confirmDeleteId !== null || editingExpId !== null); },[checkedIds, confirmDeleteId, editingExpId, onSelectionChange]);
+
+  // Auto-refresh après 3 min d'inactivité
+  const lastActivityRef = useRef(Date.now());
+  useEffect(()=>{
+    const onActivity = ()=>{ lastActivityRef.current = Date.now(); };
+    window.addEventListener("mousemove", onActivity);
+    window.addEventListener("keydown", onActivity);
+    window.addEventListener("click", onActivity);
+    return ()=>{
+      window.removeEventListener("mousemove", onActivity);
+      window.removeEventListener("keydown", onActivity);
+      window.removeEventListener("click", onActivity);
+    };
+  },[]);
+  useEffect(()=>{
+    const itv = setInterval(()=>{
+      if(Date.now() - lastActivityRef.current > 3 * 60 * 1000){
+        lastActivityRef.current = Date.now();
+        load();
+      }
+    }, 30_000);
+    return ()=>clearInterval(itv);
+  },[load]);
   useEffect(()=>{
     if(!focusId||loading)return;
     const found=rows.find(r=>r.case_number===focusId);

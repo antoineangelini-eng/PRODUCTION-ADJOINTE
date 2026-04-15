@@ -19,10 +19,10 @@ function fmtDate(v: string | null): string {
 
 type Item = ToastCase & { toastId: string; visible: boolean };
 
-export function IncomingCasesBanner({ toasts, onDismiss, onDismissAll }: {
+export function IncomingCasesBanner({ toasts }: {
   toasts: Item[];
-  onDismiss: (toastId: string) => void;
-  onDismissAll: () => void;
+  onDismiss?: (toastId: string) => void;
+  onDismissAll?: () => void;
 }) {
   if (toasts.length === 0) return null;
 
@@ -49,7 +49,7 @@ export function IncomingCasesBanner({ toasts, onDismiss, onDismissAll }: {
         borderRight: "1px solid rgba(74,222,128,0.25)",
       }}>
         <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80", boxShadow: "0 0 8px #4ade80" }} />
-        {toasts.length} nouveau{toasts.length > 1 ? "x" : ""} cas
+        {toasts.length} nouveau{toasts.length > 1 ? "x" : ""} cas en attente
       </div>
 
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", flex: 1 }}>
@@ -60,7 +60,7 @@ export function IncomingCasesBanner({ toasts, onDismiss, onDismissAll }: {
               display: "inline-flex",
               alignItems: "center",
               gap: 8,
-              padding: "3px 4px 3px 10px",
+              padding: "3px 10px",
               background: "rgba(255,255,255,0.03)",
               border: `1px solid ${color}40`,
               borderLeft: `3px solid ${color}`,
@@ -72,39 +72,10 @@ export function IncomingCasesBanner({ toasts, onDismiss, onDismissAll }: {
                 <span style={{ color, fontWeight: 600 }}>{t.nature_du_travail}</span>
               )}
               <span style={{ color: "#aaa" }}>Exp. {fmtDate(t.date_expedition)}</span>
-              <button
-                onClick={() => onDismiss(t.toastId)}
-                title="Masquer"
-                style={{
-                  background: "none", border: "none", color: "#555",
-                  cursor: "pointer", fontSize: 14, padding: "0 6px", lineHeight: 1,
-                }}
-                onMouseEnter={e => (e.currentTarget.style.color = "white")}
-                onMouseLeave={e => (e.currentTarget.style.color = "#555")}
-              >×</button>
             </div>
           );
         })}
       </div>
-
-      {toasts.length > 1 && (
-        <button
-          onClick={onDismissAll}
-          style={{
-            padding: "4px 10px",
-            background: "transparent",
-            border: "1px solid rgba(74,222,128,0.35)",
-            borderRadius: 6,
-            color: "#4ade80",
-            fontSize: 11,
-            fontWeight: 600,
-            cursor: "pointer",
-            whiteSpace: "nowrap",
-          }}
-        >
-          Tout masquer
-        </button>
-      )}
     </div>
   );
 }

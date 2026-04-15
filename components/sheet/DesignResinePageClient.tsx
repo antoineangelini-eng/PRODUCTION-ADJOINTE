@@ -24,6 +24,7 @@ export function DesignResinePageClient({ focusId }: { focusId: string | null }) 
           onReload={handleReload}
           onSelectionChange={setIsBusy}
           onNewCases={addToasts}
+          onBannerClear={dismissAll}
         />
       </div>
     </div>
