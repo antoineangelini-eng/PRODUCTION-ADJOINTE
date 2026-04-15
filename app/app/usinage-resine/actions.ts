@@ -141,20 +141,9 @@ export async function removeCaseFromUsinageResineAction(formData: FormData) {
   const caseId = String(formData.get("case_id") ?? "").trim();
   if (!caseId) return { error: "ID manquant" };
 
-  // Retire l'assignation UR
-  const { error: err1 } = await supabase
-    .from("case_assignments")
-    .delete()
-    .eq("case_id", caseId)
-    .eq("sector_code", "usinage_resine");
-  if (err1) return { error: err1.message };
+  const { error } = await supabase.rpc("rpc_remove_case_from_usinage_resine", { p_case_id: caseId });
+  if (error) return { error: error.message };
 
-  // Supprime la ligne sector_usinage_resine
-  const { error: err2 } = await supabase
-    .from("sector_usinage_resine")
-    .delete()
-    .eq("case_id", caseId);
-  if (err2) return { error: err2.message };
-
+  revalidatePath("/app/usinage-resine");
   return { ok: true };
 }

@@ -484,7 +484,6 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:12 }}>
                     <div style={{ textAlign:"right" }}><span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"#e0e0e0", display:"block", marginBottom:2 }}>Expédition</span><span style={{ fontSize:13, color:"#e0e0e0", fontWeight:700 }}>{fmtDate(row.date_expedition)}</span></div>
-                    <span style={{ width:9, height:9, borderRadius:"50%", background:isDone?"#4ade80":"#2a2a2a", border:isDone?"none":"1px solid #3a3a3a", display:"inline-block", flexShrink:0 }} />
                     <input type="checkbox" checked={isChecked} onChange={e => { const id=String(row.id); setCheckedIds(prev => { const n=new Set(prev); e.target.checked?n.add(id):n.delete(id); return n; }); }} style={{ width:15, height:15, cursor:"pointer", accentColor:"#4ade80", flexShrink:0 }} />
                     <button onClick={() => setConfirmDeleteId(String(row.id))} title="Supprimer le cas" style={{ background:"none", border:"none", color:"#f87171", cursor:"pointer", fontSize:14, padding:4, opacity:0.6, transition:"opacity 150ms" }} onMouseEnter={e => e.currentTarget.style.opacity="1"} onMouseLeave={e => e.currentTarget.style.opacity="0.6"}>🗑</button>
                   </div>
