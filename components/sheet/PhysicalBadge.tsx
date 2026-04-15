@@ -1,12 +1,14 @@
 "use client";
 
 /**
- * Badge "P" — indique un cas physique (inséré à la main).
- * Pastille circulaire ambrée avec dégradé chaud et finition type jeton.
+ * Badge « Physique » — pill pêche avec point rouge.
+ * Indique un cas inséré à la main via double-scan.
  */
 export function PhysicalBadge({ size = "sm" }: { size?: "sm" | "md" }) {
-  const d = size === "md" ? 18 : 15;
-  const fs = size === "md" ? 10 : 9;
+  const fs = size === "md" ? 12 : 11;
+  const pad = size === "md" ? "4px 11px 4px 12px" : "3px 10px 3px 11px";
+  const dot = size === "md" ? 8 : 7;
+  const gap = size === "md" ? 8 : 7;
   return (
     <span
       title="Cas physique inséré"
@@ -14,26 +16,35 @@ export function PhysicalBadge({ size = "sm" }: { size?: "sm" | "md" }) {
       style={{
         display: "inline-flex",
         alignItems: "center",
-        justifyContent: "center",
-        width: d,
-        height: d,
-        borderRadius: "50%",
-        background:
-          "radial-gradient(circle at 30% 25%, #e8b87a 0%, #b07a44 55%, #6b3f1d 100%)",
-        color: "#fff4e1",
+        gap,
+        padding: pad,
+        background: "#f5c4b3",
+        border: "1px solid #d89f8a",
+        borderRadius: 999,
+        color: "#893521",
         fontSize: fs,
-        fontWeight: 800,
+        fontWeight: 700,
         lineHeight: 1,
-        letterSpacing: 0,
-        boxShadow:
-          "inset 0 1px 0.5px rgba(255,230,190,0.55), inset 0 -1px 1px rgba(0,0,0,0.35), 0 0 0 0.5px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.45)",
-        flexShrink: 0,
+        letterSpacing: 0.1,
         userSelect: "none",
+        boxShadow: "0 1px 2px rgba(0,0,0,0.3)",
         fontFamily: "ui-sans-serif, system-ui, -apple-system, sans-serif",
-        textShadow: "0 1px 1px rgba(0,0,0,0.35)",
+        flexShrink: 0,
+        whiteSpace: "nowrap",
       }}
     >
-      P
+      <span>Physique</span>
+      <span
+        style={{
+          width: dot,
+          height: dot,
+          borderRadius: "50%",
+          background:
+            "radial-gradient(circle at 30% 30%, #c85a3d 0%, #893521 75%)",
+          boxShadow: "0 0 4px rgba(137,53,33,0.6)",
+          flexShrink: 0,
+        }}
+      />
     </span>
   );
 }

@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>Mockup badge Physique — aperçu par onglet</title>
+<style>
+  body { margin:0; background:#0b0b0b; color:#e5e5e5; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px 32px; }
+  h1 { font-size: 16px; color:#aaa; margin: 0 0 18px; font-weight: 600; letter-spacing: .5px; }
+  h2 { font-size: 12px; margin: 28px 0 10px; letter-spacing: .5px; text-transform: uppercase; }
+  .dm h2 { color:#4ade80; }
+  .dr h2 { color:#7c8196; }
+  .ut h2 { color:#e5a84d; }
+  .ur h2 { color:#e07a5f; }
+  .fi h2 { color:#b084cc; }
+  .ad h2 { color:#f59e0b; }
+
+  .row {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-radius: 8px;
+    background: #121212; border: 1px solid #1e1e1e;
+    margin-bottom: 8px; margin-right: 12px;
+  }
+  .left-accent { width:3px; height:22px; border-radius:2px; }
+  .dm .left-accent { background:#4ade80; }
+  .dr .left-accent { background:#7c8196; }
+  .ut .left-accent { background:#e5a84d; }
+  .ur .left-accent { background:#e07a5f; }
+  .fi .left-accent { background:#b084cc; }
+  .ad .left-accent { background:#f59e0b; }
+
+  .case-num { font-weight: 800; font-size: 16px; letter-spacing: .3px; color: #fff; }
+
+  /* Badge Physique — pill pêche #f5c4b3 + texte brun #893521 */
+  .phys {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 3px 10px 3px 11px;
+    background: #f5c4b3;
+    border: 1px solid #d89f8a;
+    border-radius: 999px;
+    color: #893521;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: .1px;
+    user-select: none;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .phys .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #c85a3d 0%, #893521 75%);
+    box-shadow: 0 0 4px rgba(137,53,33,0.6);
+  }
+
+  /* variante "taille md" pour Usinage Résine (cartes + grosses) */
+  .phys.md { padding: 4px 11px 4px 12px; font-size: 12px; }
+  .phys.md .dot { width: 8px; height: 8px; }
+
+  .legend {
+    margin-top: 24px; padding: 12px 14px; border: 1px dashed #333; border-radius: 6px;
+    color: #888; font-size: 12px; max-width: 640px;
+  }
+  .legend b { color: #ccc; }
+  .note { color:#777; font-size: 11px; margin-left: 6px; }
+  .section { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<h1>Badge « Physique » — aperçu dans chaque onglet</h1>
+
+<section class="dm section">
+  <h2>⚙ Design Métal — ligne tableau</h2>
+  <div class="row">
+    <div class="left-accent"></div>
+    <span class="case-num">127840</span>
+    <span class="phys"><span>Physique</span><span class="dot"></span></span>
+  </div>
+  <span class="note">placé juste après le n° de cas, taille « sm »</span>
+</section>
+
+<section class="dr section">
+  <h2>⚙ Design Résine — ligne tableau</h2>
+  <div class="row">
+    <div class="left-accent"></div>
+    <span class="case-num">130172</span>
+    <span class="phys"><span>Physique</span><span class="dot"></span></span>
+  </div>
+</section>
+
+<section class="ut section">
+  <h2>⚙ Usinage Titane — ligne tableau</h2>
+  <div class="row">
+    <div class="left-accent"></div>
+    <span class="case-num">131205</span>
+    <span class="phys"><span>Physique</span><span class="dot"></span></span>
+  </div>
+</section>
+
+<section class="ur section">
+  <h2>⚙ Usinage Résine — carte (lot)</h2>
+  <div class="row" style="padding:14px 16px;">
+    <div class="left-accent" style="height:26px;"></div>
+    <span class="case-num" style="font-size:18px;">128540</span>
+    <span class="phys md"><span>Physique</span><span class="dot"></span></span>
+  </div>
+  <span class="note">taille « md » car les cartes UR sont un poil plus grandes</span>
+</section>
+
+<section class="fi section">
+  <h2>⚙ Finition — ligne tableau</h2>
+  <div class="row">
+    <div class="left-accent"></div>
+    <span class="case-num">129011</span>
+    <span class="phys"><span>Physique</span><span class="dot"></span></span>
+  </div>
+</section>
+
+<section class="ad section">
+  <h2>📊 Dashboard — priorités / bloqués</h2>
+  <div class="row">
+    <div class="left-accent"></div>
+    <span class="case-num" style="font-size:14px;">127840</span>
+    <span class="phys"><span>Physique</span><span class="dot"></span></span>
+    <span style="color:#888; font-size:12px;">Design Métal · exp. 22/04</span>
+  </div>
+</section>
+
+<section class="section" style="margin-top:28px;">
+  <h2 style="color:#888;">📋 Historique (tous secteurs)</h2>
+  <div class="row">
+    <div class="left-accent" style="background:#444;"></div>
+    <span class="case-num">126950</span>
+    <span class="phys"><span>Physique</span><span class="dot"></span></span>
+  </div>
+</section>
+
+<section class="section" style="margin-top:28px;">
+  <h2 style="color:#888;">📢 Bannière « cas entrant »</h2>
+  <div class="row" style="background:#14261a; border-color:#2a4a33;">
+    <span style="color:#4ade80; font-weight:700;">🆕 Nouveau cas</span>
+    <span class="case-num">127840</span>
+    <span class="phys"><span>Physique</span><span class="dot"></span></span>
+  </div>
+</section>
+
+<div class="legend">
+  <b>Choix de design :</b><br>
+  — Pill clair crème (<code>#f5f1e8</code>) avec texte noir ; très lisible sur fond sombre, se détache sans crier.<br>
+  — Petit point rouge/orange lumineux à droite (statut « alerte / spécial »).<br>
+  — Bordure fine + légère ombre pour un effet « étiquette physique » cohérent avec la sémantique.<br>
+  — Deux tailles : <b>sm</b> (tableaux standards) et <b>md</b> (cartes UR, détail cas).<br>
+  — Placement <b>juste après le numéro de cas</b>, séparé par un gap de 8–10 px, aligné verticalement sur la baseline.
+</div>
+
+</body>
+</html>

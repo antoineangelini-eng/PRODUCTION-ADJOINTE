@@ -57,7 +57,7 @@ const thSticky: React.CSSProperties = { ...thBase, color: "#ffffff", textAlign: 
 
 const tdBase: React.CSSProperties = {
   padding: "0 8px", whiteSpace: "nowrap", fontSize: 12, textAlign: "center",
-  border: "none", verticalAlign: "middle", height: 70,
+  border: "none", verticalAlign: "middle", height: 50,
 };
 const tdSticky: React.CSSProperties = { ...tdBase, textAlign: "left", position: "sticky", left: 0, zIndex: 2, fontWeight: 700, fontSize: 13 };
 
@@ -236,7 +236,8 @@ function InlineTextInput({ value, onSave, width = 100 }: { value: string | null;
 
 
 // ── Cellule avec mode H/B activable au double-clic ──────────────
-function HBCell({ active, onToggle, tdStyle, simple, dual }: {
+function HBCell({ active, onToggle, tdStyle, simple, dual, rowH = 70 }: {
+  rowH?: number;
   active: boolean;
   onToggle: () => void;
   tdStyle: React.CSSProperties;
@@ -252,19 +253,19 @@ function HBCell({ active, onToggle, tdStyle, simple, dual }: {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Contenu fixe dans hauteur 70px */}
-      <div style={{ height: 70, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      {/* Contenu à hauteur dynamique (50 par défaut, 70 en mode H/B) */}
+      <div style={{ height: rowH, display: "flex", alignItems: "center", justifyContent: "center", paddingRight: 14 }}>
         {active ? dual : simple}
       </div>
-      {/* Flèches haut/bas discrètes au hover */}
-      {hovered && (
+      {/* Flèches haut/bas — toujours visibles si actif, sinon discrètes au hover */}
+      {(hovered || active) && (
         <div
           onClick={e => { e.stopPropagation(); onToggle(); }}
           onDoubleClick={e => e.stopPropagation()}
           title={active ? "Revenir en mode simple" : "Activer Haut / Bas"}
-          style={{ position: "absolute", top: "50%", right: 5, transform: "translateY(-50%)", display: "flex", flexDirection: "column", gap: 1, cursor: "pointer", padding: "3px 2px", borderRadius: 4, background: active ? "rgba(245,158,11,0.08)" : "rgba(255,255,255,0.04)" }}>
-          <svg viewBox="0 0 8 5" width="8" height="5" fill="none" stroke={active ? "rgba(245,158,11,0.7)" : "rgba(255,255,255,0.45)"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4l3-3 3 3"/></svg>
-          <svg viewBox="0 0 8 5" width="8" height="5" fill="none" stroke={active ? "rgba(245,158,11,0.7)" : "rgba(255,255,255,0.45)"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1l3 3 3-3"/></svg>
+          style={{ position: "absolute", top: "50%", right: 4, transform: "translateY(-50%)", display: "flex", flexDirection: "column", gap: 1, cursor: "pointer", padding: "2px", borderRadius: 4, opacity: active ? 0.9 : 0.75 }}>
+          <svg viewBox="0 0 8 5" width="8" height="5" fill="none" stroke={active ? "rgba(245,158,11,0.85)" : "rgba(255,255,255,0.55)"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M1 4l3-3 3 3"/></svg>
+          <svg viewBox="0 0 8 5" width="8" height="5" fill="none" stroke={active ? "rgba(245,158,11,0.85)" : "rgba(255,255,255,0.55)"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1l3 3 3-3"/></svg>
         </div>
       )}
     </td>
@@ -665,9 +666,13 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
               const rowShadow = getRowShadow(isChecked, isHovered, isActive);
               const accentColor = isChecked ? "#4ade80" : natColor;
 
-              const tdCard: React.CSSProperties = { ...tdBase, background: isFound ? "transparent" : rowBg, borderTop: `1px solid ${isFound ? "transparent" : rowBorder}`, borderBottom: `1px solid ${isFound ? "transparent" : rowBorder}`, borderLeft: "none", borderRight: "none", transition: "background 160ms, border-color 160ms" };
-              const tdCardFirst: React.CSSProperties = { ...tdSticky, background: isFound ? "transparent" : rowBg, paddingLeft: 12, borderTop: `1px solid ${isFound ? "transparent" : rowBorder}`, borderBottom: `1px solid ${isFound ? "transparent" : rowBorder}`, borderLeft: `1px solid ${isFound ? "transparent" : rowBorder}`, borderTopLeftRadius: 14, borderBottomLeftRadius: 14, boxShadow: isFound ? "none" : `inset 4px 0 0 ${accentColor}cc, ${rowShadow}`, transition: "background 160ms, border-color 160ms, box-shadow 160ms" };
-              const tdCardLast: React.CSSProperties = { ...tdBase, background: isFound ? "transparent" : rowBg, borderTop: `1px solid ${isFound ? "transparent" : rowBorder}`, borderBottom: `1px solid ${isFound ? "transparent" : rowBorder}`, borderRight: `1px solid ${isFound ? "transparent" : rowBorder}`, borderTopRightRadius: 14, borderBottomRightRadius: 14, boxShadow: isFound ? "none" : rowShadow, transition: "background 160ms, border-color 160ms" };
+              // Hauteur dynamique : 70 si au moins un mode Haut/Bas actif, sinon 50 (comme DM/DR)
+              const hasHB = Boolean(ut.mode_hb_machine || ut.mode_hb_calcul || ut.mode_hb_brut);
+              const rowH  = hasHB ? 70 : 50;
+
+              const tdCard: React.CSSProperties = { ...tdBase, height: rowH, background: isFound ? "transparent" : rowBg, borderTop: `1px solid ${isFound ? "transparent" : rowBorder}`, borderBottom: `1px solid ${isFound ? "transparent" : rowBorder}`, borderLeft: "none", borderRight: "none", transition: "background 160ms, border-color 160ms" };
+              const tdCardFirst: React.CSSProperties = { ...tdSticky, height: rowH, background: isFound ? "transparent" : rowBg, paddingLeft: 12, borderTop: `1px solid ${isFound ? "transparent" : rowBorder}`, borderBottom: `1px solid ${isFound ? "transparent" : rowBorder}`, borderLeft: `1px solid ${isFound ? "transparent" : rowBorder}`, borderTopLeftRadius: 14, borderBottomLeftRadius: 14, boxShadow: isFound ? "none" : `inset 4px 0 0 ${accentColor}cc, ${rowShadow}`, transition: "background 160ms, border-color 160ms, box-shadow 160ms" };
+              const tdCardLast: React.CSSProperties = { ...tdBase, height: rowH, background: isFound ? "transparent" : rowBg, borderTop: `1px solid ${isFound ? "transparent" : rowBorder}`, borderBottom: `1px solid ${isFound ? "transparent" : rowBorder}`, borderRight: `1px solid ${isFound ? "transparent" : rowBorder}`, borderTopRightRadius: 14, borderBottomRightRadius: 14, boxShadow: isFound ? "none" : rowShadow, transition: "background 160ms, border-color 160ms" };
 
               const rawDate = ut.reception_metal_at ? ut.reception_metal_at.slice(0, 10) : "";
 
@@ -726,6 +731,7 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
 
                   {/* Machine — double-clic pour H/B */}
                   <HBCell
+                    rowH={rowH}
                     active={Boolean(ut.mode_hb_machine)}
                     onToggle={() => { const n = !ut.mode_hb_machine; patchRow(String(row.id), "ut", "mode_hb_machine", n); saveCell(String(row.id), "mode_hb_machine", n); }}
                     tdStyle={tdCard}
@@ -740,6 +746,7 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
 
                   {/* N° calcul — double-clic pour H/B */}
                   <HBCell
+                    rowH={rowH}
                     active={Boolean(ut.mode_hb_calcul)}
                     onToggle={() => { const n = !ut.mode_hb_calcul; patchRow(String(row.id), "ut", "mode_hb_calcul", n); saveCell(String(row.id), "mode_hb_calcul", n); }}
                     tdStyle={tdCard}
@@ -755,6 +762,7 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
 
                   {/* Brut — double-clic pour H/B */}
                   <HBCell
+                    rowH={rowH}
                     active={Boolean(ut.mode_hb_brut)}
                     onToggle={() => { const n = !ut.mode_hb_brut; patchRow(String(row.id), "ut", "mode_hb_brut", n); saveCell(String(row.id), "mode_hb_brut", n); }}
                     tdStyle={tdCard}
