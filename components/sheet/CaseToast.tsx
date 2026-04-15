@@ -79,6 +79,34 @@ export function CaseToastContainer({ toasts, onDismiss }: {
   );
 }
 
+// Banner persistant (pas d'auto-dismiss) — pour IncomingCasesBanner
+export function useIncomingBanner() {
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  function addToasts(cases: ToastCase[]) {
+    const newToasts: ToastItem[] = cases.map(c => ({
+      ...c,
+      toastId: `${c.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      visible: true,
+    }));
+    setToasts(prev => {
+      const existingIds = new Set(prev.map(t => t.id));
+      const toAdd = newToasts.filter(t => !existingIds.has(t.id));
+      return [...prev, ...toAdd];
+    });
+  }
+
+  function dismiss(toastId: string) {
+    setToasts(prev => prev.filter(t => t.toastId !== toastId));
+  }
+
+  function dismissAll() {
+    setToasts([]);
+  }
+
+  return { toasts, addToasts, dismiss, dismissAll };
+}
+
 export function useCaseToasts() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 

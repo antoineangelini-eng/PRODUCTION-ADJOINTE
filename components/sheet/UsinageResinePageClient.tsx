@@ -2,7 +2,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { UsinageResineTable } from "@/components/sheet/UsinageResineTable";
 import { UsinageResineLotPanel } from "@/components/sheet/UsinageResineLotPanel";
-import { CaseToastContainer, useCaseToasts, type ToastCase } from "@/components/sheet/CaseToast";
+import { useIncomingBanner, type ToastCase } from "@/components/sheet/CaseToast";
+import { IncomingCasesBanner } from "@/components/sheet/IncomingCasesBanner";
 import { RealtimeBanner } from "@/components/sheet/RealtimeBanner";
 import { usePollingRefresh } from "@/hooks/usePollingRefresh";
 import { useRouter } from "next/navigation";
@@ -25,7 +26,7 @@ export function UsinageResinePageClient({ focusId }: { focusId: string | null; h
 
   // Polling / realtime
   const [isBusy, setIsBusy]         = useState(false);
-  const { toasts, addToasts, dismiss } = useCaseToasts();
+  const { toasts, addToasts, dismiss, dismissAll } = useIncomingBanner();
   const reloadRef                   = useRef<() => void>(() => {});
 
   const handleReload = useCallback((fn: () => void) => { reloadRef.current = fn; }, []);
@@ -151,6 +152,7 @@ export function UsinageResinePageClient({ focusId }: { focusId: string | null; h
 
       {/* ── Bandeau realtime ─────────────────────────────────────────────────── */}
       <RealtimeBanner hasPending={false} isBusy={isBusy} onRefresh={() => reloadRef.current?.()} />
+      <IncomingCasesBanner toasts={toasts} onDismiss={dismiss} onDismissAll={dismissAll} />
 
       {/* ── Lot panel ────────────────────────────────────────────────────────── */}
       <UsinageResineLotPanel
@@ -175,8 +177,6 @@ export function UsinageResinePageClient({ focusId }: { focusId: string | null; h
         />
       </div>
 
-      {/* ── Toasts nouveaux cas ───────────────────────────────────────────────── */}
-      <CaseToastContainer toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }
