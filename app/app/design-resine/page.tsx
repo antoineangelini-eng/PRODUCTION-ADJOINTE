@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { DesignResinePageClient } from "@/components/sheet/DesignResinePageClient";
 import { createCaseAction } from "@/app/app/design-resine/actions";
+import { CaseNumberInput } from "@/components/sheet/CaseNumberInput";
 import { DesignResineHistoryWrapper } from "@/app/app/design-resine/DesignResineHistoryWrapper";
 
 export default async function Page({
@@ -43,7 +44,7 @@ export default async function Page({
               <form action={createCaseAction} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <span style={{ fontSize: 11, color: "#7c8196", letterSpacing: 0.5 }}>Créer un cas</span>
                 <div style={{ display: "flex", gap: 6 }}>
-                  <input name="case_number" placeholder="N° du cas" style={{ padding: "7px 10px", border: "1px solid rgba(129,140,248,0.35)", background: "rgba(129,140,248,0.03)", color: "white", fontSize: 12, width: 110, outline: "none", borderRadius: 4 }} />
+                  <CaseNumberInput style={{ padding: "7px 10px", border: "1px solid rgba(129,140,248,0.35)", background: "rgba(129,140,248,0.03)", color: "white", fontSize: 12, width: 110, outline: "none", borderRadius: 4 }} />
                   <button type="submit" style={{ padding: "7px 14px", border: "1px solid #7c8196", background: "rgba(129,140,248,0.08)", color: "#7c8196", cursor: "pointer", fontSize: 12, fontWeight: 700, borderRadius: 4 }}>Créer</button>
                 </div>
               </form>

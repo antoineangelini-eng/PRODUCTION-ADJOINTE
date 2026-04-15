@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import {
   loadDesignResineRowsAction,
   saveDesignResineCellAction,
@@ -233,6 +233,20 @@ export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCa
     }, 30_000);
     return ()=>clearInterval(itv);
   },[load]);
+
+  // Tri DR :
+  //   1) Cases créés en DR (pas de DM associé) → en tête, plus récents d'abord.
+  //   2) Cases venus de DM → ensuite, triés par date d'expédition ascendante.
+  const sortedRows = useMemo(()=>{
+    const isDrOrigin = (r: DesignResineRow) => !(r as any).sector_design_metal;
+    const drCreated = rows.filter(isDrOrigin).sort((a, b) =>
+      (b.created_at ?? "").localeCompare(a.created_at ?? "")
+    );
+    const fromDm = rows.filter(r => !isDrOrigin(r)).sort((a, b) =>
+      (a.date_expedition ?? "9999").localeCompare(b.date_expedition ?? "9999")
+    );
+    return [...drCreated, ...fromDm];
+  }, [rows]);
   useEffect(()=>{
     if(!focusId||loading)return;
     const found=rows.find(r=>r.case_number===focusId);
@@ -315,7 +329,7 @@ export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCa
       {/* Barre validation */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,position:"sticky",top:0,zIndex:3,background:"#0b0b0b",padding:"0 20px 8px 20px"}}>
         <div style={{minHeight:36,display:"flex",alignItems:"center",gap:10}}>
-          {!searchNotFound&&<div style={{fontSize:12,color:"white",padding:"4px 10px",background:"transparent",border:"1px solid rgba(255,255,255,0.2)",borderRadius:6}}>{rows.length} dossier{rows.length>1?"s":""}</div>}
+          {!searchNotFound&&<div style={{fontSize:12,color:"white",padding:"4px 10px",background:"transparent",border:"1px solid rgba(255,255,255,0.2)",borderRadius:6}}>{sortedRows.length} dossier{sortedRows.length>1?"s":""}</div>}
           {searchNotFound&&focusId&&<div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 12px",background:"#1a0f0f",border:"1px solid rgba(239,68,68,0.4)",borderRadius:6}}><span style={{fontSize:12,color:"#f87171"}}>Cas <strong style={{color:"white"}}>"{focusId}"</strong> introuvable</span><button onClick={()=>setSearchNotFound(false)} style={{background:"none",border:"none",color:"#555",cursor:"pointer",fontSize:14}}>×</button></div>}
           {batchResult?.okIds.length?<div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:6}}><span style={{color:"white",fontSize:13}}>✓</span><span style={{color:"white",fontSize:12,fontWeight:600}}>{batchResult.okIds.length} envoyé{batchResult.okIds.length>1?"s":""}</span></div>:null}
           {batchResult?.errors.length?(
@@ -358,7 +372,7 @@ export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCa
             </tr>
           </thead>
           <tbody>
-            {rows.map(row=>{
+            {sortedRows.map(row=>{
               const dm=(row as any).sector_design_metal??{};
               const dr=(row as any).sector_design_resine??{};
               const nat=row.nature_du_travail??"";
@@ -447,7 +461,7 @@ export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCa
                 </tr>
               );
             })}
-            {rows.length===0&&<tr><td colSpan={17} style={{padding:16,color:"#555",fontSize:13,textAlign:"center"}}>Aucun dossier en cours.</td></tr>}
+            {sortedRows.length===0&&<tr><td colSpan={17} style={{padding:16,color:"#555",fontSize:13,textAlign:"center"}}>Aucun dossier en cours.</td></tr>}
           </tbody>
         </table>
       </div>

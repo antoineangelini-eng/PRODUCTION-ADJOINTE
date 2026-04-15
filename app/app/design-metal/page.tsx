@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { DesignMetalTable } from "@/components/sheet/DesignMetalTable";
 import { DesignMetalHistoryWrapper } from "@/app/app/design-metal/DesignMetalHistoryWrapper";
+import { CaseNumberInput } from "@/components/sheet/CaseNumberInput";
 
 function addBusinessDays(date: Date, days: number): Date {
   const d = new Date(
@@ -108,7 +109,7 @@ export default async function Page({
               <form action={createCaseAction} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <span style={{ fontSize: 11, color: "#4ade80", letterSpacing: 0.5 }}>Créer un cas</span>
                 <div style={{ display: "flex", gap: 6 }}>
-                  <input name="case_number" placeholder="N° du cas"
+                  <CaseNumberInput
                     style={{ padding: "7px 10px", border: "1px solid rgba(74,222,128,0.35)", background: "rgba(74,222,128,0.03)", color: "white", fontSize: 12, width: 110, outline: "none", borderRadius: 4 }} />
                   <NatureSelect />
                   <button type="submit"
