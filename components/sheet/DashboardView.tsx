@@ -1,133 +1,243 @@
 "use client";
 import { useEffect, useState } from "react";
-import { loadDashboardDataAction, loadSectorDelaysAction, type DashboardData, type SectorDelays, type Period } from "@/app/app/admin/dashboard-actions";
+import { loadOpsDashboardAction, type OpsDashboard } from "@/app/app/admin/dashboard-actions";
 import { UserDetailModal } from "@/components/sheet/UserDetailModal";
 
-function fmtDuration(hours: number): string {
-  if (hours < 1) return `${Math.round(hours * 60)} min`;
-  if (hours < 24) return `${hours.toFixed(1)} h`;
-  return `${(hours / 24).toFixed(1)} j`;
+const SECTOR_META: Record<string, { short: string; label: string; color: string }> = {
+  design_metal:   { short: "DM",  label: "Design Métal",   color: "#4ade80" },
+  design_resine:  { short: "DR",  label: "Design Résine",  color: "#7c8196" },
+  usinage_titane: { short: "UT",  label: "Usinage Titane", color: "#60a5fa" },
+  usinage_resine: { short: "UR",  label: "Usinage Résine", color: "#a78bfa" },
+  finition:       { short: "FI",  label: "Finition",       color: "#f59e0b" },
+};
+
+function sectorLabel(s: string | null): string {
+  return s ? SECTOR_META[s]?.label ?? s : "—";
+}
+function sectorShort(s: string | null): string {
+  return s ? SECTOR_META[s]?.short ?? s : "—";
+}
+function sectorColor(s: string | null): string {
+  return (s && SECTOR_META[s]?.color) || "#888";
 }
 
-function periodLabel(p: Period): string {
-  return p === "today" ? "Aujourd'hui" : p === "7d" ? "7 derniers jours" : "30 derniers jours";
-}
-
-function fmtSector(s: string | null): string {
-  switch (s) {
-    case "design_metal": return "Design Métal";
-    case "design_resine": return "Design Résine";
-    case "usinage_titane": return "Usinage Titane";
-    case "usinage_resine": return "Usinage Résine";
-    case "finition": return "Finition";
-    case "admin": return "Admin";
-    default: return s ?? "—";
-  }
-}
-
-function fmtDate(s: string | null): string {
-  if (!s) return "—";
-  return new Date(s.slice(0, 10) + "T00:00:00").toLocaleDateString("fr-FR");
+function fmtExp(daysUntil: number | null): { text: string; color: string } {
+  if (daysUntil === null) return { text: "—", color: "#888" };
+  if (daysUntil < 0)  return { text: `retard ${-daysUntil}j`, color: "#f87171" };
+  if (daysUntil === 0) return { text: "aujourd'hui", color: "#f59e0b" };
+  if (daysUntil === 1) return { text: "demain", color: "#f59e0b" };
+  if (daysUntil <= 2) return { text: `dans ${daysUntil}j`, color: "#fbbf24" };
+  return { text: `dans ${daysUntil}j`, color: "#aaa" };
 }
 
 export function DashboardView() {
-  const [period, setPeriod] = useState<Period>("7d");
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [delays, setDelays] = useState<SectorDelays | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<OpsDashboard | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
   const [selectedUser, setSelectedUser] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     let alive = true;
-    setLoading(true);
     setError(null);
-    Promise.all([
-      loadDashboardDataAction(period),
-      loadSectorDelaysAction(period),
-    ])
-      .then(([d, del]) => { if (alive) { setData(d); setDelays(del); } })
-      .catch(e => { if (alive) setError(e.message ?? "Erreur"); })
-      .finally(() => { if (alive) setLoading(false); });
+    loadOpsDashboardAction()
+      .then(d => { if (alive) setData(d); })
+      .catch(e => { if (alive) setError(e.message ?? "Erreur"); });
     return () => { alive = false; };
-  }, [period]);
+  }, [reloadTick]);
 
   const card: React.CSSProperties = { background: "#0d0d0d", border: "1px solid #1e1e1e", borderRadius: 10, padding: 16 };
   const th: React.CSSProperties = { textAlign: "left", padding: "8px 10px", fontSize: 11, color: "#888", fontWeight: 600, borderBottom: "1px solid #1e1e1e" };
   const td: React.CSSProperties = { padding: "8px 10px", fontSize: 12, color: "#ddd", borderBottom: "1px solid #141414" };
 
-  const kpi = (label: string, value: number | string, color: string) => (
-    <div style={{ ...card, flex: 1, minWidth: 160 }}>
-      <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 800, color, marginTop: 6 }}>{value}</div>
+  const kpi = (label: string, value: number | string, color: string, icon: string) => (
+    <div style={{ ...card, flex: 1, minWidth: 180 }}>
+      <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 0.5, display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={{ fontSize: 14 }}>{icon}</span>{label}
+      </div>
+      <div style={{ fontSize: 32, fontWeight: 800, color, marginTop: 6, lineHeight: 1 }}>{value}</div>
     </div>
+  );
+
+  const badge = (text: string, color: string, filled = false) => (
+    <span style={{
+      fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
+      background: filled ? color : `${color}22`, color: filled ? "#0b0b0b" : color,
+      border: `1px solid ${color}44`,
+    }}>{text}</span>
   );
 
   return (
     <div style={{ overflowY: "auto", flex: 1, minHeight: 0, padding: "16px 0" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
-        <div style={{ display: "flex", gap: 6 }}>
-          {(["today", "7d", "30d"] as Period[]).map(p => (
-            <button key={p} onClick={() => setPeriod(p)} style={{
-              padding: "6px 14px", fontSize: 12, fontWeight: 600, borderRadius: 6, cursor: "pointer",
-              border: period === p ? "1px solid #4ade80" : "1px solid #2a2a2a",
-              background: period === p ? "rgba(74,222,128,0.12)" : "transparent",
-              color: period === p ? "#4ade80" : "#888",
-            }}>{periodLabel(p)}</button>
-          ))}
-        </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 16 }}>
+        <button onClick={() => setReloadTick(t => t + 1)} style={{
+          padding: "6px 14px", fontSize: 12, fontWeight: 600, borderRadius: 6, cursor: "pointer",
+          border: "1px solid #2a2a2a", background: "transparent", color: "#aaa",
+        }}>↻ Rafraîchir</button>
       </div>
 
-      {loading && !data && <div style={{ color: "#666", fontSize: 12 }}>Chargement…</div>}
       {error && <div style={{ color: "#f87171", fontSize: 12 }}>{error}</div>}
+      {!data && !error && <div style={{ color: "#666", fontSize: 12 }}>Chargement…</div>}
 
       {data && (
         <>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16, opacity: loading ? 0.6 : 1 }}>
-            {kpi("Cas créés", data.kpi.created, "#60a5fa")}
-            {kpi("Cas validés", data.kpi.completed, "#4ade80")}
-            {kpi("Cas actifs", data.kpi.active, "#e0e0e0")}
-            {kpi("Cas en retard", data.kpi.late, data.kpi.late > 0 ? "#f87171" : "#4ade80")}
+          {/* ── KPIs ───────────────────────────────────────────────────── */}
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+            {kpi("En retard", data.kpis.late, data.kpis.late > 0 ? "#f87171" : "#4ade80", "⚠️")}
+            {kpi("Urgents (≤2j)", data.kpis.urgent, data.kpis.urgent > 0 ? "#f59e0b" : "#4ade80", "🔥")}
+            {kpi("Bloqués (≥3j)", data.kpis.stuck, data.kpis.stuck > 0 ? "#f59e0b" : "#4ade80", "⏸️")}
+            {kpi("Cas actifs", data.kpis.active, "#e0e0e0", "📦")}
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-            <div style={card}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#e0e0e0", marginBottom: 10 }}>Activité par secteur</div>
+          {/* ── Pipeline ───────────────────────────────────────────────── */}
+          <div style={{ ...card, marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#e0e0e0", marginBottom: 4 }}>Pipeline en direct</div>
+            <div style={{ fontSize: 11, color: "#666", marginBottom: 14 }}>Répartition des cas actifs par secteur.</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {data.pipeline.map(p => {
+                const maxVal = Math.max(1, ...data.pipeline.map(x => x.active));
+                const pct = (p.active / maxVal) * 100;
+                return (
+                  <div key={p.sector} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 130, fontSize: 12, color: "#e0e0e0", fontWeight: 600 }}>
+                      <span style={{ color: sectorColor(p.sector), marginRight: 6 }}>●</span>
+                      {sectorLabel(p.sector)}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 100, height: 26, background: "#141414", borderRadius: 5, overflow: "hidden", position: "relative" }}>
+                      <div style={{
+                        width: `${pct}%`, height: "100%",
+                        background: `${sectorColor(p.sector)}30`,
+                        borderRight: `2px solid ${sectorColor(p.sector)}`,
+                        transition: "width 300ms",
+                      }} />
+                      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", padding: "0 10px", gap: 8 }}>
+                        <span style={{ fontSize: 13, fontWeight: 800, color: "#e0e0e0" }}>{p.active}</span>
+                        {p.late > 0 && badge(`${p.late} retard`, "#f87171")}
+                        {p.urgent > 0 && badge(`${p.urgent} urgent`, "#f59e0b")}
+                        {p.stuck > 0 && badge(`${p.stuck} bloqué`, "#a78bfa")}
+                      </div>
+                    </div>
+                    <div style={{ width: 160, fontSize: 11, color: "#888", textAlign: "right" }}>
+                      {p.users.length > 0 ? `👥 ${p.users.join(", ")}` : "—"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── Cas prioritaires ───────────────────────────────────────── */}
+          <div style={{ ...card, marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#e0e0e0", marginBottom: 4 }}>
+              À traiter en priorité
+            </div>
+            <div style={{ fontSize: 11, color: "#666", marginBottom: 10 }}>Cas en retard, urgents ou bloqués — triés par urgence.</div>
+            {data.priorityCases.length === 0 ? (
+              <div style={{ color: "#4ade80", fontSize: 13, padding: "12px 0" }}>✓ Rien d'urgent, tout roule.</div>
+            ) : (
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead><tr>
+                  <th style={th}>N° cas</th>
+                  <th style={th}>Nature</th>
                   <th style={th}>Secteur</th>
-                  <th style={{ ...th, textAlign: "right" }}>Modifications</th>
-                  <th style={{ ...th, textAlign: "right" }}>Validations</th>
-                  <th style={{ ...th, textAlign: "right" }}>Total</th>
+                  <th style={th}>Expédition</th>
+                  <th style={th}>Dernière activité</th>
+                  <th style={th}>État</th>
                 </tr></thead>
                 <tbody>
-                  {data.bySector.length === 0 && <tr><td colSpan={4} style={{ ...td, color: "#666", textAlign: "center" }}>Aucune activité</td></tr>}
-                  {data.bySector.map(s => (
-                    <tr key={s.code}>
-                      <td style={td}>{fmtSector(s.code)}</td>
-                      <td style={{ ...td, textAlign: "right" }}>{s.updates}</td>
-                      <td style={{ ...td, textAlign: "right", color: "#4ade80" }}>{s.completions}</td>
-                      <td style={{ ...td, textAlign: "right", fontWeight: 700 }}>{s.total}</td>
+                  {data.priorityCases.map(c => {
+                    const exp = fmtExp(c.daysUntilExp);
+                    const act = c.daysSinceActivity === null
+                      ? { text: "jamais", color: "#888" }
+                      : c.daysSinceActivity === 0
+                        ? { text: "aujourd'hui", color: "#4ade80" }
+                        : c.daysSinceActivity === 1
+                          ? { text: "hier", color: "#aaa" }
+                          : { text: `il y a ${c.daysSinceActivity}j`, color: c.daysSinceActivity >= 3 ? "#f87171" : "#aaa" };
+                    return (
+                      <tr key={c.id}>
+                        <td style={{ ...td, fontWeight: 700 }}>{c.caseNumber ?? "—"}</td>
+                        <td style={{ ...td, color: "#aaa" }}>{c.nature ?? "—"}</td>
+                        <td style={td}>
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
+                            background: `${sectorColor(c.sector)}20`, color: sectorColor(c.sector),
+                          }}>{sectorShort(c.sector)}</span>
+                        </td>
+                        <td style={{ ...td, color: exp.color, fontWeight: 600 }}>{exp.text}</td>
+                        <td style={{ ...td, color: act.color }}>{act.text}</td>
+                        <td style={td}>
+                          <div style={{ display: "flex", gap: 4 }}>
+                            {c.isLate && badge("retard", "#f87171", true)}
+                            {c.isUrgent && badge("urgent", "#f59e0b", true)}
+                            {c.isStuck && badge("bloqué", "#a78bfa")}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* ── Cas bloqués ───────────────────────────────────────────── */}
+          {data.stuckCases.length > 0 && (
+            <div style={{ ...card, marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#a78bfa", marginBottom: 4 }}>
+                Cas bloqués ({data.stuckCases.length})
+              </div>
+              <div style={{ fontSize: 11, color: "#666", marginBottom: 10 }}>Aucune activité depuis 3 jours ou plus.</div>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead><tr>
+                  <th style={th}>N° cas</th>
+                  <th style={th}>Nature</th>
+                  <th style={th}>Secteur</th>
+                  <th style={th}>Dernière action par</th>
+                  <th style={{ ...th, textAlign: "right" }}>Inactivité</th>
+                </tr></thead>
+                <tbody>
+                  {data.stuckCases.map(c => (
+                    <tr key={c.id}>
+                      <td style={{ ...td, fontWeight: 700 }}>{c.caseNumber ?? "—"}</td>
+                      <td style={{ ...td, color: "#aaa" }}>{c.nature ?? "—"}</td>
+                      <td style={td}>
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
+                          background: `${sectorColor(c.sector)}20`, color: sectorColor(c.sector),
+                        }}>{sectorShort(c.sector)}</span>
+                      </td>
+                      <td style={{ ...td, color: "#aaa" }}>{c.lastActionBy ?? "—"}</td>
+                      <td style={{ ...td, textAlign: "right", color: "#a78bfa", fontWeight: 700 }}>
+                        {c.daysSinceActivity} j
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+          )}
 
-            <div style={card}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#e0e0e0", marginBottom: 10 }}>Activité par utilisateur</div>
+          {/* ── Charge par utilisateur ────────────────────────────────── */}
+          <div style={card}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#e0e0e0", marginBottom: 4 }}>Charge par utilisateur</div>
+            <div style={{ fontSize: 11, color: "#666", marginBottom: 10 }}>
+              Qui déborde, qui galère. Clique sur un utilisateur pour voir son détail.
+            </div>
+            {data.userLoad.length === 0 ? (
+              <div style={{ color: "#666", fontSize: 12, padding: "8px 0" }}>Aucun utilisateur actif.</div>
+            ) : (
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead><tr>
                   <th style={th}>Utilisateur</th>
-                  <th style={th}>Secteur</th>
-                  <th style={{ ...th, textAlign: "right" }}>Créés</th>
-                  <th style={{ ...th, textAlign: "right" }}>Modifications</th>
-                  <th style={{ ...th, textAlign: "right" }}>Validations</th>
-                  <th style={{ ...th, textAlign: "right" }}>Total</th>
+                  <th style={th}>Secteurs</th>
+                  <th style={{ ...th, textAlign: "right" }}>Cas actifs</th>
+                  <th style={{ ...th, textAlign: "right" }}>Urgents</th>
+                  <th style={{ ...th, textAlign: "right" }}>Bloqués</th>
+                  <th style={{ ...th, textAlign: "right" }}>Actions (7j)</th>
+                  <th style={th}>Statut</th>
                 </tr></thead>
                 <tbody>
-                  {data.byUser.length === 0 && <tr><td colSpan={6} style={{ ...td, color: "#666", textAlign: "center" }}>Aucune activité</td></tr>}
-                  {data.byUser.slice(0, 20).map(u => (
+                  {data.userLoad.map(u => (
                     <tr
                       key={u.id}
                       onClick={() => setSelectedUser({ id: u.id, name: u.name })}
@@ -136,79 +246,29 @@ export function DashboardView() {
                       onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                     >
                       <td style={{ ...td, fontWeight: 600, color: "#4ade80" }}>{u.name} →</td>
-                      <td style={{ ...td, color: "#888" }}>{fmtSector(u.sector)}</td>
-                      <td style={{ ...td, textAlign: "right", color: "#60a5fa" }}>{u.created || ""}</td>
-                      <td style={{ ...td, textAlign: "right" }}>{u.updates || ""}</td>
-                      <td style={{ ...td, textAlign: "right", color: "#4ade80" }}>{u.completions || ""}</td>
-                      <td style={{ ...td, textAlign: "right", fontWeight: 700 }}>{u.total}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* ── Délais par secteur ───────────────────────────────────────── */}
-          {delays && (
-            <div style={{ ...card, marginBottom: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#e0e0e0", marginBottom: 4 }}>
-                Délais moyens par secteur
-              </div>
-              <div style={{ fontSize: 11, color: "#666", marginBottom: 10 }}>
-                Temps qu'un cas passe dans un secteur, de la première action jusqu'à la validation.
-              </div>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead><tr>
-                  <th style={th}>Secteur</th>
-                  <th style={{ ...th, textAlign: "right" }}>Global (moyenne)</th>
-                  <th style={{ ...th, textAlign: "right" }}>Nb cas (global)</th>
-                  <th style={{ ...th, textAlign: "right" }}>Sur la période</th>
-                  <th style={{ ...th, textAlign: "right" }}>Nb cas (période)</th>
-                </tr></thead>
-                <tbody>
-                  {delays.global.length === 0 && (
-                    <tr><td colSpan={5} style={{ ...td, color: "#666", textAlign: "center" }}>Pas encore assez de données</td></tr>
-                  )}
-                  {delays.global.map(g => {
-                    const p = delays.period.find(x => x.sector === g.sector);
-                    return (
-                      <tr key={g.sector}>
-                        <td style={td}>{fmtSector(g.sector)}</td>
-                        <td style={{ ...td, textAlign: "right", fontWeight: 700, color: "#e0e0e0" }}>{fmtDuration(g.avgHours)}</td>
-                        <td style={{ ...td, textAlign: "right", color: "#888" }}>{g.count}</td>
-                        <td style={{ ...td, textAlign: "right", fontWeight: 700, color: "#4ade80" }}>
-                          {p ? fmtDuration(p.avgHours) : "—"}
-                        </td>
-                        <td style={{ ...td, textAlign: "right", color: "#888" }}>{p?.count ?? 0}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          <div style={card}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#f87171", marginBottom: 10 }}>
-              Cas en retard ({data.kpi.late})
-            </div>
-            {data.lateCases.length === 0 ? (
-              <div style={{ color: "#666", fontSize: 12, padding: "8px 0" }}>Aucun cas en retard 🎉</div>
-            ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead><tr>
-                  <th style={th}>N° cas</th>
-                  <th style={th}>Nature</th>
-                  <th style={th}>Date expédition</th>
-                  <th style={{ ...th, textAlign: "right" }}>Retard</th>
-                </tr></thead>
-                <tbody>
-                  {data.lateCases.map(c => (
-                    <tr key={c.id}>
-                      <td style={{ ...td, fontWeight: 700 }}>{c.case_number ?? "—"}</td>
-                      <td style={{ ...td, color: "#aaa" }}>{c.nature_du_travail ?? "—"}</td>
-                      <td style={td}>{fmtDate(c.date_expedition)}</td>
-                      <td style={{ ...td, textAlign: "right", color: "#f87171", fontWeight: 700 }}>{c.delay} j</td>
+                      <td style={td}>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          {u.sectors.map(s => (
+                            <span key={s} style={{
+                              fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 3,
+                              background: `${sectorColor(s)}20`, color: sectorColor(s),
+                            }}>{sectorShort(s)}</span>
+                          ))}
+                        </div>
+                      </td>
+                      <td style={{ ...td, textAlign: "right", fontWeight: 700 }}>{u.activeCases}</td>
+                      <td style={{ ...td, textAlign: "right", color: u.urgentCases > 0 ? "#f59e0b" : "#666" }}>
+                        {u.urgentCases || "—"}
+                      </td>
+                      <td style={{ ...td, textAlign: "right", color: u.stuckCases > 0 ? "#a78bfa" : "#666" }}>
+                        {u.stuckCases || "—"}
+                      </td>
+                      <td style={{ ...td, textAlign: "right", color: "#aaa" }}>{u.actionsLast7d}</td>
+                      <td style={td}>
+                        {u.flag === "overloaded" && badge("débordé", "#f87171", true)}
+                        {u.flag === "struggling" && badge("galère ?", "#f59e0b", true)}
+                        {u.flag === "ok" && <span style={{ color: "#4ade80", fontSize: 11 }}>✓ ok</span>}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -221,7 +281,7 @@ export function DashboardView() {
       {selectedUser && (
         <UserDetailModal
           userId={selectedUser.id}
-          period={period}
+          period="7d"
           onClose={() => setSelectedUser(null)}
         />
       )}
