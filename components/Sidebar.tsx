@@ -92,6 +92,7 @@ export function Sidebar({ sector, isAdmin }: Props) {
               <NavLink href="/app/usinage-resine" icon="🦷" expanded={open}>Usinage Résine</NavLink>
               <NavLink href="/app/finition"       icon="✅" expanded={open}>Finition</NavLink>
               <SectionLabel label="Outils" visible={open} />
+              <NavLink href="/app/admin/dashboard" icon="📊" expanded={open}>Tableau de bord</NavLink>
               <NavLink href="/app/history" icon="📖" expanded={open}>Historique</NavLink>
             </>
           ) : (

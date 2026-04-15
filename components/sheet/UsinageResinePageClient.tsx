@@ -152,7 +152,7 @@ export function UsinageResinePageClient({ focusId }: { focusId: string | null; h
 
       {/* ── Bandeau realtime ─────────────────────────────────────────────────── */}
       <RealtimeBanner hasPending={false} isBusy={isBusy} onRefresh={() => reloadRef.current?.()} />
-      <IncomingCasesBanner toasts={toasts} onDismiss={dismiss} onDismissAll={dismissAll} />
+      <IncomingCasesBanner toasts={toasts} onDismiss={dismiss} onDismissAll={dismissAll} onIntegrate={() => reloadRef.current?.()} />
 
       {/* ── Lot panel ────────────────────────────────────────────────────────── */}
       <UsinageResineLotPanel

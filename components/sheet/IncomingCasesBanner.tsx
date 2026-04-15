@@ -19,10 +19,11 @@ function fmtDate(v: string | null): string {
 
 type Item = ToastCase & { toastId: string; visible: boolean };
 
-export function IncomingCasesBanner({ toasts }: {
+export function IncomingCasesBanner({ toasts, onIntegrate }: {
   toasts: Item[];
   onDismiss?: (toastId: string) => void;
   onDismissAll?: () => void;
+  onIntegrate?: () => void;
 }) {
   if (toasts.length === 0) return null;
 
@@ -51,6 +52,28 @@ export function IncomingCasesBanner({ toasts }: {
         <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80", boxShadow: "0 0 8px #4ade80" }} />
         {toasts.length} nouveau{toasts.length > 1 ? "x" : ""} cas en attente
       </div>
+
+      {onIntegrate && (
+        <button
+          onClick={onIntegrate}
+          style={{
+            padding: "4px 12px",
+            background: "rgba(74,222,128,0.15)",
+            border: "1px solid rgba(74,222,128,0.5)",
+            borderRadius: 6,
+            color: "#4ade80",
+            fontSize: 11,
+            fontWeight: 700,
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+            transition: "all 150ms",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(74,222,128,0.25)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "rgba(74,222,128,0.15)"; }}
+        >
+          ↻ Intégrer maintenant
+        </button>
+      )}
 
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", flex: 1 }}>
         {toasts.map(t => {

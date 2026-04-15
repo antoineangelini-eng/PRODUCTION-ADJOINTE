@@ -17,7 +17,7 @@ export function UsinageTitanePageClient({ focusId }: { focusId: string | null })
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
       <RealtimeBanner hasPending={hasPending} isBusy={isBusy} onRefresh={confirmRefresh} />
-      <IncomingCasesBanner toasts={toasts} onDismiss={dismiss} onDismissAll={dismissAll} />
+      <IncomingCasesBanner toasts={toasts} onDismiss={dismiss} onDismissAll={dismissAll} onIntegrate={() => reloadRef.current?.()} />
       <div style={{ flex: 1, minHeight: 0 }}>
         <UsinageTitaneTable
           focusId={focusId}
