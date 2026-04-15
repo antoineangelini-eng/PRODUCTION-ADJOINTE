@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { loadFinitionRowsAction, validateFinitionBatchAction, type FinitionRow } from "@/app/app/finition/actions";
 import { CaseDetailModal } from "@/components/sheet/CaseDetailModal";
+import type { ToastCase } from "@/components/sheet/CaseToast";
 
 function toDateStr(d: Date) { return d.toISOString().split("T")[0]; }
 
@@ -61,13 +62,15 @@ function DateCell({ value }: { value: string | null }) {
   return <span style={{ color:"white" }}>{new Date(value.slice(0,10)+"T00:00:00").toLocaleDateString("fr-FR")}</span>;
 }
 
-export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelectionChange }: {
+export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelectionChange, onNewCases }: {
   filter?: "today"|"tomorrow"|"all"|"late";
   onReload?: (fn:()=>void)=>void;
   highlightId?: string|null;
   lotPanel?: React.ReactNode;
   onSelectionChange?: (isBusy: boolean) => void;
+  onNewCases?: (cases: ToastCase[]) => void;
 }) {
+  const onNewCasesRef = useRef(onNewCases); onNewCasesRef.current = onNewCases;
   const [rows, setRows]             = useState<FinitionRow[]>([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState<string|null>(null);
@@ -78,7 +81,27 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
-    try { const data = await loadFinitionRowsAction(); setRows(data); setError(null); }
+    try {
+      const data = await loadFinitionRowsAction();
+      if (silent) {
+        setRows(prev => {
+          const prevIds = new Set(prev.map(r => String(r.id)));
+          const incoming = data.filter(r => !prevIds.has(String(r.id)));
+          if (incoming.length > 0) {
+            onNewCasesRef.current?.(incoming.map(r => ({
+              id: String(r.id),
+              case_number: r.case_number,
+              date_expedition: r.date_expedition,
+              nature_du_travail: r.nature_du_travail,
+            })));
+          }
+          return data;
+        });
+      } else {
+        setRows(data);
+      }
+      setError(null);
+    }
     catch (e:any) { if (!silent) setError(e.message ?? "Erreur"); }
     finally { if (!silent) setLoading(false); }
   }, []);

@@ -1,7 +1,7 @@
 import { SearchBar } from "@/components/sheet/SearchBar";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { DesignResineTable } from "@/components/sheet/DesignResineTable";
+import { DesignResinePageClient } from "@/components/sheet/DesignResinePageClient";
 import { createCaseAction } from "@/app/app/design-resine/actions";
 import { DesignResineHistoryWrapper } from "@/app/app/design-resine/DesignResineHistoryWrapper";
 
@@ -52,7 +52,7 @@ export default async function Page({
             </div>
           </div>
           <div style={{ flex: 1, minHeight: 0 }}>
-            <DesignResineTable focusId={focusId} />
+            <DesignResinePageClient focusId={focusId} />
           </div>
         </>
       )}

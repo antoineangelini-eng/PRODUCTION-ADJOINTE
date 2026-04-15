@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { UsinageResineTable } from "@/components/sheet/UsinageResineTable";
 import { UsinageResineLotPanel } from "@/components/sheet/UsinageResineLotPanel";
-import { CaseToastContainer, type ToastCase } from "@/components/sheet/CaseToast";
+import { CaseToastContainer, useCaseToasts, type ToastCase } from "@/components/sheet/CaseToast";
 import { RealtimeBanner } from "@/components/sheet/RealtimeBanner";
 import { usePollingRefresh } from "@/hooks/usePollingRefresh";
 import { useRouter } from "next/navigation";
@@ -25,7 +25,7 @@ export function UsinageResinePageClient({ focusId }: { focusId: string | null; h
 
   // Polling / realtime
   const [isBusy, setIsBusy]         = useState(false);
-  const [toasts, setToasts]         = useState<ToastCase[]>([]);
+  const { toasts, addToasts, dismiss } = useCaseToasts();
   const reloadRef                   = useRef<() => void>(() => {});
 
   const handleReload = useCallback((fn: () => void) => { reloadRef.current = fn; }, []);
@@ -39,7 +39,7 @@ export function UsinageResinePageClient({ focusId }: { focusId: string | null; h
   }
 
   function handleNewCases(cases: ToastCase[]) {
-    setToasts(prev => [...prev, ...cases]);
+    addToasts(cases);
   }
 
   return (
@@ -176,10 +176,7 @@ export function UsinageResinePageClient({ focusId }: { focusId: string | null; h
       </div>
 
       {/* ── Toasts nouveaux cas ───────────────────────────────────────────────── */}
-      <CaseToastContainer
-        toasts={toasts as any}
-        onDismiss={(toastId: string) => setToasts(prev => prev.filter(x => x.id !== toastId))}
-      />
+      <CaseToastContainer toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

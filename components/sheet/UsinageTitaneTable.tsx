@@ -375,7 +375,13 @@ function DualText({ valueH, valueB, onSaveH, onSaveB, width = 90 }: {
 }
 
 // ── Composant principal ──────────────────────────────────────────
-export function UsinageTitaneTable({ focusId }: { focusId: string | null }) {
+export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNewCases }: {
+  focusId: string | null;
+  onReload?: (fn: () => void) => void;
+  onSelectionChange?: (busy: boolean) => void;
+  onNewCases?: (cases: { id: string; case_number: string | null; date_expedition: string | null; nature_du_travail: string | null }[]) => void;
+}) {
+  const onNewCasesRef = useRef(onNewCases); onNewCasesRef.current = onNewCases;
   const [rows, setRows]               = useState<UsinageTitaneRow[]>([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState<string | null>(null);
@@ -389,14 +395,37 @@ export function UsinageTitaneTable({ focusId }: { focusId: string | null }) {
   const [foundRowId, setFoundRowId]   = useState<string | null>(null);
   const [editingDate, setEditingDate] = useState<{ caseId: string; column: string; value: string; rect: DOMRect } | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true); setError(null);
-    try { setRows((await loadUsinageTitaneRowsAction()) ?? []); }
-    catch (e: any) { setError(e.message); }
-    finally { setLoading(false); }
+  const load = useCallback(async (silent = false) => {
+    if (!silent) { setLoading(true); setError(null); }
+    try {
+      const fresh = (await loadUsinageTitaneRowsAction()) ?? [];
+      if (silent) {
+        setRows(prev => {
+          const prevIds = new Set(prev.map(r => String(r.id)));
+          const incoming = fresh.filter(r => !prevIds.has(String(r.id)));
+          if (incoming.length > 0) {
+            onNewCasesRef.current?.(incoming.map(r => ({
+              id: String(r.id),
+              case_number: r.case_number,
+              date_expedition: r.date_expedition,
+              nature_du_travail: r.nature_du_travail,
+            })));
+          }
+          return fresh;
+        });
+      } else {
+        setRows(fresh);
+      }
+    }
+    catch (e: any) { if (!silent) setError(e.message); }
+    finally { if (!silent) setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { onReload?.(() => load(true)); }, [load, onReload]);
+  useEffect(() => {
+    onSelectionChange?.(checkedIds.size > 0 || confirmDeleteId !== null);
+  }, [checkedIds, confirmDeleteId, onSelectionChange]);
 
   // Auto-refresh après 5 min d'inactivité
   const lastActivityRef = useRef(Date.now());
@@ -531,7 +560,7 @@ export function UsinageTitaneTable({ focusId }: { focusId: string | null }) {
   if (error) return (
     <div style={{ padding: 20 }}>
       <div style={{ color: "#f87171", fontSize: 13 }}>Erreur : {error}</div>
-      <button onClick={load} style={{ marginTop: 8, border: "1px solid #f87171", background: "none", color: "#f87171", padding: "4px 10px", cursor: "pointer", borderRadius: 4, fontSize: 12 }}>Réessayer</button>
+      <button onClick={() => load()} style={{ marginTop: 8, border: "1px solid #f87171", background: "none", color: "#f87171", padding: "4px 10px", cursor: "pointer", borderRadius: 4, fontSize: 12 }}>Réessayer</button>
     </div>
   );
 

@@ -5,6 +5,7 @@ import { FinitionScanner } from "@/components/sheet/FinitionScanner";
 import { getFinitionStatsAction } from "@/app/app/finition/actions";
 import { usePollingRefresh } from "@/hooks/usePollingRefresh";
 import { RealtimeBanner } from "@/components/sheet/RealtimeBanner";
+import { CaseToastContainer, useCaseToasts } from "@/components/sheet/CaseToast";
 
 type Tab = "all" | "today" | "tomorrow" | "late";
 
@@ -16,6 +17,7 @@ export function FinitionPageClient(_props: { hideHeader?: boolean } = {}) {
     validatedToday: 0, totalToday: 0, late: 0, countToday: 0, countTomorrow: 0,
   });
   const reloadRef = useRef<(() => void) | null>(null);
+  const { toasts, addToasts, dismiss } = useCaseToasts();
 
   const refreshStats = useCallback(async () => {
     try { setStats(await getFinitionStatsAction()); } catch {}
@@ -82,6 +84,7 @@ export function FinitionPageClient(_props: { hideHeader?: boolean } = {}) {
             onReload={fn => { reloadRef.current = fn; }}
             highlightId={highlightId}
             onSelectionChange={setIsBusy}
+            onNewCases={addToasts}
           />
         </div>
         <div style={{
@@ -96,6 +99,8 @@ export function FinitionPageClient(_props: { hideHeader?: boolean } = {}) {
           />
         </div>
       </div>
+
+      <CaseToastContainer toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

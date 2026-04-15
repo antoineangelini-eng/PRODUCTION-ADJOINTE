@@ -157,7 +157,13 @@ function TextInput({value,onSave,width=100}:{value:string|null;onSave:(v:string)
     style={{padding:"3px 8px",border:focused?"1px solid #4ade80":"1px solid transparent",background:focused?"rgba(74,222,128,0.06)":"rgba(255,255,255,0.05)",color:"white",width,fontSize:13,textAlign:"center",outline:"none",borderRadius:6,transition:"all 150ms"}}/>;
 }
 
-export function DesignResineTable({focusId}:{focusId:string|null}){
+export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCases}:{
+  focusId:string|null;
+  onReload?: (fn: () => void) => void;
+  onSelectionChange?: (busy: boolean) => void;
+  onNewCases?: (cases: { id: string; case_number: string | null; date_expedition: string | null; nature_du_travail: string | null }[]) => void;
+}){
+  const onNewCasesRef = useRef(onNewCases); onNewCasesRef.current = onNewCases;
   const [rows,setRows]=useState<DesignResineRow[]>([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState<string|null>(null);
@@ -172,13 +178,34 @@ export function DesignResineTable({focusId}:{focusId:string|null}){
   const [editingExpRect,setEditingExpRect]=useState<DOMRect|null>(null);
   const [foundRowId,setFoundRowId]=useState<string|null>(null);
 
-  const load=useCallback(async()=>{
-    setLoading(true);setError(null);
-    try{setRows(await loadDesignResineRowsAction());}
-    catch(e:any){setError(e?.message??"Erreur inconnue");}
-    finally{setLoading(false);}
+  const load=useCallback(async(silent=false)=>{
+    if(!silent){setLoading(true);setError(null);}
+    try{
+      const fresh = await loadDesignResineRowsAction();
+      if(silent){
+        setRows(prev=>{
+          const prevIds = new Set(prev.map(r=>String(r.id)));
+          const incoming = fresh.filter(r=>!prevIds.has(String(r.id)));
+          if(incoming.length>0){
+            onNewCasesRef.current?.(incoming.map(r=>({
+              id: String(r.id),
+              case_number: r.case_number,
+              date_expedition: r.date_expedition,
+              nature_du_travail: r.nature_du_travail,
+            })));
+          }
+          return fresh;
+        });
+      } else {
+        setRows(fresh);
+      }
+    }
+    catch(e:any){if(!silent)setError(e?.message??"Erreur inconnue");}
+    finally{if(!silent)setLoading(false);}
   },[]);
   useEffect(()=>{load();},[load]);
+  useEffect(()=>{ onReload?.(() => load(true)); },[load, onReload]);
+  useEffect(()=>{ onSelectionChange?.(checkedIds.size > 0 || confirmDeleteId !== null || editingExpId !== null); },[checkedIds, confirmDeleteId, editingExpId, onSelectionChange]);
   useEffect(()=>{
     if(!focusId||loading)return;
     const found=rows.find(r=>r.case_number===focusId);
@@ -252,7 +279,7 @@ export function DesignResineTable({focusId}:{focusId:string|null}){
   }
 
   if(loading)return <div style={{color:"#555",fontSize:13,padding:"20px 0"}}>Chargement...</div>;
-  if(error)return <div style={{color:"#f87171",fontSize:13,padding:"20px 0"}}><div style={{fontWeight:700,marginBottom:4}}>Erreur :</div><code style={{fontSize:12,background:"rgba(239,68,68,0.08)",padding:"4px 8px",borderRadius:4,display:"block"}}>{error}</code><button onClick={load} style={{marginTop:8,border:"1px solid #f87171",background:"none",color:"#f87171",padding:"4px 10px",cursor:"pointer",borderRadius:4,fontSize:12}}>Réessayer</button></div>;
+  if(error)return <div style={{color:"#f87171",fontSize:13,padding:"20px 0"}}><div style={{fontWeight:700,marginBottom:4}}>Erreur :</div><code style={{fontSize:12,background:"rgba(239,68,68,0.08)",padding:"4px 8px",borderRadius:4,display:"block"}}>{error}</code><button onClick={()=>load()} style={{marginTop:8,border:"1px solid #f87171",background:"none",color:"#f87171",padding:"4px 10px",cursor:"pointer",borderRadius:4,fontSize:12}}>Réessayer</button></div>;
 
   return (
     <div style={{display:"flex",flexDirection:"column",height:"100%",minHeight:0}}>

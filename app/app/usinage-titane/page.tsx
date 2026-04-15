@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { SearchBar } from "@/components/sheet/SearchBar";
-import { UsinageTitaneTable } from "@/components/sheet/UsinageTitaneTable";
+import { UsinageTitanePageClient } from "@/components/sheet/UsinageTitanePageClient";
 import { UsinageTitaneHistoryWrapper } from "@/app/app/usinage-titane/UsinageTitaneHistoryWrapper";
 
 export default async function Page({ searchParams }: { searchParams?: Promise<{ focus?: string; tab?: string }> }) {
@@ -37,7 +37,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<{ 
             <SearchBar basePath="/app/usinage-titane" />
           </div>
           <div style={{ flex: 1, minHeight: 0 }}>
-            <UsinageTitaneTable focusId={focusId} />
+            <UsinageTitanePageClient focusId={focusId} />
           </div>
         </>
       )}
