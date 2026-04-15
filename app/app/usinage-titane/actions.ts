@@ -13,6 +13,7 @@ export type UsinageTitaneRow = {
   created_at: string | null;
   date_expedition: string | null;
   nature_du_travail: string | null;
+  is_physical: boolean | null;
   sector_design_metal: {
     design_chassis: boolean | null;
     design_chassis_at: string | null;
@@ -48,7 +49,7 @@ export async function loadUsinageTitaneRowsAction(): Promise<UsinageTitaneRow[]>
     .from("case_assignments")
     .select(`
       cases:case_id (
-        id, created_at, case_number, date_expedition, nature_du_travail,
+        id, created_at, case_number, date_expedition, nature_du_travail, is_physical,
         sector_design_metal ( design_chassis, design_chassis_at, reception_metal_date, modele_a_faire_ok ),
         sector_usinage_titane (
           envoye_usinage, envoye_usinage_at,

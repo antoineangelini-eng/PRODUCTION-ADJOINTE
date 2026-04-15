@@ -2,6 +2,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { PhysicalBadge } from "@/components/sheet/PhysicalBadge";
 import {
   loadUsinageResineRowsAction,
   saveUsinageResineCellAction,
@@ -486,6 +487,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 14px", borderBottom:"2px solid #2a2a2a" }}>
                   <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                     <span style={{ fontSize:18, fontWeight:800, color:"white", lineHeight:1 }}>{row.case_number}</span>
+                    {row.is_physical && <PhysicalBadge size="md" />}
                     {nat && <span style={{ display:"inline-flex", padding:"2px 9px", borderRadius:5, fontSize:10, fontWeight:700, background:`${natColor}18`, border:`1px solid ${natColor}40`, color:natColor, whiteSpace:"nowrap" }}>{nat}</span>}
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:12 }}>
@@ -543,6 +545,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
               </div>
               <div style={{ background:"#0b0b0b", border:"1px solid #1e1e1e", borderRadius:8, padding:"12px 14px", marginBottom:18, display:"flex", alignItems:"center", gap:10 }}>
                 <span style={{ fontSize:20, fontWeight:800, color:"white" }}>{row.case_number}</span>
+                {row.is_physical && <PhysicalBadge size="md" />}
                 {row.nature_du_travail && (
                   <span style={{ fontSize:11, fontWeight:600, padding:"3px 9px", borderRadius:5, background:"rgba(255,255,255,0.05)", color:"#aaa" }}>{row.nature_du_travail}</span>
                 )}

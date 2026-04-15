@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { loadFinitionRowsAction, validateFinitionBatchAction, type FinitionRow } from "@/app/app/finition/actions";
 import { CaseDetailModal } from "@/components/sheet/CaseDetailModal";
+import { PhysicalBadge } from "@/components/sheet/PhysicalBadge";
 import type { ToastCase } from "@/components/sheet/CaseToast";
 
 function toDateStr(d: Date) { return d.toISOString().split("T")[0]; }
@@ -349,6 +350,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                       >
                         {row.case_number}
                       </button>
+                      {row.is_physical && <PhysicalBadge />}
                     </div>
                   </td>
 

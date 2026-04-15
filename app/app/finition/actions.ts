@@ -9,6 +9,7 @@ export type FinitionRow = {
   created_at: string | null;
   date_expedition: string | null;
   nature_du_travail: string | null;
+  is_physical: boolean | null;
   sector_design_metal: {
     reception_metal: boolean | null;
     reception_metal_date: string | null;
@@ -76,7 +77,7 @@ export async function loadFinitionRowsAction(): Promise<FinitionRow[]> {
     .from("case_assignments")
     .select(`
       cases:case_id (
-        id, created_at, case_number, date_expedition, nature_du_travail,
+        id, created_at, case_number, date_expedition, nature_du_travail, is_physical,
         sector_design_metal ( reception_metal, reception_metal_date, type_de_dents, teintes_associees, modele_a_faire ),
         sector_design_resine ( design_dents_resine, nb_blocs_de_dents, teintes_associees, type_de_dents, modele_a_realiser_ok ),
         sector_usinage_resine ( usinage_dents_resine, reception_resine_at ),

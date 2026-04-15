@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { PhysicalBadge } from "@/components/sheet/PhysicalBadge";
 import {
   loadDesignResineRowsAction,
   saveDesignResineCellAction,
@@ -395,7 +396,7 @@ export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCa
                 <tr key={row.id} id={`row-dr-${row.id}`} onClick={()=>setActiveRowId(String(row.id))} onMouseEnter={()=>setHoveredId(String(row.id))} onMouseLeave={()=>setHoveredId(null)}
                   style={{cursor:"pointer",animation:isF?"row-found 2.2s ease-in-out forwards":"none",background:isF?undefined:"transparent"}}>
 
-                  <td style={tdCardFirst}><div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:24,padding:"2px 8px",borderRadius:8,color:"#ffffff",background:isA?"rgba(255,255,255,0.04)":"transparent",border:isA?"1px solid rgba(255,255,255,0.06)":"1px solid transparent",transition:"all 160ms"}}>{row.case_number}</div></td>
+                  <td style={tdCardFirst}><div style={{display:"inline-flex",alignItems:"center",gap:6}}><div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:24,padding:"2px 8px",borderRadius:8,color:"#ffffff",background:isA?"rgba(255,255,255,0.04)":"transparent",border:isA?"1px solid rgba(255,255,255,0.06)":"1px solid transparent",transition:"all 160ms"}}>{row.case_number}</div>{row.is_physical&&<PhysicalBadge/>}</div></td>
                   <td style={tdCard}>{fmtDate(row.created_at)}</td>
 
                   <td style={{...tdCard,cursor:isProvisoire?"pointer":"default"}} onClick={isProvisoire?(e)=>{e.stopPropagation();const rect=(e.currentTarget as HTMLElement).getBoundingClientRect();setEditingExpId(String(row.id));setEditingExpRect(rect);}:undefined}>

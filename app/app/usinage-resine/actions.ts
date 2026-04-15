@@ -14,6 +14,7 @@ export type UsinageResineRow = {
   created_at: string | null;
   date_expedition: string | null;
   nature_du_travail: string | null;
+  is_physical: boolean | null;
   sector_design_resine: {
     type_de_dents: string | null;
     design_dents_resine: boolean | null;
@@ -50,7 +51,7 @@ export async function loadUsinageResineRowsAction(): Promise<UsinageResineRow[]>
     .from("case_assignments")
     .select(`
       cases:case_id (
-        id, created_at, case_number, date_expedition, nature_du_travail,
+        id, created_at, case_number, date_expedition, nature_du_travail, is_physical,
         sector_design_resine ( type_de_dents, design_dents_resine, design_dents_resine_at, nb_blocs_de_dents, modele_a_realiser_ok, teintes_associees ),
         sector_design_metal ( type_de_dents, modele_a_faire_ok, teintes_associees ),
         sector_usinage_resine ( usinage_dents_resine, identite_machine, numero_disque, numero_lot_pmma, reception_resine_at, nb_blocs_override, teintes_override, type_de_dents_override ),

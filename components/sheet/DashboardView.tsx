@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { loadOpsDashboardAction, type OpsDashboard } from "@/app/app/admin/dashboard-actions";
-import { UserDetailModal } from "@/components/sheet/UserDetailModal";
+import { PhysicalBadge } from "@/components/sheet/PhysicalBadge";
 
 const SECTOR_META: Record<string, { short: string; label: string; color: string }> = {
   design_metal:   { short: "DM",  label: "Design Métal",   color: "#4ade80" },
@@ -34,7 +34,6 @@ export function DashboardView() {
   const [data, setData] = useState<OpsDashboard | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadTick, setReloadTick] = useState(0);
-  const [selectedUser, setSelectedUser] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -155,7 +154,12 @@ export function DashboardView() {
                           : { text: `il y a ${c.daysSinceActivity}j`, color: c.daysSinceActivity >= 3 ? "#f87171" : "#aaa" };
                     return (
                       <tr key={c.id}>
-                        <td style={{ ...td, fontWeight: 700 }}>{c.caseNumber ?? "—"}</td>
+                        <td style={{ ...td, fontWeight: 700 }}>
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                            <span>{c.caseNumber ?? "—"}</span>
+                            {c.isPhysical && <PhysicalBadge />}
+                          </div>
+                        </td>
                         <td style={{ ...td, color: "#aaa" }}>{c.nature ?? "—"}</td>
                         <td style={td}>
                           <span style={{
@@ -198,7 +202,12 @@ export function DashboardView() {
                 <tbody>
                   {data.stuckCases.map(c => (
                     <tr key={c.id}>
-                      <td style={{ ...td, fontWeight: 700 }}>{c.caseNumber ?? "—"}</td>
+                      <td style={{ ...td, fontWeight: 700 }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          <span>{c.caseNumber ?? "—"}</span>
+                          {c.isPhysical && <PhysicalBadge />}
+                        </div>
+                      </td>
                       <td style={{ ...td, color: "#aaa" }}>{c.nature ?? "—"}</td>
                       <td style={td}>
                         <span style={{
@@ -217,73 +226,7 @@ export function DashboardView() {
             </div>
           )}
 
-          {/* ── Charge par utilisateur ────────────────────────────────── */}
-          <div style={card}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#e0e0e0", marginBottom: 4 }}>Charge par utilisateur</div>
-            <div style={{ fontSize: 11, color: "#666", marginBottom: 10 }}>
-              Qui déborde, qui galère. Clique sur un utilisateur pour voir son détail.
-            </div>
-            {data.userLoad.length === 0 ? (
-              <div style={{ color: "#666", fontSize: 12, padding: "8px 0" }}>Aucun utilisateur actif.</div>
-            ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead><tr>
-                  <th style={th}>Utilisateur</th>
-                  <th style={th}>Secteurs</th>
-                  <th style={{ ...th, textAlign: "right" }}>Cas actifs</th>
-                  <th style={{ ...th, textAlign: "right" }}>Urgents</th>
-                  <th style={{ ...th, textAlign: "right" }}>Bloqués</th>
-                  <th style={{ ...th, textAlign: "right" }}>Actions (7j)</th>
-                  <th style={th}>Statut</th>
-                </tr></thead>
-                <tbody>
-                  {data.userLoad.map(u => (
-                    <tr
-                      key={u.id}
-                      onClick={() => setSelectedUser({ id: u.id, name: u.name })}
-                      style={{ cursor: "pointer", transition: "background 120ms" }}
-                      onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.04)"}
-                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                    >
-                      <td style={{ ...td, fontWeight: 600, color: "#4ade80" }}>{u.name} →</td>
-                      <td style={td}>
-                        <div style={{ display: "flex", gap: 4 }}>
-                          {u.sectors.map(s => (
-                            <span key={s} style={{
-                              fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 3,
-                              background: `${sectorColor(s)}20`, color: sectorColor(s),
-                            }}>{sectorShort(s)}</span>
-                          ))}
-                        </div>
-                      </td>
-                      <td style={{ ...td, textAlign: "right", fontWeight: 700 }}>{u.activeCases}</td>
-                      <td style={{ ...td, textAlign: "right", color: u.urgentCases > 0 ? "#f59e0b" : "#666" }}>
-                        {u.urgentCases || "—"}
-                      </td>
-                      <td style={{ ...td, textAlign: "right", color: u.stuckCases > 0 ? "#a78bfa" : "#666" }}>
-                        {u.stuckCases || "—"}
-                      </td>
-                      <td style={{ ...td, textAlign: "right", color: "#aaa" }}>{u.actionsLast7d}</td>
-                      <td style={td}>
-                        {u.flag === "overloaded" && badge("débordé", "#f87171", true)}
-                        {u.flag === "struggling" && badge("galère ?", "#f59e0b", true)}
-                        {u.flag === "ok" && <span style={{ color: "#4ade80", fontSize: 11 }}>✓ ok</span>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
         </>
-      )}
-
-      {selectedUser && (
-        <UserDetailModal
-          userId={selectedUser.id}
-          period="7d"
-          onClose={() => setSelectedUser(null)}
-        />
       )}
     </div>
   );

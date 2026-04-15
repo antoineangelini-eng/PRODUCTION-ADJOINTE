@@ -15,6 +15,7 @@ export type DesignMetalRow = {
   created_at: string | null;
   date_expedition: string | null;
   nature_du_travail: string | null;
+  is_physical: boolean | null;
   sector_design_metal: {
     design_chassis: boolean | null;
     design_chassis_at: string | null;
@@ -33,7 +34,7 @@ export async function loadDesignMetalRowsAction(): Promise<DesignMetalRow[]> {
     .from("case_assignments")
     .select(`
       cases:case_id (
-        id, created_at, case_number, date_expedition, nature_du_travail,
+        id, created_at, case_number, date_expedition, nature_du_travail, is_physical,
         sector_design_metal (
           design_chassis, design_chassis_at, dentall_case_number,
           envoye_dentall, reception_metal_date, type_de_dents,
@@ -147,6 +148,24 @@ export async function createCaseAction(formData: FormData) {
   const caseNumber = String(formData.get("case_number")       ?? "").trim();
   const nature     = String(formData.get("nature_du_travail") ?? "").trim();
   if (!caseNumber || !nature) return;
+
+  // Détection "cas physique" : même n° entré une 2e fois dans les 60 s → marquer physique
+  const sixtySecAgo = new Date(Date.now() - 60_000).toISOString();
+  const { data: recent } = await supabase
+    .from("cases")
+    .select("id, created_at, is_physical")
+    .eq("case_number", caseNumber)
+    .gte("created_at", sixtySecAgo)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (recent?.id) {
+    if (!recent.is_physical) {
+      await supabase.rpc("rpc_mark_case_physical", { p_case_id: recent.id });
+    }
+    redirect(`/app/design-metal?focus=${caseNumber}`);
+  }
 
   const { data, error } = await supabase.rpc("rpc_create_case_from_design_metal", {
     p_case_number:       caseNumber,

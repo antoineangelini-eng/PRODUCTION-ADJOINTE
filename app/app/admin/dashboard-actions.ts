@@ -31,6 +31,7 @@ export type OpsDashboard = {
     isLate: boolean;
     isUrgent: boolean;
     isStuck: boolean;
+    isPhysical: boolean;
   }>;
   stuckCases: Array<{
     id: string;
@@ -39,6 +40,7 @@ export type OpsDashboard = {
     sector: string | null;
     daysSinceActivity: number;
     lastActionBy: string | null;
+    isPhysical: boolean;
   }>;
   userLoad: Array<{
     id: string;
@@ -83,16 +85,17 @@ export async function loadOpsDashboardAction(): Promise<OpsDashboard> {
 
   // 1. Tous les cas + leur secteur actuel
   const [{ data: casesData }, { data: assignments }] = await Promise.all([
-    admin.from("cases").select("id, case_number, date_expedition, nature_du_travail").limit(2000),
+    admin.from("cases").select("id, case_number, date_expedition, nature_du_travail, is_physical").limit(2000),
     admin.from("case_assignments").select("case_id, sector_code, status"),
   ]);
-  const cases = (casesData ?? []) as Array<{ id: string; case_number: string | null; date_expedition: string | null; nature_du_travail: string | null }>;
+  const cases = (casesData ?? []) as Array<{ id: string; case_number: string | null; date_expedition: string | null; nature_du_travail: string | null; is_physical: boolean | null }>;
 
   // secteur actuel par case + done
   const sectorByCase = new Map<string, string | null>();
   const isDoneByCase = new Map<string, boolean>();
   const assignGroup = new Map<string, Array<{ sector_code: string; status: string }>>();
   for (const a of (assignments ?? []) as Array<{ case_id: string; sector_code: string; status: string }>) {
+    if (a.sector_code === "admin") continue; // admin n'est jamais un secteur de production
     if (!assignGroup.has(a.case_id)) assignGroup.set(a.case_id, []);
     assignGroup.get(a.case_id)!.push({ sector_code: a.sector_code, status: a.status });
   }
@@ -138,7 +141,7 @@ export async function loadOpsDashboardAction(): Promise<OpsDashboard> {
     id: string; case_number: string | null; nature: string | null; sector: string | null;
     date_expedition: string | null; daysUntilExp: number | null;
     daysSinceActivity: number | null; lastActionBy: string | null;
-    isLate: boolean; isUrgent: boolean; isStuck: boolean;
+    isLate: boolean; isUrgent: boolean; isStuck: boolean; isPhysical: boolean;
   };
   const activeEnriched: EnrichedCase[] = [];
   for (const c of cases) {
@@ -160,6 +163,7 @@ export async function loadOpsDashboardAction(): Promise<OpsDashboard> {
       daysSinceActivity,
       lastActionBy: la?.by ? (nameMap.get(la.by) ?? null) : null,
       isLate, isUrgent, isStuck,
+      isPhysical: Boolean(c.is_physical),
     });
   }
 
@@ -214,6 +218,7 @@ export async function loadOpsDashboardAction(): Promise<OpsDashboard> {
       daysUntilExp: x.c.daysUntilExp,
       daysSinceActivity: x.c.daysSinceActivity,
       isLate: x.c.isLate, isUrgent: x.c.isUrgent, isStuck: x.c.isStuck,
+      isPhysical: x.c.isPhysical,
     }));
 
   // 9. Cas bloqués
@@ -228,6 +233,7 @@ export async function loadOpsDashboardAction(): Promise<OpsDashboard> {
       sector: c.sector,
       daysSinceActivity: c.daysSinceActivity ?? 0,
       lastActionBy: c.lastActionBy,
+      isPhysical: c.isPhysical,
     }));
 
   // 10. Charge par utilisateur

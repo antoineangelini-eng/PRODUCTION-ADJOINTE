@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { PhysicalBadge } from "@/components/sheet/PhysicalBadge";
 
 const EVENT_LABELS: Record<string, { label: string; color: string; icon: string }> = {
   CASE_CREATED:               { label: "Dossier créé",               color: "#60a5fa", icon: "✦" },
@@ -74,7 +75,7 @@ export async function SectorHistoryTab({ sectorCode }: { sectorCode: string }) {
     .select(`
       id, created_at, event_type, actor_sector, payload,
       cases:case_id (
-        id, case_number, nature_du_travail
+        id, case_number, nature_du_travail, is_physical
       )
     `)
     .in("case_id", caseIds)
@@ -83,13 +84,14 @@ export async function SectorHistoryTab({ sectorCode }: { sectorCode: string }) {
 
   if (error) return <div style={{ color: "salmon", padding: 16 }}>{error.message}</div>;
 
-  const grouped = new Map<string, { caseNumber: string; nature: string; events: any[] }>();
+  const grouped = new Map<string, { caseNumber: string; nature: string; isPhysical: boolean; events: any[] }>();
   for (const e of (events ?? []) as any[]) {
     const caseId = e.cases?.id ?? "unknown";
     if (!grouped.has(caseId)) {
       grouped.set(caseId, {
         caseNumber: e.cases?.case_number ?? "?",
         nature: e.cases?.nature_du_travail ?? "—",
+        isPhysical: Boolean(e.cases?.is_physical),
         events: [],
       });
     }
@@ -112,6 +114,7 @@ export async function SectorHistoryTab({ sectorCode }: { sectorCode: string }) {
               display: "flex", gap: 12, alignItems: "center", background: "#111",
             }}>
               <span style={{ fontWeight: 800, fontSize: 13 }}>{group.caseNumber}</span>
+              {group.isPhysical && <PhysicalBadge />}
               <span style={{
                 fontSize: 11, padding: "2px 8px", borderRadius: 999,
                 border: "1px solid #2a2a2a", background: "#0b0b0b", color: "#888",

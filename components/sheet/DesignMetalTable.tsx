@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { useEffect, useState, useRef, useCallback } from "react";
+import { PhysicalBadge } from "@/components/sheet/PhysicalBadge";
 import {
   saveDesignMetalCellAction,
   saveTypeDeDentsAction,
@@ -892,21 +893,24 @@ export function DesignMetalTable({
                     if (col.key === "case_number")
                       return (
                         <td key={col.key} style={tdCardFirst}>
-                          <div
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              minWidth: 24,
-                              padding: "2px 8px",
-                              borderRadius: 8,
-                              color: "#ffffff",
-                              background: isActive ? "rgba(255,255,255,0.04)" : "transparent",
-                              border: isActive ? "1px solid rgba(255,255,255,0.06)" : "1px solid transparent",
-                              transition: "all 160ms",
-                            }}
-                          >
-                            {row.case_number ?? "—"}
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                            <div
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                minWidth: 24,
+                                padding: "2px 8px",
+                                borderRadius: 8,
+                                color: "#ffffff",
+                                background: isActive ? "rgba(255,255,255,0.04)" : "transparent",
+                                border: isActive ? "1px solid rgba(255,255,255,0.06)" : "1px solid transparent",
+                                transition: "all 160ms",
+                              }}
+                            >
+                              {row.case_number ?? "—"}
+                            </div>
+                            {row.is_physical && <PhysicalBadge />}
                           </div>
                         </td>
                       );

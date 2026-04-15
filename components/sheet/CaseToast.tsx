@@ -6,6 +6,7 @@ export type ToastCase = {
   case_number: string | null;
   date_expedition: string | null;
   nature_du_travail: string | null;
+  is_physical?: boolean | null;
 };
 
 type ToastItem = ToastCase & { toastId: string; visible: boolean };

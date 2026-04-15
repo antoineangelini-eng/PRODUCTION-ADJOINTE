@@ -2,6 +2,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { PhysicalBadge } from "@/components/sheet/PhysicalBadge";
 import {
   loadUsinageTitaneRowsAction,
   saveUsinageTitaneCellAction,
@@ -679,8 +680,11 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
 
                   {/* N° cas */}
                   <td style={tdCardFirst}>
-                    <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 24, padding: "2px 8px", borderRadius: 8, color: "#ffffff", background: isActive ? "rgba(255,255,255,0.04)" : "transparent", border: isActive ? "1px solid rgba(255,255,255,0.06)" : "1px solid transparent", transition: "all 160ms" }}>
-                      {row.case_number}
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 24, padding: "2px 8px", borderRadius: 8, color: "#ffffff", background: isActive ? "rgba(255,255,255,0.04)" : "transparent", border: isActive ? "1px solid rgba(255,255,255,0.06)" : "1px solid transparent", transition: "all 160ms" }}>
+                        {row.case_number}
+                      </div>
+                      {row.is_physical && <PhysicalBadge />}
                     </div>
                   </td>
 

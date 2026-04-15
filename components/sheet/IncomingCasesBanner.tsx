@@ -1,5 +1,6 @@
 "use client";
 import type { ToastCase } from "@/components/sheet/CaseToast";
+import { PhysicalBadge } from "@/components/sheet/PhysicalBadge";
 
 const NATURE_META: Record<string, { color: string }> = {
   "Chassis Argoat":    { color: "#4ade80" },
@@ -91,6 +92,7 @@ export function IncomingCasesBanner({ toasts, onIntegrate }: {
               fontSize: 11,
             }}>
               <span style={{ color: "white", fontWeight: 700 }}>N° {t.case_number ?? "—"}</span>
+              {t.is_physical && <PhysicalBadge />}
               {t.nature_du_travail && (
                 <span style={{ color, fontWeight: 600 }}>{t.nature_du_travail}</span>
               )}
