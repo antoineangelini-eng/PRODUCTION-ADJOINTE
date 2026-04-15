@@ -5,11 +5,13 @@ import { UsersManager }        from "@/components/sheet/UsersManager";
 import { WorkingDaysManager }  from "@/components/sheet/WorkingDaysManager";
 import { AdminResetPanel }     from "@/components/sheet/AdminResetPanel";
 import { FeedbackManager }     from "@/components/FeedbackManager";
+import { DashboardView }       from "@/components/sheet/DashboardView";
 import { getFeedbackCountAction } from "@/app/app/feedback-actions";
 
-type Tab = "global" | "users" | "days" | "reset" | "feedback";
+type Tab = "dashboard" | "global" | "users" | "days" | "reset" | "feedback";
 
 const TABS: { id: Tab; label: string; color?: string }[] = [
+  { id: "dashboard", label: "📊 Tableau de bord" },
   { id: "global",   label: "Vue globale" },
   { id: "users",    label: "Utilisateurs" },
   { id: "days",     label: "Jours ouvrés" },
@@ -18,7 +20,7 @@ const TABS: { id: Tab; label: string; color?: string }[] = [
 ];
 
 export function AdminPageClient() {
-  const [tab, setTab] = useState<Tab>("global");
+  const [tab, setTab] = useState<Tab>("dashboard");
   const [feedbackCount, setFeedbackCount] = useState(0);
 
   useEffect(() => {
@@ -65,6 +67,7 @@ export function AdminPageClient() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, background: "#1a1a1a", border: "1px solid #272727", borderRadius: "0 10px 10px 10px", padding: "0 16px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        {tab === "dashboard" && <DashboardView />}
         {tab === "global"   && <GlobalView />}
         {tab === "users"    && <UsersManager />}
         {tab === "days"     && <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}><WorkingDaysManager /></div>}
