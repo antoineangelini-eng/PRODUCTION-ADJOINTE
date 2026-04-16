@@ -39,6 +39,42 @@ export async function submitFeedbackAction(
   return { ok: true };
 }
 
+export async function loadMyFeedbackAction(): Promise<FeedbackRow[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("feedback")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+  return data as FeedbackRow[];
+}
+
+export async function getMyResolvedCountAction(): Promise<number> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return 0;
+
+  const { count } = await supabase
+    .from("feedback")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .in("statut", ["fait", "refuse"])
+    .eq("seen_by_user", false);
+
+  return count ?? 0;
+}
+
+export async function markFeedbackSeenAction(ids: string[]): Promise<void> {
+  const supabase = await createClient();
+  if (ids.length === 0) return;
+  await supabase.from("feedback").update({ seen_by_user: true }).in("id", ids);
+}
+
 export async function loadAllFeedbackAction(): Promise<FeedbackRow[]> {
   const supabase = createAdminClient();
 
