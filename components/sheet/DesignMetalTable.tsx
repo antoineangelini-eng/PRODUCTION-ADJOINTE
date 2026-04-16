@@ -9,6 +9,7 @@ import {
   loadDesignMetalRowsAction,
   updateCaseInfoAction,
   deleteCaseAction,
+  toggleCasePhysicalAction,
   type BatchResult,
   type DesignMetalRow,
 } from "@/app/app/design-metal/actions";
@@ -505,6 +506,20 @@ export function DesignMetalTable({
     );
   }
 
+  async function handleTogglePhysical(caseId: string, currentPhysical: boolean) {
+    // Optimistic update
+    const newPhysical = !currentPhysical;
+    patchRow(caseId, null, "is_physical", newPhysical);
+    patchRow(caseId, "sector_design_metal", "modele_a_faire_ok", !newPhysical);
+    try {
+      await toggleCasePhysicalAction(caseId);
+    } catch {
+      // Rollback on error
+      patchRow(caseId, null, "is_physical", currentPhysical);
+      patchRow(caseId, "sector_design_metal", "modele_a_faire_ok", newPhysical);
+    }
+  }
+
   async function saveBool(caseId: string, column: string, current: boolean) {
     const newVal = !current;
     patchRow(caseId, "sector_design_metal", column, newVal);
@@ -892,8 +907,11 @@ export function DesignMetalTable({
                   {COLUMNS.map((col) => {
                     if (col.key === "case_number")
                       return (
-                        <td key={col.key} style={tdCardFirst}>
-                          <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <td key={col.key} style={tdCardFirst}
+                          onDoubleClick={(e) => { e.stopPropagation(); handleTogglePhysical(String(row.id), Boolean(row.is_physical)); }}
+                          title="Double-clic pour basculer physique / numérique"
+                        >
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "default" }}>
                             <div
                               style={{
                                 display: "inline-flex",

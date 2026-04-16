@@ -8,6 +8,7 @@ import {
   saveDesignResineMultiAction,
   completeDesignResineBatchAction,
   deleteCaseAction,
+  toggleCasePhysicalAction,
   type DesignResineRow,
   type BatchResult,
 } from "@/app/app/design-resine/actions";
@@ -265,6 +266,12 @@ export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCa
       return{...row,[sectorKey]:{...(row as any)[sectorKey],[column]:value}};
     }));
   }
+  async function handleTogglePhysical(caseId:string,currentPhysical:boolean){
+    const newP=!currentPhysical;
+    patchRow(caseId,null,"is_physical",newP);
+    patchRow(caseId,"sector_design_resine","modele_a_realiser_ok",!newP);
+    try{await toggleCasePhysicalAction(caseId);}catch{patchRow(caseId,null,"is_physical",currentPhysical);patchRow(caseId,"sector_design_resine","modele_a_realiser_ok",newP);}
+  }
   async function saveBool(caseId:string,column:string,current:boolean){
     const newVal=!current;
     patchRow(caseId,"sector_design_resine",column,newVal);
@@ -396,7 +403,7 @@ export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCa
                 <tr key={row.id} id={`row-dr-${row.id}`} onClick={()=>setActiveRowId(String(row.id))} onMouseEnter={()=>setHoveredId(String(row.id))} onMouseLeave={()=>setHoveredId(null)}
                   style={{cursor:"pointer",animation:isF?"row-found 2.2s ease-in-out forwards":"none",background:isF?undefined:"transparent"}}>
 
-                  <td style={tdCardFirst}><div style={{display:"inline-flex",alignItems:"center",gap:6}}><div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:24,padding:"2px 8px",borderRadius:8,color:"#ffffff",background:isA?"rgba(255,255,255,0.04)":"transparent",border:isA?"1px solid rgba(255,255,255,0.06)":"1px solid transparent",transition:"all 160ms"}}>{row.case_number}</div>{row.is_physical&&<PhysicalBadge/>}</div></td>
+                  <td style={tdCardFirst} onDoubleClick={e=>{e.stopPropagation();handleTogglePhysical(String(row.id),Boolean(row.is_physical));}} title="Double-clic pour basculer physique / numérique"><div style={{display:"inline-flex",alignItems:"center",gap:6,cursor:"default"}}><div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:24,padding:"2px 8px",borderRadius:8,color:"#ffffff",background:isA?"rgba(255,255,255,0.04)":"transparent",border:isA?"1px solid rgba(255,255,255,0.06)":"1px solid transparent",transition:"all 160ms"}}>{row.case_number}</div>{row.is_physical&&<PhysicalBadge/>}</div></td>
                   <td style={tdCard}>{fmtDate(row.created_at)}</td>
 
                   <td style={{...tdCard,cursor:isProvisoire?"pointer":"default"}} onClick={isProvisoire?(e)=>{e.stopPropagation();const rect=(e.currentTarget as HTMLElement).getBoundingClientRect();setEditingExpId(String(row.id));setEditingExpRect(rect);}:undefined}>

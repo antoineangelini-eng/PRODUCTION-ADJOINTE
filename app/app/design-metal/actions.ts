@@ -160,6 +160,13 @@ export async function deleteCaseAction(formData: FormData) {
   return { ok: true };
 }
 
+export async function toggleCasePhysicalAction(caseId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("rpc_toggle_case_physical", { p_case_id: caseId });
+  if (error) throw new Error(error.message);
+  return Boolean(data);
+}
+
 export async function createCaseAction(formData: FormData) {
   const supabase = await createClient();
   // Nettoyage agressif : whitespace, tabs, newlines, espaces insécables, tout ce qui traîne
