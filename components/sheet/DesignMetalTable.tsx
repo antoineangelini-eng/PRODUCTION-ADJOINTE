@@ -507,16 +507,23 @@ export function DesignMetalTable({
   }
 
   async function handleTogglePhysical(caseId: string, currentPhysical: boolean) {
-    // Optimistic update
     const newPhysical = !currentPhysical;
+    // Optimistic : toggle le badge immédiatement
     patchRow(caseId, null, "is_physical", newPhysical);
-    patchRow(caseId, "sector_design_metal", "modele_a_faire_ok", !newPhysical);
+    // Si on MARQUE physique → modèle passe à false
+    if (newPhysical) {
+      patchRow(caseId, "sector_design_metal", "modele_a_faire_ok", false);
+    }
     try {
       await toggleCasePhysicalAction(caseId);
+      // Recharger les données pour récupérer la vraie valeur modèle restaurée côté serveur
+      await load(true);
     } catch {
-      // Rollback on error
       patchRow(caseId, null, "is_physical", currentPhysical);
-      patchRow(caseId, "sector_design_metal", "modele_a_faire_ok", newPhysical);
+      if (newPhysical) {
+        // Rollback : recharger pour retrouver la valeur d'origine
+        await load(true);
+      }
     }
   }
 

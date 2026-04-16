@@ -269,8 +269,14 @@ export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCa
   async function handleTogglePhysical(caseId:string,currentPhysical:boolean){
     const newP=!currentPhysical;
     patchRow(caseId,null,"is_physical",newP);
-    patchRow(caseId,"sector_design_resine","modele_a_realiser_ok",!newP);
-    try{await toggleCasePhysicalAction(caseId);}catch{patchRow(caseId,null,"is_physical",currentPhysical);patchRow(caseId,"sector_design_resine","modele_a_realiser_ok",newP);}
+    if(newP) patchRow(caseId,"sector_design_resine","modele_a_realiser_ok",false);
+    try{
+      await toggleCasePhysicalAction(caseId);
+      await load(true);
+    }catch{
+      patchRow(caseId,null,"is_physical",currentPhysical);
+      await load(true);
+    }
   }
   async function saveBool(caseId:string,column:string,current:boolean){
     const newVal=!current;
