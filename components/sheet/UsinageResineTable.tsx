@@ -28,7 +28,7 @@ const MACHINE_OPTIONS = [
   { value: "PM4", color: "#f59e0b" },
 ];
 const TYPE_DENTS_OPTIONS = [
-  { value: "Dents usiner",      color: "#7c8196" },
+  { value: "Dents usinées",      color: "#7c8196" },
   { value: "Dents du commerce", color: "#f59e0b" },
 ];
 const BG_CARD = "#1e1e1e", BG_LABEL_ROW = "#181818", BG_VAL_ROW = "#1e1e1e";

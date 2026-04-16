@@ -33,7 +33,7 @@ const tdRead: React.CSSProperties   = { ...tdBase, color:"white" };
 const tdSticky: React.CSSProperties = { ...tdBase, position:"sticky", left:0, zIndex:2, background:"#0b0b0b", textAlign:"left", fontWeight:700, color:"white" };
 
 const TYPE_DENTS_OPTIONS = [
-  { value:"Dents usiner",      color:"#7c8196" },
+  { value:"Dents usinées",      color:"#7c8196" },
   { value:"Dents du commerce", color:"#f59e0b" },
 ];
 
@@ -305,7 +305,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
               const isProvisoire  = row.nature_du_travail === "Provisoire Résine";
 
               const teintes   = ur.teintes_override ?? dr.teintes_associees ?? dm.teintes_associees ?? null;
-              // DM est la source de vérité pour type_de_dents (DR force toujours "Dents usiner")
+              // DM est la source de vérité pour type_de_dents (DR force toujours "Dents usinées")
               const typeDents = ur.type_de_dents_override ?? dm.type_de_dents ?? dr.type_de_dents ?? null;
               const nbBlocs   = ur.nb_blocs_override ?? dr.nb_blocs_de_dents ?? dr.nb_blocs ?? null;
               const receptionMetalDate  = ut.reception_metal_at ?? dm.reception_metal_date ?? null;

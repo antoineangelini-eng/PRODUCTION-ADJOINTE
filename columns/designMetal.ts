@@ -15,7 +15,7 @@ export const designMetalColumns: ColumnDef[] = [
   { key: "design_chassis_at", header: "Date Design Châssis", db: { table: "sector_design_metal", column: "design_chassis_at" }, type: "readonly" },
   // 7) Numéro du cas (Dent All Groupe)
   { key: "dentall_case_number", header: "N° Dent All Groupe", db: { table: "sector_design_metal", column: "dentall_case_number" }, type: "text" },
-  // 8) Envoye DentAll
+  // 8) Envoyé DentAll
   { key: "envoye_dentall", header: "Envoyé DentAll ✓", db: { table: "sector_design_metal", column: "envoye_dentall" }, type: "boolean" },
   // 9) Réception métal
   { key: "reception_metal_date", header: "Réception métal", db: { table: "sector_design_metal", column: "reception_metal_date" }, type: "date" },

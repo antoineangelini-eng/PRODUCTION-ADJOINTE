@@ -24,7 +24,7 @@ const NATURE_META: Record<string, { color: string }> = {
 };
 
 const TYPE_DENTS_OPTIONS = [
-  { value: "Dents usiner",      color: "#7c8196" },
+  { value: "Dents usinées",      color: "#7c8196" },
   { value: "Dents du commerce", color: "#f59e0b" },
 ];
 
@@ -381,7 +381,7 @@ export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCa
               const natureMeta=NATURE_META[nat];
               const isC=checkedIds.has(String(row.id)),isA=activeRowId===String(row.id),isH=hoveredId===String(row.id),isF=foundRowId===String(row.id);
               const typeDents=dr.type_de_dents??dm.type_de_dents??"";
-              const effectiveTypeDents=typeDents||(isProvisoire?"Dents usiner":"");
+              const effectiveTypeDents=typeDents||(isProvisoire?"Dents usinées":"");
               const typeMeta=TYPE_DENTS_OPTIONS.find(o=>o.value===effectiveTypeDents)??{color:"#555"};
               const modeleOk=dr.modele_a_realiser_ok!==null&&dr.modele_a_realiser_ok!==undefined?dr.modele_a_realiser_ok:(isProvisoire?true:dm.modele_a_faire_ok??null);
               const teintes=dr.teintes_associees??dm.teintes_associees??null;

@@ -200,7 +200,7 @@ export default async function CaseDetail({
               },
               {
                 key: "design_chassis_at",
-                label: "Date et Heure Design ChassisTerminé",
+                label: "Date et Heure Design Chassis Terminé",
                 render: () => (dm.design_chassis_at ? fmtDateTime(dm.design_chassis_at) : "—"),
               },
               {
@@ -210,12 +210,12 @@ export default async function CaseDetail({
               },
               {
                 key: "envoye_dentall",
-                label: "Envoye DentAll",
+                label: "Envoyé DentAll",
                 render: () => fmtBool(dm.envoye_dentall),
               },
               {
                 key: "reception_metal_date",
-                label: "RECEPTION MÉTAL",
+                label: "RÉCEPTION MÉTAL",
                 render: () =>
                   dm.reception_metal_date ? fmtDate(dm.reception_metal_date) : "—",
               },
@@ -354,12 +354,12 @@ export default async function CaseDetail({
               },
               {
                 key: "design_chassis_at_from_dm",
-                label: "Date et Heure Design ChassisTerminé",
+                label: "Date et Heure Design Chassis Terminé",
                 render: () => (dm?.design_chassis_at ? fmtDateTime(dm.design_chassis_at) : "—"),
               },
               {
                 key: "envoye_usinage",
-                label: "Envoye Usinage (que titane)",
+                label: "Envoyé Usinage (que titane)",
                 render: () => fmtBool(ut.envoye_usinage),
               },
 
@@ -377,7 +377,7 @@ export default async function CaseDetail({
 
               {
                 key: "reception_metal_from_dm",
-                label: "RECEPTION MÉTAL",
+                label: "RÉCEPTION MÉTAL",
                 render: () =>
                   dm?.reception_metal_date ? fmtDate(dm.reception_metal_date) : "—",
               },
@@ -429,7 +429,7 @@ export default async function CaseDetail({
               },
               {
                 key: "nb_blocs_de_dents_from_dr",
-                label: "Nombre de blocks de dent ?",
+                label: "Nombre de blocs de dents ?",
                 render: () => (dr ? val(dr.nb_blocs_de_dents) : "—"),
               },
               {
@@ -456,7 +456,7 @@ export default async function CaseDetail({
               },
 
               { key: "lot_pmma", label: "N° De Lots PMMA", render: () => "—" },
-              { key: "reception_resine", label: "RECEPTION RÉSINE", render: () => "—" },
+              { key: "reception_resine", label: "RÉCEPTION RÉSINE", render: () => "—" },
 
               {
                 key: "nature_right",

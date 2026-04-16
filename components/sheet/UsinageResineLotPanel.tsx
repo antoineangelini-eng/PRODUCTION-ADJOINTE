@@ -17,7 +17,7 @@ const MACHINE_OPTIONS = [
 ];
 
 const TYPE_DENTS_OPTIONS = [
-  { value: "Dents usiner",      color: "#7c8196" },
+  { value: "Dents usinées",      color: "#7c8196" },
   { value: "Dents du commerce", color: "#f59e0b" },
 ];
 

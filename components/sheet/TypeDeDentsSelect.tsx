@@ -4,12 +4,12 @@ import { useState, useRef } from "react";
 import { saveTypeDeDentsAction } from "@/app/app/design-metal/actions";
 
 const OPTIONS = [
-  { value: "Dents usiner",      color: "#7c8196" },
+  { value: "Dents usinées",      color: "#7c8196" },
   { value: "Dents du commerce", color: "#f59e0b" },
 ];
 
 export function TypeDeDentsSelect({ caseId, dbValue }: { caseId: string; dbValue: string | null }) {
-  const initial = OPTIONS.find(o => o.value === dbValue) ? dbValue! : "Dents usiner";
+  const initial = OPTIONS.find(o => o.value === dbValue) ? dbValue! : "Dents usinées";
   const [current, setCurrent] = useState(initial);
   const formRef = useRef<HTMLFormElement>(null);
   const meta = OPTIONS.find(o => o.value === current) ?? OPTIONS[0];

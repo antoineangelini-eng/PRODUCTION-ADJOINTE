@@ -125,10 +125,10 @@ export async function createCaseAction(formData: FormData) {
   const caseId = typeof data === "string" ? data : String(data);
   if (!caseId || caseId === "null") return;
 
-  // Forcer type_de_dents = "Dents usiner" pour tout cas créé depuis DR
+  // Forcer type_de_dents = "Dents usinées" pour tout cas créé depuis DR
   await supabase
     .from("sector_design_resine")
-    .update({ type_de_dents: "Dents usiner" })
+    .update({ type_de_dents: "Dents usinées" })
     .eq("case_id", caseId);
 
   // Calculer la date d'expédition en jours ouvrés (hors weekends)
