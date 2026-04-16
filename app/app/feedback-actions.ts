@@ -13,6 +13,7 @@ export type FeedbackRow = {
   priorite: "faible" | "normal" | "haute";
   statut: "ouvert" | "en_cours" | "fait" | "refuse";
   note_admin: string | null;
+  seen_by_user: boolean;
   email?: string;
 };
 
@@ -107,7 +108,8 @@ export async function updateFeedbackAction(
   note_admin: string | null
 ): Promise<void> {
   const supabase = createAdminClient();
-  await supabase.from("feedback").update({ statut, note_admin }).eq("id", id);
+  // Reset seen_by_user quand l'admin change le statut → l'utilisateur sera re-notifié
+  await supabase.from("feedback").update({ statut, note_admin, seen_by_user: false }).eq("id", id);
   revalidatePath("/app/admin");
 }
 
