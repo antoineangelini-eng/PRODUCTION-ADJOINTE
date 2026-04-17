@@ -71,9 +71,19 @@ export async function getMyResolvedCountAction(): Promise<number> {
 }
 
 export async function markFeedbackSeenAction(ids: string[]): Promise<void> {
-  const supabase = await createClient();
   if (ids.length === 0) return;
-  await supabase.from("feedback").update({ seen_by_user: true }).in("id", ids);
+  // Vérifier que l'utilisateur est connecté
+  const userClient = await createClient();
+  const { data: { user } } = await userClient.auth.getUser();
+  if (!user) return;
+  // Utiliser adminClient pour bypasser RLS (l'utilisateur n'a pas UPDATE sur feedback)
+  // On filtre par user_id pour s'assurer qu'il ne marque que ses propres tickets
+  const admin = createAdminClient();
+  await admin
+    .from("feedback")
+    .update({ seen_by_user: true })
+    .in("id", ids)
+    .eq("user_id", user.id);
 }
 
 export async function loadAllFeedbackAction(): Promise<FeedbackRow[]> {

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   submitFeedbackAction,
   loadMyFeedbackAction,
@@ -20,11 +20,9 @@ const STATUT_META: Record<string, { label: string; color: string; icon: string }
   refuse:   { label: "Refusé",     color: "#f87171", icon: "✕" },
 };
 
-function FeedbackCard({ fb }: { fb: FeedbackRow }) {
+function FeedbackCard({ fb, isNew }: { fb: FeedbackRow; isNew: boolean }) {
   const st = STATUT_META[fb.statut] ?? STATUT_META.ouvert;
   const pr = PRIO_META[fb.priorite] ?? PRIO_META.normal;
-  const isResolved = fb.statut === "fait" || fb.statut === "refuse";
-  const isNew = isResolved && !fb.seen_by_user;
   return (
     <div style={{
       background: isNew ? "rgba(74,222,128,0.04)" : "#141414",
@@ -71,7 +69,7 @@ export function FeedbackButton() {
   const [open, setOpen] = useState(false);
   const [tab, setTab]   = useState<"new" | "active" | "history">("new");
 
-  // Form state
+  // Form
   const [titre, setTitre]       = useState("");
   const [desc, setDesc]         = useState("");
   const [priorite, setPriorite] = useState<"faible" | "normal" | "haute">("normal");
@@ -79,12 +77,20 @@ export function FeedbackButton() {
   const [done, setDone]         = useState(false);
   const [error, setError]       = useState<string | null>(null);
 
-  // Data
+  // Data — on utilise un ref pour garder les données stables pendant toute la session modale
+  const feedbackRef = useRef<FeedbackRow[]>([]);
   const [allFeedback, setAllFeedback] = useState<FeedbackRow[]>([]);
   const [loadingFb, setLoadingFb]     = useState(false);
   const [resolvedCount, setResolvedCount] = useState(0);
 
-  // ── Polling indépendant toutes les 30s ──
+  // IDs des tickets résolu non-vus au moment de l'ouverture de la modale.
+  const unseenIdsRef = useRef<string[]>([]);
+  // Flag pour éviter de recharger tant que la modale est ouverte
+  const modalLoadedRef = useRef(false);
+  // Flag : on a déjà envoyé le markSeen pour cette session modale
+  const markedSeenRef = useRef(false);
+
+  // ── Polling notification toutes les 30s (indépendant de tout) ──
   useEffect(() => {
     let active = true;
     const check = async () => {
@@ -98,53 +104,66 @@ export function FeedbackButton() {
     return () => { active = false; clearInterval(interval); };
   }, []);
 
-  // ── Charger les feedbacks quand on ouvre un onglet qui en a besoin ──
-  const loadFeedback = useCallback(async () => {
-    setLoadingFb(true);
-    try {
-      const data = await loadMyFeedbackAction();
-      setAllFeedback(data);
-    } catch {}
-    setLoadingFb(false);
-  }, []);
-
+  // ── Charger les feedbacks à l'ouverture de la modale (une seule fois) ──
   useEffect(() => {
-    if (open && (tab === "active" || tab === "history")) loadFeedback();
-  }, [open, tab, loadFeedback]);
+    if (!open) {
+      modalLoadedRef.current = false;
+      markedSeenRef.current = false;
+      return;
+    }
+    if (modalLoadedRef.current) return;
+    modalLoadedRef.current = true;
 
-  // ── Quand on ouvre "Mes demandes", marquer les résolu non-vus comme vus ──
-  useEffect(() => {
-    if (!open || tab !== "active") return;
-    const unseen = allFeedback.filter(
-      fb => (fb.statut === "fait" || fb.statut === "refuse") && !fb.seen_by_user
-    );
-    if (unseen.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      setLoadingFb(true);
+      try {
+        const data = await loadMyFeedbackAction();
+        if (cancelled) return;
+        feedbackRef.current = data;
+        setAllFeedback(data);
+        unseenIdsRef.current = data
+          .filter(fb => (fb.statut === "fait" || fb.statut === "refuse") && !fb.seen_by_user)
+          .map(fb => fb.id);
+      } catch {}
+      if (!cancelled) setLoadingFb(false);
+    })();
+    return () => { cancelled = true; };
+  }, [open]);
 
-    // Marquer comme vus après un court délai (l'user a le temps de voir)
-    const t = setTimeout(async () => {
-      await markFeedbackSeenAction(unseen.map(r => r.id));
-      // Mettre à jour localement
-      setAllFeedback(prev =>
-        prev.map(fb =>
-          unseen.some(u => u.id === fb.id) ? { ...fb, seen_by_user: true } : fb
-        )
-      );
-      setResolvedCount(0);
-    }, 2000);
-    return () => clearTimeout(t);
-  }, [open, tab, allFeedback]);
+  // ── Marquer comme vu quand l'utilisateur consulte "Mes demandes" ──
+  function handleTabClick(t: "new" | "active" | "history") {
+    setTab(t);
+    if (t === "active" && !markedSeenRef.current && unseenIdsRef.current.length > 0) {
+      markedSeenRef.current = true;
+      const toMark = [...unseenIdsRef.current];
+      // Fire-and-forget : on marque en background, les tickets restent visibles
+      markFeedbackSeenAction(toMark)
+        .then(() => setResolvedCount(prev => Math.max(0, prev - toMark.length)))
+        .catch(() => { markedSeenRef.current = false; }); // retry possible si échec
+    }
+  }
 
-  // Séparer les listes
+  // ── Fermeture simple (pas de marquage ici) ──
+  function handleClose() {
+    setOpen(false);
+    setDone(false);
+  }
+
+  // ── Listes filtrées (utilise unseenIdsRef pour la stabilité) ──
+  // "Mes demandes" = ouvert + en_cours + résolu non-vu (basé sur le ref, pas le DB live)
   const activeFeedback = allFeedback.filter(fb => {
-    // Actifs = ouvert/en_cours OU fait/refusé mais PAS ENCORE VU
     if (fb.statut === "ouvert" || fb.statut === "en_cours") return true;
-    if ((fb.statut === "fait" || fb.statut === "refuse") && !fb.seen_by_user) return true;
+    // Résolu : visible si dans la liste des non-vus capturée à l'ouverture
+    if (fb.statut === "fait" || fb.statut === "refuse") {
+      return unseenIdsRef.current.includes(fb.id);
+    }
     return false;
   });
-  const historyFeedback = allFeedback.filter(fb => {
-    // Historique = fait/refusé ET déjà vu
-    return (fb.statut === "fait" || fb.statut === "refuse") && fb.seen_by_user;
-  });
+  // "Historique" = résolu ET PAS dans les non-vus (donc déjà vu lors d'une session précédente)
+  const historyFeedback = allFeedback.filter(fb =>
+    (fb.statut === "fait" || fb.statut === "refuse") && !unseenIdsRef.current.includes(fb.id)
+  );
 
   async function submit() {
     if (!titre.trim() || !desc.trim()) return;
@@ -155,8 +174,6 @@ export function FeedbackButton() {
     setDone(true);
     setTimeout(() => { setDone(false); setTitre(""); setDesc(""); setPriorite("normal"); }, 1800);
   }
-
-  function handleClose() { setOpen(false); setDone(false); }
 
   const PRIO = [
     { value: "faible", label: "Faible", color: "#a3a3a3" },
@@ -202,18 +219,15 @@ export function FeedbackButton() {
         <div onClick={handleClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div onClick={e => e.stopPropagation()} style={{ background: "#1c1c1c", border: "1px solid #333", borderRadius: 12, width: 440, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-            {/* Header + Tabs */}
             <div style={{ padding: "16px 20px 0", flexShrink: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "white", marginBottom: 12 }}>
-                💡 Améliorations
-              </div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "white", marginBottom: 12 }}>💡 Améliorations</div>
               <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #2a2a2a" }}>
                 {([
                   { key: "new" as const, label: "Nouvelle demande", badge: 0 },
                   { key: "active" as const, label: "Mes demandes", badge: resolvedCount },
                   { key: "history" as const, label: "Historique", badge: 0 },
                 ]).map(t => (
-                  <button key={t.key} onClick={() => setTab(t.key)}
+                  <button key={t.key} onClick={() => handleTabClick(t.key)}
                     style={{
                       padding: "8px 14px", fontSize: 11, fontWeight: 700,
                       background: "transparent", border: "none", cursor: "pointer",
@@ -238,7 +252,6 @@ export function FeedbackButton() {
 
             <div style={{ flex: 1, overflow: "auto", padding: "16px 20px 20px" }}>
 
-              {/* ── Nouvelle demande ── */}
               {tab === "new" && (
                 done ? (
                   <div style={{ textAlign: "center", padding: "20px 0" }}>
@@ -281,7 +294,6 @@ export function FeedbackButton() {
                 )
               )}
 
-              {/* ── Mes demandes (actifs + résolu non vu) ── */}
               {tab === "active" && (
                 loadingFb ? (
                   <div style={{ textAlign: "center", padding: "24px 0", color: "#555", fontSize: 12 }}>Chargement…</div>
@@ -289,12 +301,13 @@ export function FeedbackButton() {
                   <div style={{ textAlign: "center", padding: "24px 0", color: "#444", fontSize: 12 }}>Aucune demande en cours.</div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {activeFeedback.map(fb => <FeedbackCard key={fb.id} fb={fb} />)}
+                    {activeFeedback.map(fb => (
+                      <FeedbackCard key={fb.id} fb={fb} isNew={unseenIdsRef.current.includes(fb.id)} />
+                    ))}
                   </div>
                 )
               )}
 
-              {/* ── Historique (résolu + déjà vu) ── */}
               {tab === "history" && (
                 loadingFb ? (
                   <div style={{ textAlign: "center", padding: "24px 0", color: "#555", fontSize: 12 }}>Chargement…</div>
@@ -302,7 +315,9 @@ export function FeedbackButton() {
                   <div style={{ textAlign: "center", padding: "24px 0", color: "#444", fontSize: 12 }}>Aucun ticket clôturé.</div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {historyFeedback.map(fb => <FeedbackCard key={fb.id} fb={fb} />)}
+                    {historyFeedback.map(fb => (
+                      <FeedbackCard key={fb.id} fb={fb} isNew={false} />
+                    ))}
                   </div>
                 )
               )}
