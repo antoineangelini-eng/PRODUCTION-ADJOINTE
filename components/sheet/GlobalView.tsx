@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
+import { PhysicalBadge } from "@/components/sheet/PhysicalBadge";
 import { loadAllCasesAction, type AdminCaseRow } from "@/app/app/admin/actions";
 
 const NATURE_META: Record<string, { color: string }> = {
@@ -506,7 +507,10 @@ export function GlobalView() {
                         borderBottomLeftRadius: hasAny ? 0 : 8,
                         boxShadow: `inset 4px 0 0 ${natColor}99`,
                       })}>
-                        <span style={{ fontSize: 14, fontWeight: 800, color: "white" }}>{row.case_number}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 14, fontWeight: 800, color: "white" }}>{row.case_number}</span>
+                          {row.is_physical && <PhysicalBadge />}
+                        </div>
                       </td>
                       <td style={tdS(L.creation)}>
                         <span style={{ fontSize: 12, color: "#aaa" }}>{fmtDate(row.created_at)}</span>

@@ -8,6 +8,7 @@ export type UtHistoryRow = {
   created_at: string | null;
   date_expedition: string | null;
   nature_du_travail: string | null;
+  is_physical: boolean;
   completed_at: string | null;
   envoye_usinage: boolean | null;
   numero_lot_metal: string | null;
@@ -32,7 +33,7 @@ export async function loadUtHistoryAction(): Promise<UtHistoryRow[]> {
   const { data } = await supabase
     .from("case_assignments")
     .select(`updated_at, cases:case_id (
-      id, case_number, created_at, date_expedition, nature_du_travail,
+      id, case_number, created_at, date_expedition, nature_du_travail, is_physical,
       sector_usinage_titane ( envoye_usinage, envoye_usinage_at, numero_lot_metal, machine_ut, machine_ut_h, machine_ut_b, numero_calcul, numero_calcul_h, numero_calcul_b, nombre_brut, nombre_brut_h, nombre_brut_b, reception_metal_at ),
       sector_design_metal ( modele_a_faire_ok, design_chassis, design_chassis_at )
     )`)
@@ -48,7 +49,8 @@ export async function loadUtHistoryAction(): Promise<UtHistoryRow[]> {
     return {
       id: c.id ?? "", case_number: c.case_number ?? null,
       created_at: c.created_at ?? null, date_expedition: c.date_expedition ?? null,
-      nature_du_travail: c.nature_du_travail ?? null, completed_at: r.updated_at ?? null,
+      nature_du_travail: c.nature_du_travail ?? null, is_physical: Boolean(c.is_physical),
+      completed_at: r.updated_at ?? null,
       envoye_usinage: ut.envoye_usinage ?? null,
       numero_lot_metal: ut.numero_lot_metal ?? null,
       envoye_usinage_at: ut.envoye_usinage_at ?? null,

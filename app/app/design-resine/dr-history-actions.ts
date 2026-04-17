@@ -8,6 +8,7 @@ export type DrHistoryRow = {
   created_at: string | null;
   date_expedition: string | null;
   nature_du_travail: string | null;
+  is_physical: boolean;
   completed_at: string | null;
   // DR
   design_dents_resine: boolean | null;
@@ -24,7 +25,7 @@ export async function loadDrHistoryAction(): Promise<DrHistoryRow[]> {
   const { data } = await supabase
     .from("case_assignments")
     .select(`updated_at, cases:case_id (
-      id, case_number, created_at, date_expedition, nature_du_travail,
+      id, case_number, created_at, date_expedition, nature_du_travail, is_physical,
       sector_design_resine ( design_dents_resine, design_dents_resine_at, nb_blocs_de_dents, modele_a_realiser_ok, teintes_associees, type_de_dents ),
       sector_design_metal ( modele_a_faire_ok )
     )`)
@@ -42,7 +43,8 @@ export async function loadDrHistoryAction(): Promise<DrHistoryRow[]> {
     return {
       id: c.id ?? "", case_number: c.case_number ?? null,
       created_at: c.created_at ?? null, date_expedition: c.date_expedition ?? null,
-      nature_du_travail: c.nature_du_travail ?? null, completed_at: r.updated_at ?? null,
+      nature_du_travail: c.nature_du_travail ?? null, is_physical: Boolean(c.is_physical),
+      completed_at: r.updated_at ?? null,
       design_dents_resine: dr.design_dents_resine ?? null,
       design_dents_resine_at: dr.design_dents_resine_at ?? null,
       nb_blocs_de_dents: dr.nb_blocs_de_dents ?? null,

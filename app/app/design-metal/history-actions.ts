@@ -9,6 +9,7 @@ export type DmHistoryRow = {
   created_at: string | null;
   date_expedition: string | null;
   nature_du_travail: string | null;
+  is_physical: boolean;
   completed_at: string | null;
   // sector_design_metal
   design_chassis: boolean | null;
@@ -29,7 +30,7 @@ export async function loadDmHistoryAction(): Promise<DmHistoryRow[]> {
     .select(`
       updated_at,
       cases:case_id (
-        id, case_number, created_at, date_expedition, nature_du_travail,
+        id, case_number, created_at, date_expedition, nature_du_travail, is_physical,
         sector_design_metal (
           design_chassis, design_chassis_at, dentall_case_number,
           envoye_dentall, reception_metal_date, type_de_dents,
@@ -51,6 +52,7 @@ export async function loadDmHistoryAction(): Promise<DmHistoryRow[]> {
       created_at:          c.created_at ?? null,
       date_expedition:     c.date_expedition ?? null,
       nature_du_travail:   c.nature_du_travail ?? null,
+      is_physical:         Boolean(c.is_physical),
       completed_at:        r.updated_at ?? null,
       design_chassis:      dm.design_chassis ?? null,
       design_chassis_at:   dm.design_chassis_at ?? null,

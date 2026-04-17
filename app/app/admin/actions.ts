@@ -50,6 +50,8 @@ export type AdminCaseRow = {
   fin_reception_resine_at: string | null;
   fin_reception_complete_at: string | null;
   fin_validation: boolean | null;
+  // Physique
+  is_physical: boolean;
   // Statut
   current_sector: string | null;
   is_done: boolean;
@@ -76,7 +78,7 @@ export async function loadAllCasesAction(): Promise<AdminCaseRow[]> {
   // ── 1. Tous les cas ──────────────────────────────────────────────────────
   const { data: cases, error: casesError } = await supabase
     .from("cases")
-    .select("id, case_number, created_at, date_expedition, nature_du_travail")
+    .select("id, case_number, created_at, date_expedition, nature_du_travail, is_physical")
     .order("created_at", { ascending: false })
     .limit(500);
 
@@ -147,6 +149,7 @@ export async function loadAllCasesAction(): Promise<AdminCaseRow[]> {
       created_at: c.created_at,
       date_expedition: c.date_expedition,
       nature_du_travail: c.nature_du_travail,
+      is_physical: Boolean(c.is_physical),
       type_de_dents: (dr as any).type_de_dents ?? (dm as any).type_de_dents ?? null,
       // DM
       dm_design_chassis:       (dm as any).design_chassis       ?? null,

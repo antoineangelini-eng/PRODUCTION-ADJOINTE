@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
+import { PhysicalBadge } from "@/components/sheet/PhysicalBadge";
 import { loadDmHistoryAction, reopenCaseAction, type DmHistoryRow } from "./history-actions";
 
 const NATURE_META: Record<string, { color: string }> = {
@@ -160,6 +161,7 @@ function HistoryCard({ row, onReopen }: { row: DmHistoryRow; onReopen: () => voi
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
             <span style={{ fontSize: 14, fontWeight: 700, color: "white" }}>{row.case_number}</span>
+            {row.is_physical && <PhysicalBadge />}
             <span style={{ display: "inline-flex", padding: "1px 6px", borderRadius: 4, fontSize: 9, fontWeight: 600, background: `${natColor}18`, border: `1px solid ${natColor}40`, color: natColor }}>
               {row.nature_du_travail}
             </span>

@@ -8,6 +8,7 @@ export type FinHistoryRow = {
   created_at: string | null;
   date_expedition: string | null;
   nature_du_travail: string | null;
+  is_physical: boolean;
   completed_at: string | null;
   validation: boolean | null;
   validation_at: string | null;
@@ -22,7 +23,7 @@ export async function loadFinHistoryAction(): Promise<FinHistoryRow[]> {
   const { data } = await supabase
     .from("case_assignments")
     .select(`updated_at, cases:case_id (
-      id, case_number, created_at, date_expedition, nature_du_travail,
+      id, case_number, created_at, date_expedition, nature_du_travail, is_physical,
       sector_finition ( validation, validation_at ),
       sector_usinage_titane ( reception_metal_at ),
       sector_usinage_resine ( reception_resine_at ),
@@ -42,7 +43,8 @@ export async function loadFinHistoryAction(): Promise<FinHistoryRow[]> {
     return {
       id: c.id ?? "", case_number: c.case_number ?? null,
       created_at: c.created_at ?? null, date_expedition: c.date_expedition ?? null,
-      nature_du_travail: c.nature_du_travail ?? null, completed_at: r.updated_at ?? null,
+      nature_du_travail: c.nature_du_travail ?? null, is_physical: Boolean(c.is_physical),
+      completed_at: r.updated_at ?? null,
       validation: fin.validation ?? null,
       validation_at: fin.validation_at ?? null,
       reception_metal_at: ut.reception_metal_at ?? null,

@@ -2,6 +2,7 @@
 // Import this file in each sector's History component
 
 import React, { useState } from "react";
+import { PhysicalBadge } from "@/components/sheet/PhysicalBadge";
 
 export const NATURE_META: Record<string, { color: string }> = {
   "Chassis Argoat":    { color: "#4ade80" },
@@ -139,7 +140,7 @@ export function HistoryFilters({ count, natFilter, setNatFilter, yearFilter, set
 }
 
 export function CardShell({ row, accentColor, open, onToggle, onReopen, children, summaryExtra }: {
-  row: { case_number: string | null; nature_du_travail: string | null; created_at: string | null; date_expedition: string | null; completed_at: string | null };
+  row: { case_number: string | null; nature_du_travail: string | null; created_at: string | null; date_expedition: string | null; completed_at: string | null; is_physical?: boolean };
   accentColor: string; open: boolean;
   onToggle: () => void; onReopen: (e: React.MouseEvent) => void;
   children?: React.ReactNode;
@@ -154,6 +155,7 @@ export function CardShell({ row, accentColor, open, onToggle, onReopen, children
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
             <span style={{ fontSize: 14, fontWeight: 700, color: "white" }}>{row.case_number}</span>
+            {row.is_physical && <PhysicalBadge />}
             <span style={{ display: "inline-flex", padding: "1px 6px", borderRadius: 4, fontSize: 9, fontWeight: 600, background: `${natColor}18`, border: `1px solid ${natColor}40`, color: natColor }}>{row.nature_du_travail}</span>
           </div>
           <span style={{ fontSize: 9, color: "#4ade80" }}>✓</span>
