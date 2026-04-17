@@ -64,6 +64,14 @@ function Val({ children, muted }: { children: React.ReactNode; muted?: boolean }
 function OuiBadge() {
   return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80", display: "inline-block" }} /><span style={{ fontSize: 12, color: "#4ade80", fontWeight: 600 }}>Oui</span></div>;
 }
+function NonBadge() {
+  return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: "#f87171", display: "inline-block" }} /><span style={{ fontSize: 12, color: "#f87171", fontWeight: 600 }}>Non</span></div>;
+}
+function BoolBadge({ val }: { val: boolean | null | undefined }) {
+  if (val === true) return <OuiBadge />;
+  if (val === false) return <NonBadge />;
+  return <Val muted>—</Val>;
+}
 function TimeBadge({ dt }: { dt: { date: string; time: string } | null }) {
   if (!dt) return <Val muted>—</Val>;
   return <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}><span style={{ fontSize: 11, color: "#aaa" }}>{dt.date}</span><span style={{ fontSize: 12, fontWeight: 700, color: "#4ade80", background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.3)", borderRadius: 5, padding: "1px 10px" }}>{dt.time}</span></div>;
@@ -499,7 +507,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
                 <div style={{ ...grid2, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl>Date de création</Lbl><Lbl>Type de dents</Lbl></div>
                 <div style={{ ...vals2, background:BG_VAL_ROW, borderBottom:BD_MED }}><Val>{fmtDate(row.created_at)}</Val><span style={{ display:"inline-flex", padding:"3px 10px", borderRadius:6, background:(TYPE_DENTS_OPTIONS.find(o=>o.value===effectiveTD)?.color??"#555")+"18", border:`1px solid ${(TYPE_DENTS_OPTIONS.find(o=>o.value===effectiveTD)?.color??"#555")}44`, color:TYPE_DENTS_OPTIONS.find(o=>o.value===effectiveTD)?.color??"#555", fontSize:12, fontWeight:700 }}>{effectiveTD||"—"}</span></div>
                 <div style={{ ...grid3, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl>Design résine</Lbl><Lbl>Date &amp; heure</Lbl><Lbl>Modèle</Lbl></div>
-                <div style={{ ...vals3, background:BG_VAL_ROW, borderBottom:BD_MED }}>{dr.design_dents_resine?<OuiBadge/>:<Val muted>—</Val>}<TimeBadge dt={dt}/>{(dr.modele_a_realiser_ok??dm.modele_a_faire_ok)?<OuiBadge/>:<Val muted>—</Val>}</div>
+                <div style={{ ...vals3, background:BG_VAL_ROW, borderBottom:BD_MED }}>{dr.design_dents_resine?<OuiBadge/>:<Val muted>—</Val>}<TimeBadge dt={dt}/><BoolBadge val={dr.modele_a_realiser_ok??dm.modele_a_faire_ok??null} /></div>
                 <div style={{ ...grid2, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl color="#4ade80">Blocs</Lbl><Lbl color="#4ade80">Teinte</Lbl></div>
                 <div style={{ ...vals2, background:"#1b1b1b", borderBottom:BD_STRONG }}>
                   <InlineText value={ur.nb_blocs_override??dr.nb_blocs_de_dents??null} onFocusChange={setIsEditing} navAttr={`${row.id}_col_1`} onSave={v => { patchRow(String(row.id),"ur","nb_blocs_override",v||null); saveCell(String(row.id),"nb_blocs_override",v||null); }} />
