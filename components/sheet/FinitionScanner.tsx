@@ -2,6 +2,16 @@
 import React, { useRef, useState, useEffect } from "react";
 import { resolveCaseForFinition, validateFinitionBatchAction } from "@/app/app/finition/actions";
 
+// Mapping AZERTY non-shifté → chiffre (même table que CaseNumberInput)
+const AZERTY_MAP: Record<string, string> = {
+  "&": "1", "é": "2", "\"": "3", "'": "4", "(": "5",
+  "-": "6", "è": "7", "_": "8", "ç": "9", "à": "0",
+  "É": "2", "È": "7", "Ç": "9", "À": "0",
+};
+function normalizeAzerty(v: string): string {
+  return v.split("").map(ch => AZERTY_MAP[ch] ?? ch).join("").toUpperCase();
+}
+
 type ScannedCase = {
   caseNumber: string;
   caseId: string;
@@ -150,7 +160,7 @@ export function FinitionScanner({
           <input
             ref={inputRef}
             value={value}
-            onChange={e => setValue(e.target.value.toUpperCase())}
+            onChange={e => setValue(normalizeAzerty(e.target.value))}
             onKeyDown={e => { if (e.key === "Enter") handleScan(value); }}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
@@ -164,7 +174,6 @@ export function FinitionScanner({
               border:`1px solid ${focused ? "rgba(74,222,128,0.5)" : "#2a2a2a"}`,
               borderRadius:10, color:"white", fontSize:14,
               outline:"none", transition:"border-color 200ms", cursor:"text",
-              textTransform:"uppercase",
             }}
           />
           <div style={{
