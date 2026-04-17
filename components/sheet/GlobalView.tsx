@@ -423,7 +423,7 @@ export function GlobalView() {
                 <th style={thSticky(L.type, "#7c8196bb")}>Type de dents</th>
                 <th style={{ ...thSticky(L.modele, "#aaa"), fontSize: 8 }}>Modèle</th>
                 <th style={{ ...thSticky(L.teinte, "#aaa"), fontSize: 8 }}>Teinte</th>
-                <th style={{ ...thBase, color: "#888", width: 40, minWidth: 40, fontSize: 8 }}>▼▲</th>
+                <th style={{ ...thBase, color: "transparent", width: 40, minWidth: 40 }}></th>
                 {SECTOR_DEFS.map(s =>
                   SUMMARY_COLS[s.key].map((col, ci) => (
                     <th key={`${s.key}-${ci}`} style={{
@@ -432,7 +432,7 @@ export function GlobalView() {
                     }}>{col.label}</th>
                   ))
                 )}
-                <th style={{ ...thBase, color: "#555", width: 32, minWidth: 32, fontSize: 8 }}></th>
+                <th style={{ ...thBase, color: "#555", width: 32, minWidth: 32, fontSize: 8 }}>▼▲</th>
               </tr>
             </thead>
 
