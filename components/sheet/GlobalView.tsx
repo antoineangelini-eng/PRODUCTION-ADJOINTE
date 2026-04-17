@@ -366,7 +366,7 @@ export function GlobalView() {
               <col style={{ width: W.type }} />
               <col style={{ width: W.modele }} />
               <col style={{ width: W.teinte }} />
-              <col style={{ width: 36 }} />
+              <col style={{ width: 40 }} />
               {summaryCols.map((c, i) => <col key={i} style={{ width: c.w }} />)}
             </colgroup>
 
@@ -381,8 +381,8 @@ export function GlobalView() {
                 <th style={{ ...thSticky(L.type), borderBottom: "1px solid #1a1a1a" }} />
                 <th style={{ ...thSticky(L.modele), borderBottom: "1px solid #1a1a1a" }} />
                 <th style={{ ...thSticky(L.teinte), borderBottom: "1px solid #1a1a1a" }} />
-                {/* Colonne expand-all — vide dans la ligne groupes */}
-                <th style={{ background: TH_BG, border: "none", borderBottom: "1px solid #1a1a1a", width: 36, zIndex: 12, position: "sticky" as const, left: L.teinte + W.teinte }} />
+                {/* Colonne expand-all */}
+                <th style={{ background: TH_BG, border: "none", borderBottom: "1px solid #1a1a1a", width: 40, zIndex: 12 }} />
                 {SECTOR_DEFS.map(s => {
                   const isExpandable = s.key !== "fin";
                   const isAnyOpen = isExpandable && Object.values(expanded).some(set => set.has(s.key));
@@ -423,7 +423,7 @@ export function GlobalView() {
                 <th style={thSticky(L.type, "#7c8196bb")}>Type de dents</th>
                 <th style={{ ...thSticky(L.modele, "#aaa"), fontSize: 8 }}>Modèle</th>
                 <th style={{ ...thSticky(L.teinte, "#aaa"), fontSize: 8 }}>Teinte</th>
-                <th style={{ ...thBase, color: "#333", width: 36, minWidth: 36 }}></th>
+                <th style={{ ...thBase, color: "#888", width: 40, minWidth: 40, fontSize: 8 }}>▼▲</th>
                 {SECTOR_DEFS.map(s =>
                   SUMMARY_COLS[s.key].map((col, ci) => (
                     <th key={`${s.key}-${ci}`} style={{
@@ -541,24 +541,25 @@ export function GlobalView() {
                         onClick={() => toggleAllSectors(row.id, isResine)}
                         style={{
                           ...tdBase,
-                          background: hasAny ? "rgba(74,222,128,0.06)" : bg,
+                          background: hasAny ? "rgba(74,222,128,0.08)" : bg,
                           borderTop: `1px solid ${bd}`,
                           borderBottom: `1px solid ${bd}`,
                           cursor: "pointer",
                           transition: "all 150ms",
-                          width: 36, minWidth: 36,
+                          width: 40, minWidth: 40,
                           textAlign: "center" as const,
                         }}
                         title={hasAny ? "Replier tous les détails" : "Déplier tous les détails"}
-                        onMouseEnter={e => { e.currentTarget.style.background = hasAny ? "rgba(74,222,128,0.15)" : "rgba(255,255,255,0.06)"; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = hasAny ? "rgba(74,222,128,0.06)" : bg; }}
+                        onMouseEnter={e => { e.currentTarget.style.background = hasAny ? "rgba(74,222,128,0.18)" : "rgba(255,255,255,0.08)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = hasAny ? "rgba(74,222,128,0.08)" : bg; }}
                       >
                         <div style={{
                           display: "inline-flex", alignItems: "center", justifyContent: "center",
-                          width: 20, height: 20, borderRadius: 4,
-                          border: hasAny ? "1px solid rgba(74,222,128,0.5)" : "1px solid #3a3a3a",
-                          color: hasAny ? "#4ade80" : "#666",
-                          fontSize: 9, fontWeight: 700,
+                          padding: "3px 8px", borderRadius: 5,
+                          background: hasAny ? "rgba(74,222,128,0.15)" : "rgba(255,255,255,0.06)",
+                          border: hasAny ? "1px solid rgba(74,222,128,0.4)" : "1px solid #555",
+                          color: hasAny ? "#4ade80" : "#ccc",
+                          fontSize: 11, fontWeight: 700,
                           transition: "all 150ms",
                         }}>
                           {hasAny ? "▲" : "▼"}
