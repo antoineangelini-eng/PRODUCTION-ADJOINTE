@@ -340,24 +340,8 @@ export function GlobalView() {
         </select>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="N° du cas..."
           style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", color: "white", fontSize: 11, padding: "4px 10px", borderRadius: 6, outline: "none", width: 150 }} />
-        {(() => {
-          const anyOpen = filtered.some(r => { const s = expanded[r.id]; return s && s.size > 0; });
-          return (
-            <button onClick={toggleAllSectorsGlobal}
-              title={anyOpen ? "Replier tous les secteurs" : "Déplier tous les secteurs"}
-              style={{
-                marginLeft: "auto", background: anyOpen ? "rgba(74,222,128,0.08)" : "#1a1a1a",
-                border: anyOpen ? "1px solid rgba(74,222,128,0.3)" : "1px solid #2a2a2a",
-                color: anyOpen ? "#4ade80" : "#aaa", fontSize: 11, fontWeight: 600,
-                padding: "4px 12px", borderRadius: 6, cursor: "pointer",
-                display: "flex", alignItems: "center", gap: 5, transition: "all 150ms",
-              }}>
-              {anyOpen ? "▲ Replier tout" : "▼ Déplier tout"}
-            </button>
-          );
-        })()}
         <button onClick={load} title="Rafraîchir"
-          style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", color: "#aaa", fontSize: 13, padding: "4px 10px", borderRadius: 6, cursor: "pointer" }}>↻</button>
+          style={{ marginLeft: "auto", background: "#1a1a1a", border: "1px solid #2a2a2a", color: "#aaa", fontSize: 13, padding: "4px 10px", borderRadius: 6, cursor: "pointer" }}>↻</button>
       </div>
 
       {/* Scrollbar stylisée + fix z-index scroll */}
