@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Badge « Physique » — pastille compacte rouge/sombre.
+ * Badge « Physique » — style pêche d'origine, taille compacte.
  */
 export function PhysicalBadge({ size = "sm" }: { size?: "sm" | "md" }) {
   const fs = size === "md" ? 10 : 9;
@@ -16,30 +16,33 @@ export function PhysicalBadge({ size = "sm" }: { size?: "sm" | "md" }) {
         alignItems: "center",
         gap: 4,
         padding: pad,
-        background: "rgba(239,68,68,0.12)",
-        border: "1px solid rgba(239,68,68,0.35)",
-        borderRadius: 4,
-        color: "#f87171",
+        background: "#f5c4b3",
+        border: "1px solid #d89f8a",
+        borderRadius: 999,
+        color: "#893521",
         fontSize: fs,
         fontWeight: 700,
         lineHeight: 1,
-        letterSpacing: "0.04em",
-        textTransform: "uppercase",
+        letterSpacing: 0.1,
         userSelect: "none",
+        boxShadow: "0 1px 2px rgba(0,0,0,0.3)",
+        fontFamily: "ui-sans-serif, system-ui, -apple-system, sans-serif",
         flexShrink: 0,
         whiteSpace: "nowrap",
       }}
     >
+      <span>Physique</span>
       <span
         style={{
           width: dot,
           height: dot,
           borderRadius: "50%",
-          background: "#f87171",
+          background:
+            "radial-gradient(circle at 30% 30%, #c85a3d 0%, #893521 75%)",
+          boxShadow: "0 0 4px rgba(137,53,33,0.6)",
           flexShrink: 0,
         }}
       />
-      <span>Phys.</span>
     </span>
   );
 }

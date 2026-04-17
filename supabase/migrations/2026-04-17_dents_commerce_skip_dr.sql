@@ -71,24 +71,18 @@ RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
-DECLARE
-  v_nature text;
 BEGIN
   UPDATE case_assignments
      SET status = 'done'
    WHERE case_id = p_case_id
      AND sector_code = 'design_resine';
 
-  SELECT nature_du_travail INTO v_nature FROM cases WHERE id = p_case_id;
-
-  -- Définitif Résine & Provisoire Résine → passent par UR
-  IF v_nature IN ('Définitif Résine', 'Provisoire Résine') THEN
-    INSERT INTO case_assignments (case_id, sector_code, status)
-    VALUES (p_case_id, 'usinage_resine', 'active')
-    ON CONFLICT (case_id, sector_code)
-      DO UPDATE SET status = 'active'
-      WHERE case_assignments.status IS DISTINCT FROM 'done';
-  END IF;
+  -- Tous les cas validés par DR → UR
+  INSERT INTO case_assignments (case_id, sector_code, status)
+  VALUES (p_case_id, 'usinage_resine', 'active')
+  ON CONFLICT (case_id, sector_code)
+    DO UPDATE SET status = 'active'
+    WHERE case_assignments.status IS DISTINCT FROM 'done';
 
   -- Finition : toujours s'assurer qu'elle est ouverte
   INSERT INTO case_assignments (case_id, sector_code, status)
