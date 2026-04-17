@@ -38,8 +38,7 @@ export async function loadDrHistoryAction(): Promise<DrHistoryRow[]> {
     const c = r.cases ?? {};
     const dr = c.sector_design_resine ?? {};
     const dm = c.sector_design_metal ?? {};
-    const isProv = c.nature_du_travail === "Provisoire Résine";
-    const modeleEffectif = isProv ? true : (dm.modele_a_faire_ok ?? dr.modele_a_realiser_ok ?? null);
+    const modeleEffectif = dr.modele_a_realiser_ok ?? dm.modele_a_faire_ok ?? null;
     return {
       id: c.id ?? "", case_number: c.case_number ?? null,
       created_at: c.created_at ?? null, date_expedition: c.date_expedition ?? null,
