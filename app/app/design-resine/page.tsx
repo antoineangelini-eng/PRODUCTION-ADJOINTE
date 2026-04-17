@@ -2,7 +2,7 @@ import { SearchBar } from "@/components/sheet/SearchBar";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { DesignResinePageClient } from "@/components/sheet/DesignResinePageClient";
-import { createCaseAction } from "@/app/app/design-resine/actions";
+import { createCaseAction, scanCaseAction } from "@/app/app/design-resine/actions";
 import { CaseNumberInput } from "@/components/sheet/CaseNumberInput";
 import { DesignResineHistoryWrapper } from "@/app/app/design-resine/DesignResineHistoryWrapper";
 
@@ -49,7 +49,13 @@ export default async function Page({
                 </div>
               </form>
               <div style={{ width: 1, background: "#222", alignSelf: "stretch", marginTop: 20 }} />
-              <SearchBar basePath="/app/design-resine" />
+              <form action={scanCaseAction} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <span style={{ fontSize: 11, color: "white", letterSpacing: 0.5 }}>Rechercher / Scanner</span>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <CaseNumberInput name="scan" placeholder="N° du cas..." style={{ padding: "7px 10px", border: "1px solid #ffffff", background: "transparent", color: "white", fontSize: 12, width: 160, outline: "none", borderRadius: 4 }} />
+                  <button type="submit" style={{ padding: "7px 12px", border: "1px solid #ffffff", background: "transparent", color: "white", cursor: "pointer", fontSize: 12, borderRadius: 4 }}>Rechercher</button>
+                </div>
+              </form>
             </div>
           </div>
           <div style={{ flex: 1, minHeight: 0 }}>

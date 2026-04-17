@@ -216,6 +216,12 @@ export async function createCaseAction(formData: FormData) {
   const caseId = typeof data === "string" ? data : String(data);
   if (!caseId || caseId === "null") return;
 
+  // Défaut type_de_dents = "Dents usinées"
+  await supabase
+    .from("sector_design_metal")
+    .update({ type_de_dents: "Dents usinées" })
+    .eq("case_id", caseId);
+
   // Calculer la date d'expédition en jours ouvrés
   const { data: wdConfig } = await supabase
     .from("working_days_config")

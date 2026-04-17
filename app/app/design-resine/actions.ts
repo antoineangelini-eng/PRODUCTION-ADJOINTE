@@ -157,14 +157,29 @@ export async function createCaseAction(formData: FormData) {
 
 export async function scanCaseAction(formData: FormData) {
   const supabase = await createClient();
-  const caseNumber = String(formData.get("scan") ?? "").trim();
+  const rawInput = String(formData.get("scan") ?? "").trim();
+  if (!rawInput) return;
+
+  // Nettoyage identique à createCaseAction
+  const caseNumber = rawInput.replace(/[\s\u00A0\u200B-\u200D\uFEFF]+/g, "").trim();
   if (!caseNumber) return;
+
+  // Chercher le cas dans le secteur DR
   const { data, error } = await supabase.rpc("rpc_scan_case", {
     p_sector_code: "design_resine",
     p_case_number: caseNumber,
   });
-  if (error) return;
-  redirect(`/app/design-resine?focus=${data}`);
+
+  if (!error && data) {
+    // Cas trouvé dans DR → juste focus
+    redirect(`/app/design-resine?focus=${caseNumber}`);
+  }
+
+  // Cas introuvable dans DR → le créer automatiquement
+  const fd = new FormData();
+  fd.set("case_number", caseNumber);
+  await createCaseAction(fd);
+  // createCaseAction fait déjà redirect
 }
 
 export async function saveDesignResineCellAction(formData: FormData) {
