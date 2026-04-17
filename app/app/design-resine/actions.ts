@@ -124,10 +124,12 @@ export async function createCaseAction(formData: FormData) {
   const caseId = typeof data === "string" ? data : String(data);
   if (!caseId || caseId === "null") return;
 
-  // Forcer type_de_dents = "Dents usinées" pour tout cas créé depuis DR (via RPC pour contourner RLS)
+  // Défauts pour tout cas créé depuis DR (via RPC pour contourner RLS)
+  // - type_de_dents = "Dents usinées"
+  // - modele_a_realiser_ok = true (Provisoire Résine n'a pas de modèle physique)
   await supabase.rpc("rpc_update_design_resine", {
     p_case_id: caseId,
-    p_patch: { type_de_dents: "Dents usinées" },
+    p_patch: { type_de_dents: "Dents usinées", modele_a_realiser_ok: true },
   });
 
   // Calculer la date d'expédition en jours ouvrés (hors weekends)
