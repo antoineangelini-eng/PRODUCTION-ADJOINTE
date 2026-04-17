@@ -263,6 +263,23 @@ export function GlobalView() {
     });
   }
 
+  // Ouvre/ferme un secteur sur TOUTES les lignes d'un coup (clic header)
+  function toggleSectorGlobal(sectorKey: string) {
+    setExpanded(prev => {
+      const isOpen = filtered.some(r => (prev[r.id] ?? new Set()).has(sectorKey));
+      const next: ExpandMap = { ...prev };
+      for (const r of filtered) {
+        const cur = new Set(prev[r.id] ?? []);
+        // Pour les cas résine, on n'ouvre pas DM et UT
+        const isResine = r.nature_du_travail === "Définitif Résine" || r.nature_du_travail === "Provisoire Résine";
+        if (isResine && (sectorKey === "dm" || sectorKey === "ut")) continue;
+        if (isOpen) cur.delete(sectorKey); else cur.add(sectorKey);
+        next[r.id] = cur;
+      }
+      return next;
+    });
+  }
+
   function toggleAllSectors(rowId: string, isResine: boolean) {
     setExpanded(prev => {
       const cur = prev[rowId] ?? new Set<string>();
@@ -347,24 +364,33 @@ export function GlobalView() {
                 <th style={{ ...thSticky(L.teinte), borderBottom: "1px solid #1a1a1a" }} />
                 {/* Colonne expand-all — vide dans la ligne groupes */}
                 <th style={{ background: TH_BG, border: "none", borderBottom: "1px solid #1a1a1a", width: 36, zIndex: 12, position: "sticky" as const, left: L.teinte + W.teinte }} />
-                {SECTOR_DEFS.map(s => (
-                  <th key={s.key} colSpan={SUMMARY_COLS[s.key].length} style={{
-                    ...thBase, color: s.color, fontSize: 9, fontWeight: 800,
-                    letterSpacing: "0.1em", borderBottom: "1px solid #1a1a1a",
-                    borderLeft: `2px solid ${s.color}40`, padding: "5px 0 6px",
-                    textAlign: "center" as const,
-                    background: s.key !== "fin" && Object.values(expanded).some(set => set.has(s.key))
-                      ? `${s.color}10` : TH_BG,
-                    transition: "background 200ms",
-                  }}>
-                    {s.label}
-                    {s.key !== "fin" && (
-                      <span style={{ fontSize: 8, opacity: 0.45, marginLeft: 4 }}>
-                        {Object.values(expanded).some(set => set.has(s.key)) ? "▲" : "▼"}
-                      </span>
-                    )}
-                  </th>
-                ))}
+                {SECTOR_DEFS.map(s => {
+                  const isExpandable = s.key !== "fin";
+                  const isAnyOpen = isExpandable && Object.values(expanded).some(set => set.has(s.key));
+                  return (
+                    <th key={s.key} colSpan={SUMMARY_COLS[s.key].length}
+                      onClick={isExpandable ? () => toggleSectorGlobal(s.key) : undefined}
+                      style={{
+                        ...thBase, color: s.color, fontSize: 9, fontWeight: 800,
+                        letterSpacing: "0.1em", borderBottom: "1px solid #1a1a1a",
+                        borderLeft: `2px solid ${s.color}40`, padding: "5px 0 6px",
+                        textAlign: "center" as const,
+                        background: isAnyOpen ? `${s.color}10` : TH_BG,
+                        transition: "background 200ms",
+                        cursor: isExpandable ? "pointer" : "default",
+                        userSelect: "none" as const,
+                      }}
+                      title={isExpandable ? (isAnyOpen ? "Replier tout" : "Déplier tout") : undefined}
+                    >
+                      {s.label}
+                      {isExpandable && (
+                        <span style={{ fontSize: 8, opacity: 0.45, marginLeft: 4 }}>
+                          {isAnyOpen ? "▲" : "▼"}
+                        </span>
+                      )}
+                    </th>
+                  );
+                })}
                 {/* Remplissage droite — empêche le contenu de passer sous le header au scroll */}
                 <th style={{ background: TH_BG, border: "none", borderBottom: "1px solid #1a1a1a", width: "100vw" }} />
               </tr>
