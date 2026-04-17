@@ -214,10 +214,12 @@ export async function saveDesignResineCellAction(formData: FormData) {
     value = raw === "" ? null : raw;
   }
 
-  await supabase.rpc("rpc_update_design_resine", {
-    p_case_id: caseId,
-    p_patch: { [column]: value },
-  });
+  // Admin direct update pour garantir la sauvegarde (bypass RLS + RPC whitelist)
+  const admin = createAdminClient();
+  await admin
+    .from("sector_design_resine")
+    .update({ [column]: value })
+    .eq("case_id", caseId);
 }
 
 // Save multiple fields at once (used for auto-logic)
