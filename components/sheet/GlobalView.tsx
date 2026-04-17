@@ -368,6 +368,7 @@ export function GlobalView() {
               <col style={{ width: W.teinte }} />
               <col style={{ width: 40 }} />
               {summaryCols.map((c, i) => <col key={i} style={{ width: c.w }} />)}
+              <col style={{ width: 32 }} />
             </colgroup>
 
             <thead style={{ position: "sticky", top: 0, zIndex: 11, background: TH_BG }}>
@@ -410,8 +411,7 @@ export function GlobalView() {
                     </th>
                   );
                 })}
-                {/* Remplissage droite — empêche le contenu de passer sous le header au scroll */}
-                <th style={{ background: TH_BG, border: "none", borderBottom: "1px solid #1a1a1a", width: "100vw" }} />
+                <th style={{ background: TH_BG, border: "none", borderBottom: "1px solid #1a1a1a", width: 32 }} />
               </tr>
 
               {/* Ligne colonnes */}
@@ -432,8 +432,7 @@ export function GlobalView() {
                     }}>{col.label}</th>
                   ))
                 )}
-                {/* Remplissage droite */}
-                <th style={{ background: TH_BG, border: "none", width: "100vw" }} />
+                <th style={{ ...thBase, color: "#555", width: 32, minWidth: 32, fontSize: 8 }}></th>
               </tr>
             </thead>
 
@@ -536,35 +535,8 @@ export function GlobalView() {
                         <Txt val={row.dr_teintes_associees} />
                       </td>
 
-                      {/* Bouton tout déplier / replier */}
-                      <td
-                        onClick={() => toggleAllSectors(row.id, isResine)}
-                        style={{
-                          ...tdBase,
-                          background: hasAny ? "rgba(74,222,128,0.08)" : bg,
-                          borderTop: `1px solid ${bd}`,
-                          borderBottom: `1px solid ${bd}`,
-                          cursor: "pointer",
-                          transition: "all 150ms",
-                          width: 40, minWidth: 40,
-                          textAlign: "center" as const,
-                        }}
-                        title={hasAny ? "Replier tous les détails" : "Déplier tous les détails"}
-                        onMouseEnter={e => { e.currentTarget.style.background = hasAny ? "rgba(74,222,128,0.18)" : "rgba(255,255,255,0.08)"; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = hasAny ? "rgba(74,222,128,0.08)" : bg; }}
-                      >
-                        <div style={{
-                          display: "inline-flex", alignItems: "center", justifyContent: "center",
-                          padding: "3px 8px", borderRadius: 5,
-                          background: hasAny ? "rgba(74,222,128,0.15)" : "rgba(255,255,255,0.06)",
-                          border: hasAny ? "1px solid rgba(74,222,128,0.4)" : "1px solid #555",
-                          color: hasAny ? "#4ade80" : "#ccc",
-                          fontSize: 11, fontWeight: 700,
-                          transition: "all 150ms",
-                        }}>
-                          {hasAny ? "▲" : "▼"}
-                        </div>
-                      </td>
+                      {/* Colonne vide (espace entre infos et secteurs) */}
+                      <td style={{ ...tdBase, background: bg, borderTop: `1px solid ${bd}`, borderBottom: `1px solid ${bd}`, width: 40, minWidth: 40 }} />
 
                       {/* Secteurs */}
                       {SECTOR_DEFS.map(s => {
@@ -582,6 +554,22 @@ export function GlobalView() {
                           </td>
                         ));
                       })}
+                      {/* Flèche déplier/replier tout */}
+                      <td
+                        onClick={() => toggleAllSectors(row.id, isResine)}
+                        title={hasAny ? "Replier" : "Déplier"}
+                        style={{
+                          ...tdBase, width: 32, minWidth: 32,
+                          background: bg, borderTop: `1px solid ${bd}`, borderBottom: `1px solid ${bd}`,
+                          cursor: "pointer", textAlign: "center" as const,
+                          color: hasAny ? "#4ade80" : "#555",
+                          fontSize: 10, transition: "color 150ms",
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.color = hasAny ? "#6ee7a0" : "#aaa"; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = hasAny ? "#4ade80" : "#555"; }}
+                      >
+                        {hasAny ? "▲" : "▼"}
+                      </td>
                     </tr>
 
                     {/* ── Panneaux détail par secteur déroulé ── */}
