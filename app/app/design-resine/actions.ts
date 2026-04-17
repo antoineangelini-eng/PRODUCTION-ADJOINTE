@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -124,13 +125,12 @@ export async function createCaseAction(formData: FormData) {
   const caseId = typeof data === "string" ? data : String(data);
   if (!caseId || caseId === "null") return;
 
-  // Défauts pour tout cas créé depuis DR (via RPC pour contourner RLS)
-  // - type_de_dents = "Dents usinées"
-  // - modele_a_realiser_ok = true (Provisoire Résine n'a pas de modèle physique)
-  await supabase.rpc("rpc_update_design_resine", {
-    p_case_id: caseId,
-    p_patch: { type_de_dents: "Dents usinées", modele_a_realiser_ok: true },
-  });
+  // Défauts pour tout cas créé depuis DR (admin bypass RLS)
+  const admin = createAdminClient();
+  await admin
+    .from("sector_design_resine")
+    .update({ type_de_dents: "Dents usinées", modele_a_realiser_ok: true })
+    .eq("case_id", caseId);
 
   // Calculer la date d'expédition en jours ouvrés (hors weekends)
   const { data: wdConfig } = await supabase
