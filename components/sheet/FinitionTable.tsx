@@ -138,11 +138,9 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
     onSelectionChange?.(checkedIds.size > 0 || detailCaseId !== null);
   }, [checkedIds, detailCaseId, onSelectionChange]);
 
-  function validateFinRow(row: any): string[] {
-    const fin = row.sector_finition ?? {};
-    const missing: string[] = [];
-    if (!fin.validation) missing.push("Validation");
-    return missing;
+  function validateFinRow(_row: any): string[] {
+    // Finition : pas de champs obligatoires, la validation est l'action finale
+    return [];
   }
 
   async function handleBatch() {
