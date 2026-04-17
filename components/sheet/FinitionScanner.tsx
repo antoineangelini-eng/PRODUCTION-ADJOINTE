@@ -150,7 +150,7 @@ export function FinitionScanner({
           <input
             ref={inputRef}
             value={value}
-            onChange={e => setValue(e.target.value)}
+            onChange={e => setValue(e.target.value.toUpperCase())}
             onKeyDown={e => { if (e.key === "Enter") handleScan(value); }}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
@@ -164,6 +164,7 @@ export function FinitionScanner({
               border:`1px solid ${focused ? "rgba(74,222,128,0.5)" : "#2a2a2a"}`,
               borderRadius:10, color:"white", fontSize:14,
               outline:"none", transition:"border-color 200ms", cursor:"text",
+              textTransform:"uppercase",
             }}
           />
           <div style={{

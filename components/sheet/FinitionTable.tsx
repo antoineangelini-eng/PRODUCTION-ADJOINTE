@@ -3,7 +3,6 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from "react"
 import { loadFinitionRowsAction, validateFinitionBatchAction, type FinitionRow } from "@/app/app/finition/actions";
 import { CaseDetailModal } from "@/components/sheet/CaseDetailModal";
 import { PhysicalBadge } from "@/components/sheet/PhysicalBadge";
-import type { ToastCase } from "@/components/sheet/CaseToast";
 
 function toDateStr(d: Date) { return d.toISOString().split("T")[0]; }
 
@@ -63,15 +62,13 @@ function DateCell({ value }: { value: string | null }) {
   return <span style={{ color:"white" }}>{new Date(value.slice(0,10)+"T00:00:00").toLocaleDateString("fr-FR")}</span>;
 }
 
-export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelectionChange, onNewCases }: {
+export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelectionChange }: {
   filter?: "today"|"tomorrow"|"all"|"late";
   onReload?: (fn:()=>void)=>void;
   highlightId?: string|null;
   lotPanel?: React.ReactNode;
   onSelectionChange?: (isBusy: boolean) => void;
-  onNewCases?: (cases: ToastCase[]) => void;
 }) {
-  const onNewCasesRef = useRef(onNewCases); onNewCasesRef.current = onNewCases;
   const [rows, setRows]             = useState<FinitionRow[]>([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState<string|null>(null);
@@ -84,23 +81,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
     if (!silent) setLoading(true);
     try {
       const data = await loadFinitionRowsAction();
-      if (silent) {
-        setRows(prev => {
-          const prevIds = new Set(prev.map(r => String(r.id)));
-          const incoming = data.filter(r => !prevIds.has(String(r.id)));
-          if (incoming.length > 0) {
-            onNewCasesRef.current?.(incoming.map(r => ({
-              id: String(r.id),
-              case_number: r.case_number,
-              date_expedition: r.date_expedition,
-              nature_du_travail: r.nature_du_travail,
-            })));
-          }
-          return data;
-        });
-      } else {
-        setRows(data);
-      }
+      setRows(data);
       setError(null);
     }
     catch (e:any) { if (!silent) setError(e.message ?? "Erreur"); }
@@ -190,19 +171,6 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
     return [...base].sort((a, b) => (a.date_expedition ?? "9999").localeCompare(b.date_expedition ?? "9999"));
   }, [rows, filter, today, tomorrow]);
 
-  const [pendingCount, setPendingCount] = useState(0);
-  useEffect(() => {
-    let alive = true;
-    const tick = async () => {
-      const { countSectorActiveAction } = await import("./pending-count-action");
-      const c = await countSectorActiveAction("finition");
-      if (alive) setPendingCount(Math.max(0, c - rows.length));
-    };
-    tick();
-    const itv = setInterval(tick, 30_000);
-    return () => { alive = false; clearInterval(itv); };
-  }, [rows.length]);
-  const urgentCount = pendingCount;
 
   const emptyMessage = () => {
     if (filter === "today")    return "Aucun cas prévu aujourd'hui.";
@@ -226,12 +194,6 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
           <div style={{ fontSize:12, color:"white", padding:"4px 10px", border:"1px solid rgba(255,255,255,0.2)", borderRadius:6 }}>
             {filtered.length} dossier{filtered.length > 1 ? "s" : ""}
           </div>
-          {urgentCount > 0 && (
-            <span style={{ fontSize: 12, color: "#f59e0b", padding: "4px 12px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.4)", borderRadius: 6, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#f59e0b", boxShadow: "0 0 8px #f59e0b" }} />
-              {urgentCount} cas en attente
-            </span>
-          )}
           {batchResult && batchResult.ok.length > 0 && (
             <div style={{ display:"flex", alignItems:"center", gap:6, padding:"4px 12px", background:"rgba(74,222,128,0.08)", border:"1px solid rgba(74,222,128,0.2)", borderRadius:6 }}>
               <span style={{ color:"#4ade80", fontSize:13 }}>✓</span>

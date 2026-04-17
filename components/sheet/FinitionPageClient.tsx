@@ -4,9 +4,6 @@ import { FinitionTable } from "@/components/sheet/FinitionTable";
 import { FinitionScanner } from "@/components/sheet/FinitionScanner";
 import { getFinitionStatsAction } from "@/app/app/finition/actions";
 import { usePollingRefresh } from "@/hooks/usePollingRefresh";
-import { RealtimeBanner } from "@/components/sheet/RealtimeBanner";
-import { useIncomingBanner } from "@/components/sheet/CaseToast";
-import { IncomingCasesBanner } from "@/components/sheet/IncomingCasesBanner";
 
 type Tab = "all" | "today" | "tomorrow" | "late";
 
@@ -18,7 +15,6 @@ export function FinitionPageClient(_props: { hideHeader?: boolean } = {}) {
     validatedToday: 0, totalToday: 0, late: 0, countToday: 0, countTomorrow: 0,
   });
   const reloadRef = useRef<(() => void) | null>(null);
-  const { toasts, addToasts, dismiss, dismissAll } = useIncomingBanner();
 
   const refreshStats = useCallback(async () => {
     try { setStats(await getFinitionStatsAction()); } catch {}
@@ -76,9 +72,6 @@ export function FinitionPageClient(_props: { hideHeader?: boolean } = {}) {
         </div>
       </div>
 
-      <RealtimeBanner hasPending={hasPending} isBusy={isBusy} onRefresh={confirmRefresh} />
-      <IncomingCasesBanner toasts={toasts} onDismiss={dismiss} onDismissAll={dismissAll} />
-
       <div style={{ flex:1, minHeight:0, display:"flex" }}>
         <div style={{ flex:1, minHeight:0, display:"flex", flexDirection:"column", overflow:"hidden" }}>
           <FinitionTable
@@ -86,7 +79,6 @@ export function FinitionPageClient(_props: { hideHeader?: boolean } = {}) {
             onReload={fn => { reloadRef.current = fn; }}
             highlightId={highlightId}
             onSelectionChange={setIsBusy}
-            onNewCases={addToasts}
           />
         </div>
         <div style={{
