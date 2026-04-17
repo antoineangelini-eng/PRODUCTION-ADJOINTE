@@ -264,6 +264,25 @@ export function GlobalView() {
   }
 
   // Ouvre/ferme un secteur sur TOUTES les lignes d'un coup (clic header)
+  // Déplie/replie les 4 secteurs sur TOUTES les lignes d'un coup
+  function toggleAllSectorsGlobal() {
+    setExpanded(prev => {
+      const allSectorKeys = SECTOR_DEFS.filter(s => s.key !== "fin").map(s => s.key);
+      // Vérifier si au moins une ligne a un secteur ouvert
+      const anyOpen = filtered.some(r => {
+        const set = prev[r.id];
+        return set && set.size > 0;
+      });
+      const next: ExpandMap = { ...prev };
+      for (const r of filtered) {
+        const isResine = r.nature_du_travail === "Définitif Résine" || r.nature_du_travail === "Provisoire Résine";
+        const expandable = allSectorKeys.filter(k => !(isResine && (k === "dm" || k === "ut")));
+        next[r.id] = anyOpen ? new Set() : new Set(expandable);
+      }
+      return next;
+    });
+  }
+
   function toggleSectorGlobal(sectorKey: string) {
     setExpanded(prev => {
       const isOpen = filtered.some(r => (prev[r.id] ?? new Set()).has(sectorKey));
@@ -321,8 +340,24 @@ export function GlobalView() {
         </select>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="N° du cas..."
           style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", color: "white", fontSize: 11, padding: "4px 10px", borderRadius: 6, outline: "none", width: 150 }} />
+        {(() => {
+          const anyOpen = filtered.some(r => { const s = expanded[r.id]; return s && s.size > 0; });
+          return (
+            <button onClick={toggleAllSectorsGlobal}
+              title={anyOpen ? "Replier tous les secteurs" : "Déplier tous les secteurs"}
+              style={{
+                marginLeft: "auto", background: anyOpen ? "rgba(74,222,128,0.08)" : "#1a1a1a",
+                border: anyOpen ? "1px solid rgba(74,222,128,0.3)" : "1px solid #2a2a2a",
+                color: anyOpen ? "#4ade80" : "#aaa", fontSize: 11, fontWeight: 600,
+                padding: "4px 12px", borderRadius: 6, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 5, transition: "all 150ms",
+              }}>
+              {anyOpen ? "▲ Replier tout" : "▼ Déplier tout"}
+            </button>
+          );
+        })()}
         <button onClick={load} title="Rafraîchir"
-          style={{ marginLeft: "auto", background: "#1a1a1a", border: "1px solid #2a2a2a", color: "#aaa", fontSize: 13, padding: "4px 10px", borderRadius: 6, cursor: "pointer" }}>↻</button>
+          style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", color: "#aaa", fontSize: 13, padding: "4px 10px", borderRadius: 6, cursor: "pointer" }}>↻</button>
       </div>
 
       {/* Scrollbar stylisée + fix z-index scroll */}
