@@ -359,9 +359,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
     const ur = row.sector_usinage_resine ?? {};
     const missing: string[] = [];
     if (!ur.usinage_dents_resine) missing.push("Usinage dents résine");
-    if (!ur.identite_machine)     missing.push("Machine");
-    if (!ur.numero_disque)        missing.push("N° disque");
-    if (!ur.reception_resine_at)  missing.push("Réception résine");
+    // Machine, N° disque et étiquette ne bloquent plus la validation
     return missing;
   }
 
@@ -485,10 +483,12 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
               <div key={row.id} id={`card-ur-${row.id}`} data-nav-row={String(row.id)} style={{ background:BG_CARD, border:`1px solid ${isChecked?"#2d4d3a":isDone?"#2d3d35":isLotFilled?"#2d2b4a":"#272727"}`, borderRadius:12, overflow:"hidden", animation:isFocused?"card-found 2s ease forwards":isNew?"card-new 2.5s ease forwards":"none", transition:"border-color 150ms" }}>
                 <div style={{ height:3, background:natColor, opacity:0.8 }} />
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 14px", borderBottom:"2px solid #2a2a2a" }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                    <span style={{ fontSize:18, fontWeight:800, color:"white", lineHeight:1 }}>{row.case_number}</span>
+                  <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                      <span style={{ fontSize:18, fontWeight:800, color:"white", lineHeight:1 }}>{row.case_number}</span>
+                      {nat && <span style={{ display:"inline-flex", padding:"2px 9px", borderRadius:5, fontSize:10, fontWeight:700, background:`${natColor}18`, border:`1px solid ${natColor}40`, color:natColor, whiteSpace:"nowrap" }}>{nat}</span>}
+                    </div>
                     {row.is_physical && <PhysicalBadge size="md" />}
-                    {nat && <span style={{ display:"inline-flex", padding:"2px 9px", borderRadius:5, fontSize:10, fontWeight:700, background:`${natColor}18`, border:`1px solid ${natColor}40`, color:natColor, whiteSpace:"nowrap" }}>{nat}</span>}
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:12 }}>
                     <div style={{ textAlign:"right" }}><span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"#e0e0e0", display:"block", marginBottom:2 }}>Expédition</span><span style={{ fontSize:13, color:"#e0e0e0", fontWeight:700 }}>{fmtDate(row.date_expedition)}</span></div>

@@ -201,9 +201,8 @@ export async function createCaseAction(formData: FormData) {
     .maybeSingle();
 
   if (recent?.id) {
-    if (!recent.is_physical) {
-      await supabase.rpc("rpc_mark_case_physical", { p_case_id: recent.id });
-    }
+    // Doublon < 60 s → on redirige simplement sans marquer physique
+    // (le scanner envoie souvent le code 2 fois, ce n'est pas un vrai cas physique)
     redirect(`/app/design-metal?focus=${caseNumber}`);
   }
 
@@ -216,11 +215,11 @@ export async function createCaseAction(formData: FormData) {
   const caseId = typeof data === "string" ? data : String(data);
   if (!caseId || caseId === "null") return;
 
-  // Défaut type_de_dents = "Dents usinées"
-  await supabase
-    .from("sector_design_metal")
-    .update({ type_de_dents: "Dents usinées" })
-    .eq("case_id", caseId);
+  // Défaut type_de_dents = "Dents usinées" (via RPC pour contourner RLS)
+  await supabase.rpc("rpc_update_design_metal", {
+    p_case_id: caseId,
+    p_patch: { type_de_dents: "Dents usinées" },
+  });
 
   // Calculer la date d'expédition en jours ouvrés
   const { data: wdConfig } = await supabase

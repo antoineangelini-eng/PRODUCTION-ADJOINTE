@@ -1,6 +1,7 @@
 -- ─────────────────────────────────────────────────────────────────────────────
--- Si type_de_dents = "Dents du commerce" dans DM, on ne passe PAS par DR.
--- On marque l'assignment DR comme "done" directement à la validation DM.
+-- Routing DM → DR basé sur type_de_dents :
+--   • "Dents du commerce" → on NE passe PAS par DR (assignment marqué done)
+--   • Tout autre type     → on OUVRE DR (assignment créé/activé)
 -- ─────────────────────────────────────────────────────────────────────────────
 
 CREATE OR REPLACE FUNCTION rpc_complete_design_metal(p_case_id uuid)
@@ -35,12 +36,20 @@ BEGIN
       WHERE case_assignments.status IS DISTINCT FROM 'done';
   END IF;
 
-  -- Si "Dents du commerce" → marquer DR comme done (pas besoin de passer par DR)
+  -- Routing vers DR basé sur type_de_dents
   IF v_type_dents = 'Dents du commerce' THEN
+    -- Pas besoin de passer par DR → marquer done (si l'assignment existe)
     UPDATE case_assignments
        SET status = 'done'
      WHERE case_id = p_case_id
        AND sector_code = 'design_resine';
+  ELSE
+    -- "Dents usinées" ou autre → ouvrir DR
+    INSERT INTO case_assignments (case_id, sector_code, status)
+    VALUES (p_case_id, 'design_resine', 'active')
+    ON CONFLICT (case_id, sector_code)
+      DO UPDATE SET status = 'active'
+      WHERE case_assignments.status IS DISTINCT FROM 'done';
   END IF;
 END;
 $$;
