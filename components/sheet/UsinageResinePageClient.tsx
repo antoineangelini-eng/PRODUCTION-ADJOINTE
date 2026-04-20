@@ -28,8 +28,10 @@ export function UsinageResinePageClient({ focusId }: { focusId: string | null; h
   const [isBusy, setIsBusy]         = useState(false);
   const { toasts, addToasts, dismiss, dismissAll } = useIncomingBanner();
   const reloadRef                   = useRef<() => void>(() => {});
+  const reloadFullRef               = useRef<() => void>(() => {});
 
   const handleReload = useCallback((fn: () => void) => { reloadRef.current = fn; }, []);
+  const handleReloadFull = useCallback((fn: () => void) => { reloadFullRef.current = fn; }, []);
   usePollingRefresh(() => reloadRef.current?.(), isBusy);
 
   function handleSearch() {
@@ -160,8 +162,8 @@ export function UsinageResinePageClient({ focusId }: { focusId: string | null; h
         onOpenChange={setLotOpen}
         onSaved={(ids: string[]) => {
           setLotFilledIds(prev => new Set([...prev, ...ids]));
-          // Recharge le tableau pour que les pancartes affichent les valeurs saisies en lot
-          reloadRef.current?.();
+          // Recharge le tableau (non-silent) pour que les valeurs saisies s'affichent
+          reloadFullRef.current?.();
         }}
       />
 
@@ -171,6 +173,7 @@ export function UsinageResinePageClient({ focusId }: { focusId: string | null; h
           focusId={activeFocus}
           lotFilledIds={lotFilledIds}
           onReload={handleReload}
+          onReloadFull={handleReloadFull}
           onSelectionChange={busy => setIsBusy(busy)}
           onNewCases={handleNewCases}
           onBannerClear={dismissAll}

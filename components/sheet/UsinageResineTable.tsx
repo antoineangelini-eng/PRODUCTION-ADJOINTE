@@ -255,9 +255,9 @@ function DisqueInput({ value, onSave, onFocusChange, navAttr }: {
   );
 }
 
-export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectionChange, onNewCases, onBannerClear }: {
+export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFull, onSelectionChange, onNewCases, onBannerClear }: {
   focusId: string|null; lotFilledIds?: Set<string>;
-  onReload?: (fn:()=>void)=>void; lotPanel?: React.ReactNode;
+  onReload?: (fn:()=>void)=>void; onReloadFull?: (fn:()=>void)=>void; lotPanel?: React.ReactNode;
   onSelectionChange?: (b:boolean)=>void; onNewCases?: (c:ToastCase[])=>void;
   onBannerClear?: () => void;
 }) {
@@ -302,6 +302,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onSelectio
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { onReload?.(() => load(true)); }, [load, onReload]);
+  useEffect(() => { onReloadFull?.(() => load(false)); }, [load, onReloadFull]);
 
   // Auto-refresh après 5 min d'inactivité
   const lastActivityRef = useRef(Date.now());
