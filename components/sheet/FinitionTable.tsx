@@ -267,6 +267,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
               const teintes   = ur.teintes_override ?? dr.teintes_associees ?? dm.teintes_associees ?? null;
               // DM est la source de vérité pour type_de_dents (DR force toujours "Dents usinées")
               const typeDents = ur.type_de_dents_override ?? dm.type_de_dents ?? dr.type_de_dents ?? null;
+              const isDentsCommerce = typeDents === "Dents du commerce";
               const nbBlocs   = ur.nb_blocs_override ?? dr.nb_blocs_de_dents ?? dr.nb_blocs ?? null;
               const receptionMetalDate  = ut.reception_metal_at ?? dm.reception_metal_date ?? null;
               const receptionResineDate = ur.reception_resine_at ?? null;
@@ -329,7 +330,13 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                   </td>
 
                   <td style={tdRead}>{teintes ?? "—"}</td>
-                  <td style={tdRead}>{nbBlocs ?? "—"}</td>
+                  <td style={isDentsCommerce ? {
+                    ...tdBase,
+                    background:"repeating-linear-gradient(135deg, rgba(239,68,68,0.07) 0px, rgba(239,68,68,0.07) 4px, transparent 4px, transparent 8px)",
+                    cursor:"not-allowed", color:"rgba(239,68,68,0.5)",
+                  } : tdRead} title={isDentsCommerce ? "Non applicable pour Dents du commerce" : undefined}>
+                    {isDentsCommerce ? "⊘" : (nbBlocs ?? "—")}
+                  </td>
                   <td style={isProvisoire ? {
                     ...tdBase,
                     background:"repeating-linear-gradient(135deg, rgba(239,68,68,0.07) 0px, rgba(239,68,68,0.07) 4px, transparent 4px, transparent 8px)",
@@ -337,7 +344,13 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                   } : tdRead} title={isProvisoire ? "Non applicable pour Provisoire Résine" : undefined}>
                     {isProvisoire ? "⊘" : <DateCell value={receptionMetalDate} />}
                   </td>
-                  <td style={tdRead}><DateCell value={receptionResineDate} /></td>
+                  <td style={isDentsCommerce ? {
+                    ...tdBase,
+                    background:"repeating-linear-gradient(135deg, rgba(239,68,68,0.07) 0px, rgba(239,68,68,0.07) 4px, transparent 4px, transparent 8px)",
+                    cursor:"not-allowed", color:"rgba(239,68,68,0.5)",
+                  } : tdRead} title={isDentsCommerce ? "Non applicable pour Dents du commerce" : undefined}>
+                    {isDentsCommerce ? "⊘" : <DateCell value={receptionResineDate} />}
+                  </td>
                   <td style={tdRead}><DateCell value={receptionCompleteDate} /></td>
 
                   <td style={{ ...tdBase, width:48 }}>

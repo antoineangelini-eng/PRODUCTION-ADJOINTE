@@ -27,7 +27,7 @@ export async function loadDrHistoryAction(): Promise<DrHistoryRow[]> {
     .select(`updated_at, cases:case_id (
       id, case_number, created_at, date_expedition, nature_du_travail, is_physical,
       sector_design_resine ( design_dents_resine, design_dents_resine_at, nb_blocs_de_dents, modele_a_realiser_ok, teintes_associees, type_de_dents ),
-      sector_design_metal ( modele_a_faire_ok )
+      sector_design_metal ( modele_a_faire_ok, teintes_associees )
     )`)
     .eq("sector_code", "design_resine")
     .eq("status", "done")
@@ -49,7 +49,7 @@ export async function loadDrHistoryAction(): Promise<DrHistoryRow[]> {
       nb_blocs_de_dents: dr.nb_blocs_de_dents ?? null,
       modele_a_realiser_ok: dr.modele_a_realiser_ok ?? null,
       modele_effectif: modeleEffectif,
-      teintes_associees: dr.teintes_associees ?? null,
+      teintes_associees: dr.teintes_associees ?? dm.teintes_associees ?? null,
       type_de_dents: dr.type_de_dents ?? null,
     };
   });

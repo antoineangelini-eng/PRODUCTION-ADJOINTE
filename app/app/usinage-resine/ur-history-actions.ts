@@ -29,7 +29,7 @@ export async function loadUrHistoryAction(): Promise<UrHistoryRow[]> {
       id, case_number, created_at, date_expedition, nature_du_travail, is_physical,
       sector_usinage_resine ( usinage_dents_resine, identite_machine, numero_disque, numero_lot_pmma, reception_resine_at, type_de_dents_override, teintes_override, nb_blocs_override ),
       sector_design_resine ( type_de_dents, teintes_associees, nb_blocs_de_dents, modele_a_realiser_ok ),
-      sector_design_metal ( modele_a_faire_ok )
+      sector_design_metal ( modele_a_faire_ok, teintes_associees )
     )`)
     .eq("sector_code", "usinage_resine")
     .eq("status", "done")
@@ -53,7 +53,7 @@ export async function loadUrHistoryAction(): Promise<UrHistoryRow[]> {
       numero_lot_pmma: ur.numero_lot_pmma ?? null,
       reception_resine_at: ur.reception_resine_at ?? null,
       type_de_dents: ur.type_de_dents_override ?? dr.type_de_dents ?? null,
-      teintes_associees: ur.teintes_override ?? dr.teintes_associees ?? null,
+      teintes_associees: ur.teintes_override ?? dr.teintes_associees ?? dm.teintes_associees ?? null,
       nb_blocs: ur.nb_blocs_override ?? dr.nb_blocs_de_dents ?? null,
       modele_effectif: modeleEffectif,
     };
