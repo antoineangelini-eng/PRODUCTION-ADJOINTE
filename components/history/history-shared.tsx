@@ -67,6 +67,17 @@ export function Field({ label, children }: { label: string; children: React.Reac
   );
 }
 
+export function FieldBlocked({ label }: { label: string }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ fontSize: 8, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" as const, color: "#888", textAlign: "center" as const }}>{label}</div>
+      <div style={{ borderRadius: 6, padding: "6px 8px", minHeight: 33, background: "repeating-linear-gradient(135deg, rgba(239,68,68,0.06) 0px, rgba(239,68,68,0.06) 4px, transparent 4px, transparent 8px)", border: "1px solid rgba(239,68,68,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ color: "rgba(239,68,68,0.3)", fontSize: 13 }}>⊘</span>
+      </div>
+    </div>
+  );
+}
+
 export function ReopenModal({ caseNumber, natureDuTravail, dateExpedition, sectorLabel, saving, error, note, setNote, onClose, onConfirm }: {
   caseNumber: string | null; natureDuTravail: string | null; dateExpedition: string | null;
   sectorLabel: string; saving: boolean; error: string | null;

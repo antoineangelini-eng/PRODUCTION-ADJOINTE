@@ -16,6 +16,7 @@ export type FinHistoryRow = {
   reception_resine_at: string | null;
   type_de_dents: string | null;
   teintes_associees: string | null;
+  nb_blocs: string | null;
 };
 
 export async function loadFinHistoryAction(): Promise<FinHistoryRow[]> {
@@ -26,8 +27,9 @@ export async function loadFinHistoryAction(): Promise<FinHistoryRow[]> {
       id, case_number, created_at, date_expedition, nature_du_travail, is_physical,
       sector_finition ( validation, validation_at ),
       sector_usinage_titane ( reception_metal_at ),
-      sector_usinage_resine ( reception_resine_at ),
-      sector_design_resine ( type_de_dents, teintes_associees )
+      sector_usinage_resine ( reception_resine_at, nb_blocs_override, teintes_override ),
+      sector_design_resine ( type_de_dents, teintes_associees, nb_blocs_de_dents ),
+      sector_design_metal ( type_de_dents, teintes_associees )
     )`)
     .eq("sector_code", "finition")
     .eq("status", "done")
@@ -40,6 +42,8 @@ export async function loadFinHistoryAction(): Promise<FinHistoryRow[]> {
     const ut  = c.sector_usinage_titane ?? {};
     const ur  = c.sector_usinage_resine ?? {};
     const dr  = c.sector_design_resine ?? {};
+    const dm  = c.sector_design_metal ?? {};
+    const typeDents = ur.type_de_dents_override ?? dm.type_de_dents ?? dr.type_de_dents ?? null;
     return {
       id: c.id ?? "", case_number: c.case_number ?? null,
       created_at: c.created_at ?? null, date_expedition: c.date_expedition ?? null,
@@ -49,8 +53,9 @@ export async function loadFinHistoryAction(): Promise<FinHistoryRow[]> {
       validation_at: fin.validation_at ?? null,
       reception_metal_at: ut.reception_metal_at ?? null,
       reception_resine_at: ur.reception_resine_at ?? null,
-      type_de_dents: dr.type_de_dents ?? null,
-      teintes_associees: dr.teintes_associees ?? null,
+      type_de_dents: typeDents,
+      teintes_associees: ur.teintes_override ?? dr.teintes_associees ?? dm.teintes_associees ?? null,
+      nb_blocs: ur.nb_blocs_override ?? dr.nb_blocs_de_dents ?? null,
     };
   });
 }

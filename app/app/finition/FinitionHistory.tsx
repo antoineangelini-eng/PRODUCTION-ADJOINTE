@@ -1,11 +1,12 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
 import { loadFinHistoryAction, reopenFinCaseAction, type FinHistoryRow } from "./fin-history-actions";
-import { fmtDate, Check, Txt, Field, ReopenModal, HistoryFilters, CardShell, latestDate } from "@/components/history/history-shared";
+import { fmtDate, Check, Txt, Field, FieldBlocked, ReopenModal, HistoryFilters, CardShell, latestDate } from "@/components/history/history-shared";
 
 function FinCard({ row, onReopen }: { row: FinHistoryRow; onReopen: () => void }) {
   const [open, setOpen] = useState(false);
   const recepComplete = latestDate(row.reception_metal_at, row.reception_resine_at);
+  const isDentsCommerce = row.type_de_dents === "Dents du commerce";
 
   return (
     <CardShell
@@ -22,7 +23,9 @@ function FinCard({ row, onReopen }: { row: FinHistoryRow; onReopen: () => void }
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ fontSize: 9, fontWeight: 600, textTransform: "uppercase" as const, color: "#999", letterSpacing: "0.05em" }}>Réception résine</div>
-            <span style={{ fontSize: 11, color: "#e0e0e0" }}>{fmtDate(row.reception_resine_at)}</span>
+            {isDentsCommerce
+              ? <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "1px 10px", borderRadius: 4, background: "repeating-linear-gradient(135deg, rgba(239,68,68,0.06) 0px, rgba(239,68,68,0.06) 4px, transparent 4px, transparent 8px)", border: "1px solid rgba(239,68,68,0.18)", color: "rgba(239,68,68,0.3)", fontSize: 13 }}>⊘</span>
+              : <span style={{ fontSize: 11, color: "#e0e0e0" }}>{fmtDate(row.reception_resine_at)}</span>}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase" as const, color: "#e0e0e0", letterSpacing: "0.05em" }}>Réception complète</div>
@@ -31,10 +34,19 @@ function FinCard({ row, onReopen }: { row: FinHistoryRow; onReopen: () => void }
         </div>
       }
     >
-      <div style={{ display: "flex", gap: 8 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
         <div style={{ flex: 1 }}><Field label="Validation"><Check val={row.validation} /></Field></div>
         <div style={{ flex: 1 }}><Field label="Type de dents"><Txt val={row.type_de_dents} color="#7c8196" /></Field></div>
         <div style={{ flex: 1 }}><Field label="Teintes"><Txt val={row.teintes_associees} /></Field></div>
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ flex: 1 }}>
+          {isDentsCommerce
+            ? <FieldBlocked label="Nb blocs" />
+            : <Field label="Nb blocs"><Txt val={row.nb_blocs} /></Field>}
+        </div>
+        <div style={{ flex: 1 }} />
+        <div style={{ flex: 1 }} />
       </div>
     </CardShell>
   );

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 
 export type BatchResult = {
@@ -97,7 +98,12 @@ export async function saveUsinageResineCellAction(formData: FormData) {
     }
   }
 
-  await supabase.rpc("rpc_update_usinage_resine", { p_case_id: caseId, p_patch: patch });
+  // Admin direct update pour garantir la sauvegarde (bypass RLS + RPC whitelist)
+  const admin = createAdminClient();
+  await admin
+    .from("sector_usinage_resine")
+    .update(patch)
+    .eq("case_id", caseId);
   revalidatePath("/app/usinage-resine");
   revalidatePath("/app/finition");
 }

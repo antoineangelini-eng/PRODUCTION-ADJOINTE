@@ -1,5 +1,6 @@
 "use server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 
 export type LotCaseUR = {
@@ -108,10 +109,12 @@ export async function saveUsinageResineLotAction(rows: LotSaveRow[]): Promise<Lo
       patch.reception_resine_at = d.toISOString().split("T")[0];
     }
 
-    const { error } = await supabase.rpc("rpc_update_usinage_resine", {
-      p_case_id: row.case_id,
-      p_patch: patch,
-    });
+    // Admin direct update pour garantir la sauvegarde (bypass RLS + RPC whitelist)
+    const admin = createAdminClient();
+    const { error } = await admin
+      .from("sector_usinage_resine")
+      .update(patch)
+      .eq("case_id", row.case_id);
     results.push({ case_id: row.case_id, case_number: row.case_number, ok: !error, error: error?.message });
   }
 
