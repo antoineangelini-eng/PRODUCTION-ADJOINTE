@@ -1,6 +1,8 @@
 "use server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { resolveDisplayNames } from "@/lib/resolve-names";
 
 export type BatchResult = {
   okIds: string[];
@@ -14,6 +16,8 @@ export type UsinageTitaneRow = {
   date_expedition: string | null;
   nature_du_travail: string | null;
   is_physical: boolean | null;
+  created_by: string | null;
+  sent_by_name: string | null;
   sector_design_metal: {
     design_chassis: boolean | null;
     design_chassis_at: string | null;
@@ -48,6 +52,7 @@ export async function loadUsinageTitaneRowsAction(): Promise<UsinageTitaneRow[]>
   const { data } = await supabase
     .from("case_assignments")
     .select(`
+      created_by,
       cases:case_id (
         id, created_at, case_number, date_expedition, nature_du_travail, is_physical,
         sector_design_metal ( design_chassis, design_chassis_at, reception_metal_date, modele_a_faire_ok ),
@@ -66,14 +71,36 @@ export async function loadUsinageTitaneRowsAction(): Promise<UsinageTitaneRow[]>
     .in("status", ["active", "in_progress"])
     .limit(200);
 
-  return ((data ?? []) as any[])
-    .map((r: any) => r.cases)
+  const rows = ((data ?? []) as any[])
+    .map((r: any) => r.cases ? { ...r.cases, created_by: r.created_by ?? null } : null)
     .filter(Boolean)
     .sort((a: any, b: any) => {
       const da = a.date_expedition ?? "9999-12-31";
       const db = b.date_expedition ?? "9999-12-31";
       return da.localeCompare(db);
     });
+
+  // Résoudre "Envoyé par" = qui a validé le cas en DM (secteur précédent)
+  const caseIds = rows.map((r: any) => r.id).filter(Boolean);
+  let senderMap: Record<string, string> = {};
+  if (caseIds.length > 0) {
+    const admin = createAdminClient();
+    const { data: senderData } = await admin
+      .from("case_assignments")
+      .select("case_id, updated_by")
+      .in("case_id", caseIds)
+      .eq("sector_code", "design_metal")
+      .eq("status", "done");
+    const senderIds = (senderData ?? []).map((s: any) => s.updated_by).filter(Boolean);
+    const nameMap = await resolveDisplayNames(senderIds);
+    (senderData ?? []).forEach((s: any) => {
+      if (s.updated_by && nameMap[s.updated_by]) {
+        senderMap[s.case_id] = nameMap[s.updated_by];
+      }
+    });
+  }
+
+  return rows.map((r: any) => ({ ...r, sent_by_name: senderMap[r.id] ?? null }));
 }
 
 export async function saveUsinageTitaneCellAction(formData: FormData) {
@@ -133,10 +160,22 @@ export async function completeUsinageTitaneBatchAction(
 }
 
 export async function deleteCaseAction(formData: FormData) {
-  const supabase = await createClient();
   const caseId = String(formData.get("case_id") ?? "").trim();
   if (!caseId) return { error: "ID manquant" };
-  const { error } = await supabase.rpc("rpc_delete_case", { p_case_id: caseId });
+
+  const { checkDeletePermission } = await import("@/lib/delete-permission");
+  const perm = await checkDeletePermission(caseId, "usinage_titane");
+  if (!perm.allowed) return { error: perm.error };
+
+  const admin = createAdminClient();
+  await admin.from("case_events").delete().eq("case_id", caseId);
+  await admin.from("case_assignments").delete().eq("case_id", caseId);
+  await admin.from("sector_design_metal").delete().eq("case_id", caseId);
+  await admin.from("sector_design_resine").delete().eq("case_id", caseId);
+  await admin.from("sector_usinage_titane").delete().eq("case_id", caseId);
+  await admin.from("sector_usinage_resine").delete().eq("case_id", caseId);
+  await admin.from("sector_finition").delete().eq("case_id", caseId);
+  const { error } = await admin.from("cases").delete().eq("id", caseId);
   if (error) return { error: error.message };
   return { ok: true };
 }

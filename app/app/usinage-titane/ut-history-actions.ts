@@ -1,6 +1,8 @@
 "use server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { resolveDisplayNames } from "@/lib/resolve-names";
 
 export type UtHistoryRow = {
   id: string;
@@ -10,6 +12,8 @@ export type UtHistoryRow = {
   nature_du_travail: string | null;
   is_physical: boolean;
   completed_at: string | null;
+  validated_by_name: string | null;
+  sent_by_name: string | null;
   envoye_usinage: boolean | null;
   numero_lot_metal: string | null;
   envoye_usinage_at: string | null;
@@ -32,7 +36,7 @@ export async function loadUtHistoryAction(): Promise<UtHistoryRow[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("case_assignments")
-    .select(`updated_at, cases:case_id (
+    .select(`updated_at, updated_by, cases:case_id (
       id, case_number, created_at, date_expedition, nature_du_travail, is_physical,
       sector_usinage_titane ( envoye_usinage, envoye_usinage_at, numero_lot_metal, machine_ut, machine_ut_h, machine_ut_b, numero_calcul, numero_calcul_h, numero_calcul_b, nombre_brut, nombre_brut_h, nombre_brut_b, reception_metal_at ),
       sector_design_metal ( modele_a_faire_ok, design_chassis, design_chassis_at )
@@ -42,15 +46,38 @@ export async function loadUtHistoryAction(): Promise<UtHistoryRow[]> {
     .order("updated_at", { ascending: false })
     .limit(500);
 
-  return ((data ?? []) as any[]).map((r: any) => {
+  const rows = (data ?? []) as any[];
+  const caseIds = rows.map((r: any) => r.cases?.id).filter(Boolean);
+
+  // Collecter tous les user IDs (validé par + envoyé par DM)
+  const allUserIds: string[] = rows.map((r: any) => r.updated_by).filter(Boolean);
+  const senderByCase: Record<string, string> = {};
+  if (caseIds.length > 0) {
+    const admin = createAdminClient();
+    const { data: senderData } = await admin
+      .from("case_assignments")
+      .select("case_id, updated_by")
+      .in("case_id", caseIds)
+      .eq("sector_code", "design_metal")
+      .eq("status", "done");
+    (senderData ?? []).forEach((s: any) => {
+      if (s.updated_by) { allUserIds.push(s.updated_by); senderByCase[s.case_id] = s.updated_by; }
+    });
+  }
+  const nameMap = await resolveDisplayNames(allUserIds);
+
+  return rows.map((r: any) => {
     const c = r.cases ?? {};
     const ut = c.sector_usinage_titane ?? {};
     const dm = c.sector_design_metal ?? {};
+    const senderId = senderByCase[c.id];
     return {
       id: c.id ?? "", case_number: c.case_number ?? null,
       created_at: c.created_at ?? null, date_expedition: c.date_expedition ?? null,
       nature_du_travail: c.nature_du_travail ?? null, is_physical: Boolean(c.is_physical),
       completed_at: r.updated_at ?? null,
+      validated_by_name: r.updated_by ? (nameMap[r.updated_by] ?? null) : null,
+      sent_by_name: senderId ? (nameMap[senderId] ?? null) : null,
       envoye_usinage: ut.envoye_usinage ?? null,
       numero_lot_metal: ut.numero_lot_metal ?? null,
       envoye_usinage_at: ut.envoye_usinage_at ?? null,

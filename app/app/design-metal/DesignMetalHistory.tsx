@@ -4,9 +4,9 @@ import { PhysicalBadge } from "@/components/sheet/PhysicalBadge";
 import { loadDmHistoryAction, reopenCaseAction, type DmHistoryRow } from "./history-actions";
 
 const NATURE_META: Record<string, { color: string }> = {
-  "Chassis Argoat":   { color: "#4ade80" },
-  "Chassis Dent All": { color: "#5a9ba8" },
-  "Définitif Résine": { color: "#a87a90" },
+  "Chassis Argoat":   { color: "#e07070" },
+  "Chassis Dent All": { color: "#4ade80" },
+  "Définitif Résine": { color: "#c4a882" },
 };
 
 const SECTORS = [
@@ -183,6 +183,12 @@ function HistoryCard({ row, onReopen }: { row: DmHistoryRow; onReopen: () => voi
             <div style={{ fontSize: 8, fontWeight: 600, textTransform: "uppercase" as const, color: "#999", letterSpacing: "0.05em", marginBottom: 1 }}>Validé le</div>
             <div style={{ fontSize: 11, color: "#c0c0c0", fontWeight: 400 }}>{fmtDate(row.completed_at)}</div>
           </div>
+          {row.validated_by_name && (
+            <div>
+              <div style={{ fontSize: 8, fontWeight: 600, textTransform: "uppercase" as const, color: "#999", letterSpacing: "0.05em", marginBottom: 1 }}>Validé par</div>
+              <div style={{ fontSize: 11, color: "#818cf8", fontWeight: 600 }}>{row.validated_by_name}</div>
+            </div>
+          )}
           <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 8 }}>
             <div style={{ fontSize: 9, fontWeight: 600, textTransform: "uppercase" as const, color: "#999", letterSpacing: "0.05em", flexShrink: 0 }}>Design châssis</div>
             {fmtDT(row.design_chassis_at)}

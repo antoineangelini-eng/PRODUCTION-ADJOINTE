@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { resolveDisplayNames } from "@/lib/resolve-names";
 
 export type DmHistoryRow = {
   id: string;
@@ -11,6 +12,7 @@ export type DmHistoryRow = {
   nature_du_travail: string | null;
   is_physical: boolean;
   completed_at: string | null;
+  validated_by_name: string | null;
   // sector_design_metal
   design_chassis: boolean | null;
   design_chassis_at: string | null;
@@ -29,6 +31,7 @@ export async function loadDmHistoryAction(): Promise<DmHistoryRow[]> {
     .from("case_assignments")
     .select(`
       updated_at,
+      updated_by,
       cases:case_id (
         id, case_number, created_at, date_expedition, nature_du_travail, is_physical,
         sector_design_metal (
@@ -43,7 +46,10 @@ export async function loadDmHistoryAction(): Promise<DmHistoryRow[]> {
     .order("updated_at", { ascending: false })
     .limit(500);
 
-  return ((data ?? []) as any[]).map((r: any) => {
+  const rows = (data ?? []) as any[];
+  const nameMap = await resolveDisplayNames(rows.map((r: any) => r.updated_by));
+
+  return rows.map((r: any) => {
     const c   = r.cases ?? {};
     const dm  = c.sector_design_metal ?? {};
     return {
@@ -54,6 +60,7 @@ export async function loadDmHistoryAction(): Promise<DmHistoryRow[]> {
       nature_du_travail:   c.nature_du_travail ?? null,
       is_physical:         Boolean(c.is_physical),
       completed_at:        r.updated_at ?? null,
+      validated_by_name:   r.updated_by ? (nameMap[r.updated_by] ?? null) : null,
       design_chassis:      dm.design_chassis ?? null,
       design_chassis_at:   dm.design_chassis_at ?? null,
       dentall_case_number: dm.dentall_case_number ?? null,

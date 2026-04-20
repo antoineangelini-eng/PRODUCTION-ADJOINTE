@@ -37,9 +37,9 @@ const TYPE_DENTS_OPTIONS = [
 ];
 
 const NATURE_META: Record<string, { color:string }> = {
-  "Chassis Argoat":    { color:"#4ade80" },
-  "Chassis Dent All":  { color:"#5a9ba8" },
-  "Définitif Résine":  { color:"#a87a90" },
+  "Chassis Argoat":    { color:"#e07070" },
+  "Chassis Dent All":  { color:"#4ade80" },
+  "Définitif Résine":  { color:"#c4a882" },
   "Provisoire Résine": { color:"#9487a8" },
 };
 
@@ -293,25 +293,28 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                     ...tdSticky,
                     background: isChecked ? "rgba(74,222,128,0.05)" : isHighlighted ? "rgba(74,222,128,0.08)" : "#0b0b0b",
                   }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                      {status==="late"  && <span style={{ fontSize:10, color:"#f87171" }}>●</span>}
-                      {status==="today" && <span style={{ fontSize:10, color:"#f59e0b" }}>●</span>}
-                      <button
-                        onClick={() => setDetailCaseId(String(row.id))}
-                        title="Voir le détail des tâches"
-                        style={{
-                          background:"none", border:"none", padding:0,
-                          cursor:"pointer", color:"white", fontWeight:700,
-                          fontSize:13, textDecoration:"underline",
-                          textDecorationColor: natureMeta ? natureMeta.color+"60" : "rgba(255,255,255,0.3)",
-                          textUnderlineOffset:3, transition:"color 150ms",
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.color = natureMeta?.color ?? "#4ade80")}
-                        onMouseLeave={e => (e.currentTarget.style.color = "white")}
-                      >
-                        {row.case_number}
-                      </button>
-                      {row.is_physical && <PhysicalBadge />}
+                    <div style={{ display:"flex", flexDirection:"column" as const, gap:2 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                        {status==="late"  && <span style={{ fontSize:10, color:"#f87171" }}>●</span>}
+                        {status==="today" && <span style={{ fontSize:10, color:"#f59e0b" }}>●</span>}
+                        <button
+                          onClick={() => setDetailCaseId(String(row.id))}
+                          title="Voir le détail des tâches"
+                          style={{
+                            background:"none", border:"none", padding:0,
+                            cursor:"pointer", color:"white", fontWeight:700,
+                            fontSize:13, textDecoration:"underline",
+                            textDecorationColor: natureMeta ? natureMeta.color+"60" : "rgba(255,255,255,0.3)",
+                            textUnderlineOffset:3, transition:"color 150ms",
+                          }}
+                          onMouseEnter={e => (e.currentTarget.style.color = natureMeta?.color ?? "#4ade80")}
+                          onMouseLeave={e => (e.currentTarget.style.color = "white")}
+                        >
+                          {row.case_number}
+                        </button>
+                        {row.is_physical && <PhysicalBadge />}
+                      </div>
+                      {(row as any).sent_by_name && <span style={{ fontSize: 9, color: "#818cf8", fontWeight: 600, whiteSpace: "nowrap" as const }}>via {(row as any).sent_by_name}</span>}
                     </div>
                   </td>
 

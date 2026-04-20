@@ -14,9 +14,9 @@ import {
 } from "@/app/app/design-resine/actions";
 
 const NATURE_META: Record<string, { color: string }> = {
-  "Chassis Argoat":    { color: "#4ade80" },
-  "Chassis Dent All":  { color: "#5a9ba8" },
-  "Définitif Résine":  { color: "#a87a90" },
+  "Chassis Argoat":    { color: "#e07070" },
+  "Chassis Dent All":  { color: "#4ade80" },
+  "Définitif Résine":  { color: "#c4a882" },
   "Provisoire Résine": { color: "#9487a8" },
   "Définitif":         { color: "#f59e0b" },
   "Définitif Bimax":   { color: "#f97316" },
@@ -25,8 +25,7 @@ const NATURE_META: Record<string, { color: string }> = {
 };
 
 const TYPE_DENTS_OPTIONS = [
-  { value: "Dents usinées",      color: "#7c8196" },
-  { value: "Dents du commerce", color: "#f59e0b" },
+  { value: "Dents usinées", color: "#7c8196" },
 ];
 
 const BASE_DENTS_OPTIONS = [
@@ -159,15 +158,19 @@ function TextInput({value,onSave,width=100}:{value:string|null;onSave:(v:string)
     style={{padding:"3px 8px",border:focused?"1px solid #4ade80":"1px solid transparent",background:focused?"rgba(74,222,128,0.06)":"rgba(255,255,255,0.05)",color:"white",width,fontSize:13,textAlign:"center",outline:"none",borderRadius:6,transition:"all 150ms"}}/>;
 }
 
-export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCases, onBannerClear}:{
+export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionChange, onNewCases, onBannerClear}:{
   focusId:string|null;
   onReload?: (fn: () => void) => void;
+  onReloadFull?: (fn: () => void) => void;
   onSelectionChange?: (busy: boolean) => void;
   onNewCases?: (cases: { id: string; case_number: string | null; date_expedition: string | null; nature_du_travail: string | null }[]) => void;
   onBannerClear?: () => void;
 }){
   const onNewCasesRef = useRef(onNewCases); onNewCasesRef.current = onNewCases;
   const onBannerClearRef = useRef(onBannerClear); onBannerClearRef.current = onBannerClear;
+  const [currentUserId,setCurrentUserId]=useState("");
+  const [isAdmin,setIsAdmin]=useState(false);
+  useEffect(()=>{import("@/app/app/user-info-action").then(m=>m.getUserInfoAction()).then(info=>{setCurrentUserId(info.userId);setIsAdmin(info.isAdmin);});},[]);
   const [rows,setRows]=useState<DesignResineRow[]>([]);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState<string|null>(null);
@@ -211,6 +214,7 @@ export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCa
   },[]);
   useEffect(()=>{load();},[load]);
   useEffect(()=>{ onReload?.(() => load(true)); },[load, onReload]);
+  useEffect(()=>{ onReloadFull?.(() => load(false)); },[load, onReloadFull]);
   useEffect(()=>{ onSelectionChange?.(checkedIds.size > 0 || confirmDeleteId !== null || editingExpId !== null); },[checkedIds, confirmDeleteId, editingExpId, onSelectionChange]);
 
   // Auto-refresh après 3 min d'inactivité
@@ -285,6 +289,18 @@ export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCa
     const fd=new FormData();fd.set("case_id",caseId);fd.set("column",column);fd.set("kind","boolean");fd.set("current",String(current));
     await saveDesignResineCellAction(fd);
   }
+  function autoFillOnSelect(row:DesignResineRow){
+    const caseId=String(row.id);
+    const dr=(row as any).sector_design_resine??{};
+    if(!dr.design_dents_resine){
+      const now=new Date().toISOString();
+      patchRow(caseId,"sector_design_resine","design_dents_resine",true);
+      patchRow(caseId,"sector_design_resine","design_dents_resine_at",now);
+      const fd=new FormData();fd.set("case_id",caseId);fd.set("column","design_dents_resine");fd.set("kind","boolean");fd.set("current","false");
+      saveDesignResineCellAction(fd);
+    }
+  }
+
   async function saveText(caseId:string,column:string,value:string){
     patchRow(caseId,"sector_design_resine",column,value||null);
     const fd=new FormData();fd.set("case_id",caseId);fd.set("column",column);fd.set("kind","text");fd.set("value",value);
@@ -409,12 +425,12 @@ export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCa
                 <tr key={row.id} id={`row-dr-${row.id}`} onClick={()=>setActiveRowId(String(row.id))} onMouseEnter={()=>setHoveredId(String(row.id))} onMouseLeave={()=>setHoveredId(null)}
                   style={{cursor:"pointer",animation:isF?"row-found 2.2s ease-in-out forwards":"none",background:isF?undefined:"transparent"}}>
 
-                  <td style={tdCardFirst} onDoubleClick={e=>{e.stopPropagation();handleTogglePhysical(String(row.id),Boolean(row.is_physical));}} title="Double-clic pour basculer physique / numérique"><div style={{display:"inline-flex",alignItems:"center",gap:6,cursor:"default"}}><div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:24,padding:"2px 8px",borderRadius:8,color:"#ffffff",background:isA?"rgba(255,255,255,0.04)":"transparent",border:isA?"1px solid rgba(255,255,255,0.06)":"1px solid transparent",transition:"all 160ms"}}>{row.case_number}</div>{row.is_physical&&<PhysicalBadge/>}</div></td>
+                  <td style={tdCardFirst} onDoubleClick={e=>{e.stopPropagation();handleTogglePhysical(String(row.id),Boolean(row.is_physical));}} title="Double-clic pour basculer physique / numérique"><div style={{display:"flex",flexDirection:"column",gap:2,cursor:"default"}}><div style={{display:"inline-flex",alignItems:"center",gap:6}}><div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:24,padding:"2px 8px",borderRadius:8,color:"#ffffff",background:isA?"rgba(255,255,255,0.04)":"transparent",border:isA?"1px solid rgba(255,255,255,0.06)":"1px solid transparent",transition:"all 160ms"}}>{row.case_number}</div>{row.is_physical&&<PhysicalBadge/>}</div>{(row as any).sent_by_name&&<span style={{fontSize:9,color:"#818cf8",fontWeight:600,whiteSpace:"nowrap",paddingLeft:8}}>via {(row as any).sent_by_name}</span>}</div></td>
                   <td style={tdCard}>{fmtDate(row.created_at)}</td>
 
-                  <td style={{...tdCard,cursor:isProvisoire?"pointer":"default"}} onClick={isProvisoire?(e)=>{e.stopPropagation();const rect=(e.currentTarget as HTMLElement).getBoundingClientRect();setEditingExpId(String(row.id));setEditingExpRect(rect);}:undefined}>
-                    {row.date_expedition?new Date(row.date_expedition).toLocaleDateString("fr-FR"):isProvisoire?<span style={{color:"#555",fontSize:11}}>— cliquer —</span>:"—"}
-                    {isProvisoire&&editingExpId===String(row.id)&&editingExpRect&&(
+                  <td style={{...tdCard,cursor:"pointer"}} onClick={(e)=>{e.stopPropagation();const rect=(e.currentTarget as HTMLElement).getBoundingClientRect();setEditingExpId(String(row.id));setEditingExpRect(rect);}}>
+                    {row.date_expedition?new Date(row.date_expedition).toLocaleDateString("fr-FR"):<span style={{color:"#555",fontSize:11}}>— cliquer —</span>}
+                    {editingExpId===String(row.id)&&editingExpRect&&(
                       <MiniCalendar value={row.date_expedition?String(row.date_expedition).slice(0,10):""} onSelect={date=>{patchRow(String(row.id),null,"date_expedition",date||null);saveCaseDateExpedition(String(row.id),date);setEditingExpId(null);}} onClose={()=>setEditingExpId(null)} rect={editingExpRect}/>
                     )}
                   </td>
@@ -424,12 +440,8 @@ export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCa
                   <td style={isProvisoire?disabledCellStyle:tdCard}>{isProvisoire?"⊘":<BoolReadOnly value={dm.design_chassis??null}/>}</td>
                   <td style={isProvisoire?disabledCellStyle:tdCard}>{isProvisoire?"⊘":<DateTimeCell value={dm.design_chassis_at??null}/>}</td>
 
-                  <td style={tdCard} onClick={e=>e.stopPropagation()}>
-                    <SelectCustom key={`td-${row.id}-${effectiveTypeDents}`} value={effectiveTypeDents}
-                      onChange={v=>{patchRow(String(row.id),"sector_design_resine","type_de_dents",v);saveText(String(row.id),"type_de_dents",v);}}
-                      options={TYPE_DENTS_OPTIONS.map(o=>({value:o.value,label:o.value,color:o.color}))}
-                      color={typeMeta.color}
-                      locked={Boolean(dm.type_de_dents)}/>
+                  <td style={tdCard}>
+                    <span style={{display:"inline-flex",padding:"3px 10px",borderRadius:6,background:"rgba(124,129,150,0.12)",border:"1px solid rgba(124,129,150,0.3)",color:"#7c8196",fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>Dents usinées</span>
                   </td>
 
                   <td style={tdCard}>
@@ -450,12 +462,14 @@ export function DesignResineTable({focusId, onReload, onSelectionChange, onNewCa
 
                   <td style={tdCard} onClick={e=>e.stopPropagation()}>
                     <div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:26,height:26,borderRadius:8,background:isC?"rgba(74,222,128,0.18)":"#181818",border:"1.5px solid rgba(255,255,255,0.85)",boxShadow:isC?"0 0 0 3px rgba(74,222,128,0.12)":"inset 0 0 0 1px rgba(255,255,255,0.03)",transition:"all 160ms ease"}}>
-                      <input type="checkbox" checked={isC} onChange={e=>setCheckedIds(prev=>{const next=new Set(prev);e.target.checked?next.add(String(row.id)):next.delete(String(row.id));return next;})} style={{width:14,height:14,cursor:"pointer",accentColor:"#4ade80",margin:0}}/>
+                      <input type="checkbox" checked={isC} onChange={e=>{const checked=e.target.checked;setCheckedIds(prev=>{const next=new Set(prev);checked?next.add(String(row.id)):next.delete(String(row.id));return next;});if(checked)autoFillOnSelect(row);}} style={{width:14,height:14,cursor:"pointer",accentColor:"#4ade80",margin:0}}/>
                     </div>
                   </td>
 
                   <td style={tdCardLast}>
-                    {confirmDeleteId===String(row.id)?(
+                    {!(isAdmin || !(row as any).created_by || (row as any).created_by === currentUserId) ? (
+                      <span style={{fontSize:9,color:"#333"}} title="Seul le créateur peut supprimer">—</span>
+                    ) : confirmDeleteId===String(row.id)?(
                       <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"center"}}>
                         <span style={{fontSize:10,color:"#f87171",whiteSpace:"nowrap"}}>Supprimer ?</span>
                         <div style={{display:"flex",gap:4}}>

@@ -16,9 +16,9 @@ import { printUrLabelAction } from "@/app/app/usinage-resine/print-actions";
 import type { ToastCase } from "@/components/sheet/CaseToast";
 
 const NATURE_META: Record<string, { color: string }> = {
-  "Chassis Argoat":    { color: "#4ade80" },
-  "Chassis Dent All":  { color: "#5a9ba8" },
-  "Définitif Résine":  { color: "#a87a90" },
+  "Chassis Argoat":    { color: "#e07070" },
+  "Chassis Dent All":  { color: "#4ade80" },
+  "Définitif Résine":  { color: "#c4a882" },
   "Provisoire Résine": { color: "#9487a8" },
 };
 const MACHINE_OPTIONS = [
@@ -262,6 +262,9 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
   onBannerClear?: () => void;
 }) {
   const onBannerClearRef = useRef(onBannerClear); onBannerClearRef.current = onBannerClear;
+  const [currentUserId,setCurrentUserId]=useState("");
+  const [isAdmin,setIsAdmin]=useState(false);
+  useEffect(()=>{import("@/app/app/user-info-action").then(m=>m.getUserInfoAction()).then(info=>{setCurrentUserId(info.userId);setIsAdmin(info.isAdmin);});},[]);
   const [rows, setRows]             = useState<UsinageResineRow[]>([]);
   const [newRowIds, setNewRowIds]   = useState<Set<string>>(new Set());
   const [hasUnsorted, setHasUnsorted] = useState(false);
@@ -274,6 +277,8 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
   const [confirmDeleteId, setConfirmDeleteId] = useState<string|null>(null);
   const [editingDate, setEditingDate] = useState<{caseId:string;column:string;value:string;rect:DOMRect}|null>(null);
   const [isEditing, setIsEditing]   = useState(false);
+  const [dualMachineIds, setDualMachineIds] = useState<Set<string>>(new Set());
+  const [dualDisqueIds, setDualDisqueIds]   = useState<Set<string>>(new Set());
   const onNewCasesRef = useRef(onNewCases); onNewCasesRef.current = onNewCases;
 
   const load = useCallback(async (silent = false) => {
@@ -404,9 +409,10 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
           caseNumber: row.case_number ?? okId,
           teinte:  ur.teintes_override ?? dr.teintes_associees ?? dm.teintes_associees ?? null,
           machine: ur.identite_machine ?? null,
+          machine2: ur.identite_machine_2 ?? null,
           disque:  ur.numero_disque    ?? null,
+          disque2: ur.numero_disque_2  ?? null,
           nbBlocs: ur.nb_blocs_override ?? dr.nb_blocs_de_dents ?? null,
-
         }).catch(e => console.error("[Zebra]", e));
       }
       setCheckedIds(prev => { const n = new Set(prev); result.okIds.forEach(id => n.delete(id)); return n; });
@@ -498,11 +504,12 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
                       {nat && <span style={{ display:"inline-flex", padding:"2px 9px", borderRadius:5, fontSize:10, fontWeight:700, background:`${natColor}18`, border:`1px solid ${natColor}40`, color:natColor, whiteSpace:"nowrap" }}>{nat}</span>}
                     </div>
                     {row.is_physical && <PhysicalBadge size="md" />}
+                    {(row as any).sent_by_name && <span style={{ fontSize: 9, color: "#818cf8", fontWeight: 600, whiteSpace: "nowrap" as const }}>via {(row as any).sent_by_name}</span>}
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:12 }}>
                     <div style={{ textAlign:"right" }}><span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"#e0e0e0", display:"block", marginBottom:2 }}>Expédition</span><span style={{ fontSize:13, color:"#e0e0e0", fontWeight:700 }}>{fmtDate(row.date_expedition)}</span></div>
                     <input type="checkbox" checked={isChecked} onChange={e => { const id=String(row.id); setCheckedIds(prev => { const n=new Set(prev); e.target.checked?n.add(id):n.delete(id); return n; }); }} style={{ width:15, height:15, cursor:"pointer", accentColor:"#4ade80", flexShrink:0 }} />
-                    <button onClick={() => setConfirmDeleteId(String(row.id))} title="Supprimer le cas" style={{ background:"none", border:"none", color:"#f87171", cursor:"pointer", fontSize:14, padding:4, opacity:0.6, transition:"opacity 150ms" }} onMouseEnter={e => e.currentTarget.style.opacity="1"} onMouseLeave={e => e.currentTarget.style.opacity="0.6"}>🗑</button>
+                    {(isAdmin || !(row as any).created_by || (row as any).created_by === currentUserId) && <button onClick={() => setConfirmDeleteId(String(row.id))} title="Supprimer le cas" style={{ background:"none", border:"none", color:"#f87171", cursor:"pointer", fontSize:14, padding:4, opacity:0.6, transition:"opacity 150ms" }} onMouseEnter={e => e.currentTarget.style.opacity="1"} onMouseLeave={e => e.currentTarget.style.opacity="0.6"}>🗑</button>}
                   </div>
                 </div>
                 <div style={{ ...grid2, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl>Date de création</Lbl><Lbl>Type de dents</Lbl></div>
@@ -519,19 +526,43 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
                   <button onClick={() => { const newVal=!isDone; patchRow(String(row.id),"ur","usinage_dents_resine",newVal); if(newVal){const j1=addBusinessDays(new Date(),1).toISOString().split("T")[0];patchRow(String(row.id),"ur","reception_resine_at",j1);saveCell(String(row.id),"usinage_with_reception",JSON.stringify({usinage_dents_resine:true,reception_resine_at:j1}));}else{patchRow(String(row.id),"ur","reception_resine_at",null);saveCell(String(row.id),"usinage_with_reception",JSON.stringify({usinage_dents_resine:false,reception_resine_at:null}));} }} style={{ background:isDone?"rgba(74,222,128,0.15)":"#232323", border:isDone?"1px solid rgba(74,222,128,0.4)":"1px solid #333", color:isDone?"#4ade80":"#555", padding:"3px 0", borderRadius:5, cursor:"pointer", fontWeight:700, fontSize:12, transition:"all 150ms", width:"90%", textAlign:"center" as const }}>{isDone?"✓ Usiné":"—"}</button>
                   <button onClick={e => { const rect=e.currentTarget.getBoundingClientRect(); setEditingDate({caseId:String(row.id),column:"reception_resine_at",value:ur.reception_resine_at?.slice(0,10)??"",rect}); }} style={{ background:"#1a1a1a", border:"1px solid #2a2a2a", borderRadius:5, color:ur.reception_resine_at?"#d0d0d0":"#3a3a3a", fontSize:12, cursor:"pointer", padding:"3px 0", width:"90%", textAlign:"center" as const, transition:"background 100ms" }} onMouseEnter={e => e.currentTarget.style.background="#222"} onMouseLeave={e => e.currentTarget.style.background="#1a1a1a"}>{ur.reception_resine_at?fmtDate(ur.reception_resine_at.slice(0,10)):"—"}</button>
                 </div>
-                <div style={{ ...grid2, background:BG_LABEL_SAISIE, borderBottom:BD_LIGHT }}><Lbl color="#7c8196">Machine</Lbl><Lbl color="#7c8196">N° disque</Lbl></div>
-                <div style={{ ...vals2, background:BG_VAL_SAISIE }}>
-                  <SelectMachine value={ur.identite_machine??""} onChange={v => { patchRow(String(row.id),"ur","identite_machine",v||null); saveCell(String(row.id),"identite_machine",v||null); }} />
-                  <DisqueInput
-                    value={ur.numero_disque??null}
-                    onFocusChange={setIsEditing}
-                    navAttr={`${row.id}_col_4`}
-                    onSave={(v) => {
-                      patchRow(String(row.id),"ur","numero_disque",v||null);
-                      saveCell(String(row.id),"numero_disque",v||null);
-                    }}
-                  />
-                </div>
+                {/* ── Machine / N° disque — double-clic active le mode double ── */}
+                {(() => {
+                  const rid = String(row.id);
+                  const hasDualMachine = dualMachineIds.has(rid) || Boolean(ur.identite_machine_2);
+                  const hasDualDisque  = dualDisqueIds.has(rid) || Boolean(ur.numero_disque_2);
+                  const showDualRow = hasDualMachine || hasDualDisque;
+                  return (<>
+                    <div style={{ ...grid2, background:BG_LABEL_SAISIE, borderBottom:BD_LIGHT }}>
+                      <Lbl color="#7c8196">Machine{showDualRow ? "s" : ""}</Lbl>
+                      <Lbl color="#7c8196">N° disque{showDualRow ? "s" : ""}</Lbl>
+                    </div>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", background:BG_VAL_SAISIE, padding:"5px 14px 7px", gap:"0 12px", alignItems:"stretch", justifyItems:"center" }}
+                      onDoubleClick={e => {
+                        e.stopPropagation();
+                        setDualMachineIds(p => new Set(p).add(rid));
+                        setDualDisqueIds(p => new Set(p).add(rid));
+                      }}>
+                      {/* Colonne Machine(s) */}
+                      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:6 }}>
+                        <SelectMachine value={ur.identite_machine??""} onChange={v => { patchRow(rid,"ur","identite_machine",v||null); saveCell(rid,"identite_machine",v||null); }} />
+                        {hasDualMachine && (
+                          <SelectMachine value={ur.identite_machine_2??""} onChange={v => { patchRow(rid,"ur","identite_machine_2",v||null); saveCell(rid,"identite_machine_2",v||null); }} />
+                        )}
+                      </div>
+                      {/* Colonne Disque(s) */}
+                      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:6, width:"100%" }}
+                        onDoubleClick={e => { e.stopPropagation(); setDualDisqueIds(p => new Set(p).add(rid)); }}>
+                        <DisqueInput value={ur.numero_disque??null} onFocusChange={setIsEditing} navAttr={`${row.id}_col_4`}
+                          onSave={v => { patchRow(rid,"ur","numero_disque",v||null); saveCell(rid,"numero_disque",v||null); }} />
+                        {hasDualDisque && (
+                          <DisqueInput value={ur.numero_disque_2??null} onFocusChange={setIsEditing} navAttr={`${row.id}_col_5`}
+                            onSave={v => { patchRow(rid,"ur","numero_disque_2",v||null); saveCell(rid,"numero_disque_2",v||null); }} />
+                        )}
+                      </div>
+                    </div>
+                  </>);
+                })()}
               </div>
             );
           })}

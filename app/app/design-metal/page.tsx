@@ -78,7 +78,7 @@ export default async function Page({
           </div>
 
           <div style={{ flex: 1, minHeight: 0 }}>
-            <DesignMetalTable focusId={focusId} currentUserId="" currentSector="" />
+            <DesignMetalTable focusId={focusId} currentUserId={user.id} currentSector={userSectors[0] ?? ""} isAdmin={userSectors.includes("admin")} />
           </div>
         </>
       )}

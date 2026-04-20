@@ -182,7 +182,7 @@ export function FeedbackManager({ onCountChange }: { onCountChange?: (n: number)
                     </div>
                     <div style={{ fontSize: 12, color: "#888", marginBottom: 6, lineHeight: 1.5 }}>{row.description}</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 10, color: "#444" }}>
-                      <span>{row.email}</span>
+                      <span style={{ color: "#aaa", fontWeight: 600 }}>{row.display_name ?? row.email}</span>
                       <span style={{ color: "#2a2a2a" }}>·</span>
                       <span title={new Date(row.created_at).toLocaleString("fr-FR")}>{relativeDate(row.created_at)}</span>
                     </div>

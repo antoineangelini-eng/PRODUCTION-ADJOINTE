@@ -3,9 +3,9 @@ import React, { useEffect, useRef, useState } from "react";
 import { getCaseDetailAction, type CaseDetail } from "@/app/app/finition/actions";
 
 const NATURE_META: Record<string, { color: string }> = {
-  "Chassis Argoat":    { color: "#4ade80" },
-  "Chassis Dent All":  { color: "#5a9ba8" },
-  "Définitif Résine":  { color: "#a87a90" },
+  "Chassis Argoat":    { color: "#e07070" },
+  "Chassis Dent All":  { color: "#4ade80" },
+  "Définitif Résine":  { color: "#c4a882" },
   "Provisoire Résine": { color: "#9487a8" },
 };
 

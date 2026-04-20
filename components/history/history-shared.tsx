@@ -5,9 +5,9 @@ import React, { useState } from "react";
 import { PhysicalBadge } from "@/components/sheet/PhysicalBadge";
 
 export const NATURE_META: Record<string, { color: string }> = {
-  "Chassis Argoat":    { color: "#4ade80" },
-  "Chassis Dent All":  { color: "#5a9ba8" },
-  "Définitif Résine":  { color: "#a87a90" },
+  "Chassis Argoat":    { color: "#e07070" },
+  "Chassis Dent All":  { color: "#4ade80" },
+  "Définitif Résine":  { color: "#c4a882" },
   "Provisoire Résine": { color: "#9487a8" },
 };
 
@@ -151,7 +151,7 @@ export function HistoryFilters({ count, natFilter, setNatFilter, yearFilter, set
 }
 
 export function CardShell({ row, accentColor, open, onToggle, onReopen, children, summaryExtra }: {
-  row: { case_number: string | null; nature_du_travail: string | null; created_at: string | null; date_expedition: string | null; completed_at: string | null; is_physical?: boolean };
+  row: { case_number: string | null; nature_du_travail: string | null; created_at: string | null; date_expedition: string | null; completed_at: string | null; is_physical?: boolean; validated_by_name?: string | null; sent_by_name?: string | null };
   accentColor: string; open: boolean;
   onToggle: () => void; onReopen: (e: React.MouseEvent) => void;
   children?: React.ReactNode;
@@ -186,6 +186,18 @@ export function CardShell({ row, accentColor, open, onToggle, onReopen, children
             <div style={{ fontSize: 8, fontWeight: 600, textTransform: "uppercase" as const, color: "#999", letterSpacing: "0.05em", marginBottom: 1 }}>Validé le</div>
             <div style={{ fontSize: 11, color: "#c0c0c0", fontWeight: 400 }}>{fmtDate(row.completed_at)}</div>
           </div>
+          {row.validated_by_name && (
+            <div>
+              <div style={{ fontSize: 8, fontWeight: 600, textTransform: "uppercase" as const, color: "#999", letterSpacing: "0.05em", marginBottom: 1 }}>Validé par</div>
+              <div style={{ fontSize: 11, color: "#818cf8", fontWeight: 600 }}>{row.validated_by_name}</div>
+            </div>
+          )}
+          {row.sent_by_name && (
+            <div>
+              <div style={{ fontSize: 8, fontWeight: 600, textTransform: "uppercase" as const, color: "#999", letterSpacing: "0.05em", marginBottom: 1 }}>Reçu de</div>
+              <div style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600 }}>{row.sent_by_name}</div>
+            </div>
+          )}
           {summaryExtra}
         </div>
 

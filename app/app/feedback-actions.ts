@@ -15,6 +15,7 @@ export type FeedbackRow = {
   note_admin: string | null;
   seen_by_user: boolean;
   email?: string;
+  display_name?: string;
 };
 
 export async function submitFeedbackAction(
@@ -96,19 +97,31 @@ export async function loadAllFeedbackAction(): Promise<FeedbackRow[]> {
 
   if (error || !data || data.length === 0) return [];
 
-  // Récupère les emails séparément
+  // Récupère les emails + noms séparément
   const userIds = [...new Set(data.map((r: any) => r.user_id).filter(Boolean))];
   const { data: profiles } = await supabase
     .from("profiles")
     .select("user_id, email")
     .in("user_id", userIds);
 
+  const { data: names } = await supabase
+    .from("user_display_names")
+    .select("user_id, display_name")
+    .in("user_id", userIds);
+
   const emailMap: Record<string, string> = {};
   (profiles ?? []).forEach((p: any) => { emailMap[p.user_id] = p.email; });
+
+  const nameMap: Record<string, string> = {};
+  (names ?? []).forEach((n: any) => {
+    const raw = n.display_name ?? "";
+    nameMap[n.user_id] = raw.charAt(0).toUpperCase() + raw.slice(1);
+  });
 
   return data.map((r: any) => ({
     ...r,
     email: emailMap[r.user_id] ?? null,
+    display_name: nameMap[r.user_id] ?? null,
   }));
 }
 

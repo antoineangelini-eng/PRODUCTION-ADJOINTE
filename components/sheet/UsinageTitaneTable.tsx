@@ -14,9 +14,9 @@ import {
 
 // ── Constantes ───────────────────────────────────────────────────
 const NATURE_META: Record<string, { color: string }> = {
-  "Chassis Argoat":    { color: "#4ade80" },
-  "Chassis Dent All":  { color: "#5a9ba8" },
-  "Définitif Résine":  { color: "#a87a90" },
+  "Chassis Argoat":    { color: "#e07070" },
+  "Chassis Dent All":  { color: "#4ade80" },
+  "Définitif Résine":  { color: "#c4a882" },
   "Provisoire Résine": { color: "#9487a8" },
 };
 
@@ -386,6 +386,9 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
 }) {
   const onNewCasesRef = useRef(onNewCases); onNewCasesRef.current = onNewCases;
   const onBannerClearRef = useRef(onBannerClear); onBannerClearRef.current = onBannerClear;
+  const [currentUserId,setCurrentUserId]=useState("");
+  const [isAdmin,setIsAdmin]=useState(false);
+  useEffect(()=>{import("@/app/app/user-info-action").then(m=>m.getUserInfoAction()).then(info=>{setCurrentUserId(info.userId);setIsAdmin(info.isAdmin);});},[]);
   const [rows, setRows]               = useState<UsinageTitaneRow[]>([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState<string | null>(null);
@@ -505,6 +508,21 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
     if (column === "envoye_usinage_with_j1") { fd.set("kind", "json"); fd.set("value", String(value)); }
     else { fd.set("kind", typeof value === "boolean" ? "boolean" : "text"); fd.set("value", String(value ?? "")); }
     await saveUsinageTitaneCellAction(fd);
+  }
+
+  function autoFillOnSelect(row: any) {
+    const caseId = String(row.id);
+    const ut = row.sector_usinage_titane ?? {};
+    if (!ut.envoye_usinage) {
+      const now = new Date().toISOString();
+      const j1 = addBusinessDays(new Date(), 1).toISOString().split("T")[0];
+      patchRow(caseId, "ut", "envoye_usinage", true);
+      patchRow(caseId, "ut", "envoye_usinage_at", now);
+      patchRow(caseId, "ut", "delai_j1_date", j1);
+      patchRow(caseId, "ut", "reception_metal_at", j1);
+      saveCell(caseId, "envoye_usinage_with_j1", JSON.stringify({ envoye_usinage: true, envoye_usinage_at: now, delai_j1_date: j1 }));
+      saveCell(caseId, "reception_metal_at", j1);
+    }
   }
 
   function validateUtRow(row: any): string[] {
@@ -685,11 +703,14 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
 
                   {/* N° cas */}
                   <td style={tdCardFirst}>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 24, padding: "2px 8px", borderRadius: 8, color: "#ffffff", background: isActive ? "rgba(255,255,255,0.04)" : "transparent", border: isActive ? "1px solid rgba(255,255,255,0.06)" : "1px solid transparent", transition: "all 160ms" }}>
-                        {row.case_number}
+                    <div style={{ display: "flex", flexDirection: "column" as const, gap: 2 }}>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 24, padding: "2px 8px", borderRadius: 8, color: "#ffffff", background: isActive ? "rgba(255,255,255,0.04)" : "transparent", border: isActive ? "1px solid rgba(255,255,255,0.06)" : "1px solid transparent", transition: "all 160ms" }}>
+                          {row.case_number}
+                        </div>
+                        {row.is_physical && <PhysicalBadge />}
                       </div>
-                      {row.is_physical && <PhysicalBadge />}
+                      {(row as any).sent_by_name && <span style={{ fontSize: 9, color: "#818cf8", fontWeight: 600, whiteSpace: "nowrap" as const, paddingLeft: 8 }}>via {(row as any).sent_by_name}</span>}
                     </div>
                   </td>
 
@@ -794,14 +815,16 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
                   <td style={tdCard} onClick={e => e.stopPropagation()}>
                     <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 8, background: isChecked ? "rgba(74,222,128,0.18)" : "#181818", border: "1.5px solid rgba(255,255,255,0.85)", boxShadow: isChecked ? "0 0 0 3px rgba(74,222,128,0.12)" : "none", transition: "all 160ms ease" }}>
                       <input type="checkbox" checked={isChecked}
-                        onChange={e => { setCheckedIds(prev => { const n = new Set(prev); e.target.checked ? n.add(String(row.id)) : n.delete(String(row.id)); return n; }); }}
+                        onChange={e => { const checked = e.target.checked; setCheckedIds(prev => { const n = new Set(prev); checked ? n.add(String(row.id)) : n.delete(String(row.id)); return n; }); if (checked) autoFillOnSelect(row); }}
                         style={{ width: 14, height: 14, cursor: "pointer", accentColor: "#4ade80", margin: 0 }} />
                     </div>
                   </td>
 
                   {/* Supprimer */}
                   <td style={tdCardLast}>
-                    {confirmDeleteId === String(row.id) ? (
+                    {!(isAdmin || !(row as any).created_by || (row as any).created_by === currentUserId) ? (
+                      <span style={{ fontSize: 9, color: "#333" }} title="Seul le créateur peut supprimer">—</span>
+                    ) : confirmDeleteId === String(row.id) ? (
                       <div style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "center" }}>
                         <span style={{ fontSize: 9, color: "#f87171", whiteSpace: "nowrap" }}>Supprimer ?</span>
                         <div style={{ display: "flex", gap: 3 }}>

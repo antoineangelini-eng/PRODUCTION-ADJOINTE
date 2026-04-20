@@ -9,9 +9,9 @@ import { createCaseAction } from "@/app/app/design-metal/actions";
 import { DesignMetalHistory } from "@/app/app/design-metal/DesignMetalHistory";
 
 const NATURE_OPTIONS = [
-  { value: "Chassis Argoat",   color: "#4ade80" },
-  { value: "Chassis Dent All", color: "#5a9ba8" },
-  { value: "Définitif Résine", color: "#a87a90" },
+  { value: "Chassis Argoat",   color: "#e07070" },
+  { value: "Chassis Dent All", color: "#4ade80" },
+  { value: "Définitif Résine", color: "#c4a882" },
 ];
 
 const inputStyle: React.CSSProperties = {

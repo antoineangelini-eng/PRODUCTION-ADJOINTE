@@ -22,9 +22,9 @@ const TYPE_DENTS_OPTIONS = [
 ];
 
 const NATURE_COLORS: Record<string, string> = {
-  "Chassis Argoat":    "#4ade80",
-  "Chassis Dent All":  "#5a9ba8",
-  "Définitif Résine":  "#a87a90",
+  "Chassis Argoat":    "#e07070",
+  "Chassis Dent All":  "#4ade80",
+  "Définitif Résine":  "#c4a882",
   "Provisoire Résine": "#9487a8",
 };
 

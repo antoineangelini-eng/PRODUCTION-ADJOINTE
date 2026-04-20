@@ -20,9 +20,9 @@ const TYPE_OPTIONS = [
 ];
 
 const NATURE_META: Record<string, { color: string }> = {
-  "Chassis Argoat": { color: "#4ade80" },
-  "Chassis Dent All": { color: "#5a9ba8" },
-  "Définitif Résine": { color: "#a87a90" },
+  "Chassis Argoat": { color: "#e07070" },
+  "Chassis Dent All": { color: "#4ade80" },
+  "Définitif Résine": { color: "#c4a882" },
 };
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -106,9 +106,13 @@ function fmtDate(s: string | null | undefined): string {
   return new Date(s.slice(0, 10) + "T00:00:00").toLocaleDateString("fr-FR");
 }
 
-function addCalendarDays(date: Date, days: number): Date {
+function addBusinessDays(date: Date, days: number): Date {
   const d = new Date(date);
-  d.setDate(d.getDate() + days);
+  let added = 0;
+  while (added < days) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() !== 0 && d.getDay() !== 6) added++;
+  }
   return d;
 }
 
@@ -426,12 +430,14 @@ export function DesignMetalTable({
   focusId,
   currentUserId,
   currentSector,
+  isAdmin = false,
   onReload,
   onSelectionChange,
 }: {
   focusId: string | null;
   currentUserId: string;
   currentSector: string;
+  isAdmin?: boolean;
   onReload?: (fn: () => void) => void;
   onSelectionChange?: (b: boolean) => void;
 }) {
@@ -534,7 +540,7 @@ export function DesignMetalTable({
       patchRow(caseId, "sector_design_metal", "design_chassis_at", newVal ? new Date().toISOString() : null);
     }
     if (column === "envoye_dentall" && newVal) {
-      const recep = toDateString(addCalendarDays(new Date(), 5));
+      const recep = toDateString(addBusinessDays(new Date(), 3));
       patchRow(caseId, "sector_design_metal", "reception_metal_date", recep);
       const fd2 = new FormData();
       fd2.set("case_id", caseId);
@@ -549,6 +555,35 @@ export function DesignMetalTable({
     fd.set("kind", "boolean");
     fd.set("current", String(current));
     await saveDesignMetalCellAction(fd);
+  }
+
+  async function autoFillOnSelect(row: DesignMetalRow) {
+    const caseId = String(row.id);
+    const dm = row.sector_design_metal ?? {} as any;
+    const isArgoat = row.nature_du_travail === "Chassis Argoat";
+    const now = new Date().toISOString();
+
+    // design_chassis = true + date/heure
+    if (!dm.design_chassis) {
+      patchRow(caseId, "sector_design_metal", "design_chassis", true);
+      patchRow(caseId, "sector_design_metal", "design_chassis_at", now);
+      const fd = new FormData();
+      fd.set("case_id", caseId); fd.set("column", "design_chassis"); fd.set("kind", "boolean"); fd.set("current", "false");
+      saveDesignMetalCellAction(fd);
+    }
+
+    // envoye_dentall + reception_metal (sauf Chassis Argoat)
+    if (!isArgoat && !dm.envoye_dentall) {
+      patchRow(caseId, "sector_design_metal", "envoye_dentall", true);
+      const recep = toDateString(addBusinessDays(new Date(), 3));
+      patchRow(caseId, "sector_design_metal", "reception_metal_date", recep);
+      const fd = new FormData();
+      fd.set("case_id", caseId); fd.set("column", "envoye_dentall"); fd.set("kind", "boolean"); fd.set("current", "false");
+      saveDesignMetalCellAction(fd);
+      const fd2 = new FormData();
+      fd2.set("case_id", caseId); fd2.set("column", "reception_metal_date"); fd2.set("kind", "date"); fd2.set("value", recep);
+      saveDesignMetalCellAction(fd2);
+    }
   }
 
   async function saveText(caseId: string, column: string, value: string) {
@@ -1009,9 +1044,9 @@ export function DesignMetalTable({
                                 minWidth: 120,
                               }}
                             >
-                              <option value="Chassis Argoat" style={{ background: "#111", color: "#4ade80" }}>Chassis Argoat</option>
-                              <option value="Chassis Dent All" style={{ background: "#111", color: "#5a9ba8" }}>Chassis Dent All</option>
-                              <option value="Définitif Résine" style={{ background: "#111", color: "#a87a90" }}>Définitif Résine</option>
+                              <option value="Chassis Argoat" style={{ background: "#111", color: "#e07070" }}>Chassis Argoat</option>
+                              <option value="Chassis Dent All" style={{ background: "#111", color: "#4ade80" }}>Chassis Dent All</option>
+                              <option value="Définitif Résine" style={{ background: "#111", color: "#c4a882" }}>Définitif Résine</option>
                             </select>
                             <svg viewBox="0 0 10 6" width="9" height="9" style={{ position: "absolute", right: 7, pointerEvents: "none", opacity: 0.7 }} fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1l4 4 4-4" /></svg>
                           </div>
@@ -1190,11 +1225,13 @@ export function DesignMetalTable({
                         type="checkbox"
                         checked={isChecked}
                         onChange={(e) => {
+                          const checked = e.target.checked;
                           setCheckedIds((prev) => {
                             const n = new Set(prev);
-                            e.target.checked ? n.add(String(row.id)) : n.delete(String(row.id));
+                            checked ? n.add(String(row.id)) : n.delete(String(row.id));
                             return n;
                           });
+                          if (checked) autoFillOnSelect(row);
                         }}
                         style={{
                           width: 14,
@@ -1209,7 +1246,9 @@ export function DesignMetalTable({
 
                   {/* ── Supprimer ── */}
                   <td style={tdCardLast}>
-                    {confirmDeleteId === String(row.id) ? (
+                    {!(isAdmin || !(row as any).created_by || (row as any).created_by === currentUserId) ? (
+                      <span style={{ fontSize: 9, color: "#333" }} title="Seul le créateur peut supprimer">—</span>
+                    ) : confirmDeleteId === String(row.id) ? (
                       <div style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "center" }}>
                         <span style={{ fontSize: 9, color: "#f87171", whiteSpace: "nowrap" }}>Supprimer ?</span>
                         <div style={{ display: "flex", gap: 3 }}>

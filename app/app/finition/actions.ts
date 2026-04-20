@@ -1,7 +1,9 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { resolveDisplayNames } from "@/lib/resolve-names";
 
 export type FinitionRow = {
   id: string;
@@ -10,6 +12,7 @@ export type FinitionRow = {
   date_expedition: string | null;
   nature_du_travail: string | null;
   is_physical: boolean | null;
+  sent_by_name: string | null;
   sector_design_metal: {
     reception_metal: boolean | null;
     reception_metal_date: string | null;
@@ -88,7 +91,7 @@ export async function loadFinitionRowsAction(): Promise<FinitionRow[]> {
     .eq("sector_code", "finition")
     .in("status", ["active", "in_progress"]);
 
-  return ((data ?? []) as any[])
+  const rows = ((data ?? []) as any[])
     .map((r: any) => r.cases)
     .filter(Boolean)
     .sort((a: any, b: any) => {
@@ -96,6 +99,38 @@ export async function loadFinitionRowsAction(): Promise<FinitionRow[]> {
       const db = b.date_expedition ?? "9999-12-31";
       return da.localeCompare(db);
     });
+
+  // Résoudre "Envoyé par" = qui a validé le cas en UT ou UR (secteur précédent)
+  const caseIds = rows.map((r: any) => r.id).filter(Boolean);
+  let senderMap: Record<string, string> = {};
+  if (caseIds.length > 0) {
+    const admin = createAdminClient();
+    // Chercher qui a complété UT ou UR pour chaque cas
+    const { data: senderData } = await admin
+      .from("case_assignments")
+      .select("case_id, updated_by, updated_at")
+      .in("case_id", caseIds)
+      .in("sector_code", ["usinage_titane", "usinage_resine"])
+      .eq("status", "done");
+    // Pour chaque cas, prendre le plus récent (UT ou UR)
+    const latestSender: Record<string, { updated_by: string; updated_at: string }> = {};
+    (senderData ?? []).forEach((s: any) => {
+      if (!s.updated_by) return;
+      const existing = latestSender[s.case_id];
+      if (!existing || (s.updated_at && (!existing.updated_at || s.updated_at > existing.updated_at))) {
+        latestSender[s.case_id] = { updated_by: s.updated_by, updated_at: s.updated_at };
+      }
+    });
+    const senderIds = Object.values(latestSender).map(s => s.updated_by);
+    const nameMap = await resolveDisplayNames(senderIds);
+    for (const [caseId, sender] of Object.entries(latestSender)) {
+      if (nameMap[sender.updated_by]) {
+        senderMap[caseId] = nameMap[sender.updated_by];
+      }
+    }
+  }
+
+  return rows.map((r: any) => ({ ...r, sent_by_name: senderMap[r.id] ?? null }));
 }
 
 export async function getCaseDetailAction(caseId: string): Promise<CaseDetail | null> {
