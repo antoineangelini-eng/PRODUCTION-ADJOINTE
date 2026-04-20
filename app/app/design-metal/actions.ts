@@ -177,8 +177,6 @@ export async function createCaseAction(formData: FormData) {
   if (!rawCaseNumber || !nature) return;
 
   // ─ Détection "cas physique" ─
-  // 1) chaîne doublée (scanner qui a collé 2 scans : "128540128540" → "128540" + flag physique)
-  // 2) même n° soumis 2 fois < 60 s → on marque le cas existant physique
   let caseNumber = rawCaseNumber;
   let forcePhysical = false;
   if (rawCaseNumber.length >= 4 && rawCaseNumber.length % 2 === 0) {
@@ -190,20 +188,40 @@ export async function createCaseAction(formData: FormData) {
     }
   }
 
-  const sixtySecAgo = new Date(Date.now() - 60_000).toISOString();
-  const { data: recent } = await supabase
+  // ─ Vérification doublon par numéro de cas ─
+  const { data: existing } = await supabase
     .from("cases")
-    .select("id, created_at, is_physical")
+    .select("id")
     .eq("case_number", caseNumber)
-    .gte("created_at", sixtySecAgo)
-    .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (recent?.id) {
-    // Doublon < 60 s → on redirige simplement sans marquer physique
-    // (le scanner envoie souvent le code 2 fois, ce n'est pas un vrai cas physique)
-    redirect(`/app/design-metal?focus=${caseNumber}`);
+  if (existing?.id) {
+    // Vérifier si le cas est dans le tableau actif DM
+    const { data: activeAssign } = await supabase
+      .from("case_assignments")
+      .select("status")
+      .eq("case_id", existing.id)
+      .eq("sector_code", "design_metal")
+      .in("status", ["active", "in_progress"])
+      .maybeSingle();
+
+    if (activeAssign) {
+      redirect(`/app/design-metal?msg=in_table&cn=${caseNumber}&focus=${caseNumber}`);
+    }
+
+    // Vérifier si le cas est dans l'historique DM
+    const { data: doneAssign } = await supabase
+      .from("case_assignments")
+      .select("status")
+      .eq("case_id", existing.id)
+      .eq("sector_code", "design_metal")
+      .eq("status", "done")
+      .maybeSingle();
+
+    if (doneAssign) {
+      redirect(`/app/design-metal?msg=in_history&cn=${caseNumber}`);
+    }
   }
 
   const { data, error } = await supabase.rpc("rpc_create_case_from_design_metal", {

@@ -6,6 +6,7 @@ import { DesignMetalTable } from "@/components/sheet/DesignMetalTable";
 import { DesignMetalHistoryWrapper } from "@/app/app/design-metal/DesignMetalHistoryWrapper";
 import { CaseNumberInput } from "@/components/sheet/CaseNumberInput";
 import { createCaseAction } from "@/app/app/design-metal/actions";
+import { FlashMessage } from "@/components/sheet/FlashMessage";
 
 export default async function Page({
   searchParams,
@@ -27,6 +28,7 @@ export default async function Page({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <FlashMessage />
 
       {/* En-tête */}
       <div style={{ flexShrink: 0, background: "#0b0b0b", padding: "10px 20px 0", borderBottom: "1px solid #1a1a1a" }}>
