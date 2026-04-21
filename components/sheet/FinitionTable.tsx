@@ -272,10 +272,30 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
               const receptionMetalDate  = ut.reception_metal_at ?? dm.reception_metal_date ?? null;
               const receptionResineDate = ur.reception_resine_at ?? null;
 
+              // Déterminer si le cas a besoin de métal (passé par UT) et/ou résine (passé par UR)
+              const needsMetal  = Boolean(ut.envoye_usinage || ut.reception_metal_at);
+              const needsResine = Boolean(ur.usinage_dents_resine || ur.reception_resine_at);
+
               const d1 = receptionMetalDate  ? new Date(receptionMetalDate.slice(0,10))  : null;
               const d2 = receptionResineDate ? new Date(receptionResineDate.slice(0,10)) : null;
-              const receptionCompleteDate = d1 && d2 ? (d1 >= d2 ? receptionMetalDate : receptionResineDate)
-                : d1 ? receptionMetalDate : d2 ? receptionResineDate : null;
+
+              // Si le cas a besoin des deux, réception complète = la plus tardive quand les deux sont remplies
+              // Si le cas n'a besoin que d'une seule, celle-ci suffit
+              let receptionCompleteDate: string | null = null;
+              if (needsMetal && needsResine) {
+                // Les deux sont requises → complète uniquement quand les deux sont là
+                if (d1 && d2) {
+                  receptionCompleteDate = d1 >= d2 ? receptionMetalDate : receptionResineDate;
+                }
+              } else if (needsMetal) {
+                receptionCompleteDate = receptionMetalDate;
+              } else if (needsResine) {
+                receptionCompleteDate = receptionResineDate;
+              } else {
+                // Aucun besoin identifié → fallback ancien comportement
+                receptionCompleteDate = d1 && d2 ? (d1 >= d2 ? receptionMetalDate : receptionResineDate)
+                  : d1 ? receptionMetalDate : d2 ? receptionResineDate : null;
+              }
 
               const typeMeta   = TYPE_DENTS_OPTIONS.find(o => o.value === typeDents) ?? { color:"white" };
               const natureMeta = NATURE_META[row.nature_du_travail ?? ""];
