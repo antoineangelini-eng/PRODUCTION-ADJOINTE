@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { loadFinitionRowsAction, validateFinitionBatchAction, type FinitionRow } from "@/app/app/finition/actions";
+import { toggleOnHoldAction } from "@/lib/on-hold";
 import { CaseDetailModal } from "@/components/sheet/CaseDetailModal";
 import { PhysicalBadge } from "@/components/sheet/PhysicalBadge";
 
@@ -76,6 +77,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
   const [batchPending, setBatchPending] = useState(false);
   const [batchResult, setBatchResult]   = useState<{ok:string[];errors:{id:string;msg:string}[]}|null>(null);
   const [detailCaseId, setDetailCaseId] = useState<string | null>(null);
+  const [holdBusy, setHoldBusy] = useState<string | null>(null);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -134,6 +136,19 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
     onSelectionChange?.(checkedIds.size > 0 || detailCaseId !== null);
   }, [checkedIds, detailCaseId, onSelectionChange]);
 
+  async function handleToggleHold(caseId: string) {
+    if (holdBusy) return;
+    setHoldBusy(caseId);
+    try {
+      const res = await toggleOnHoldAction(caseId, "finition");
+      if (res.ok) {
+        setRows(prev => prev.map(r => String(r.id) === caseId ? { ...r, _on_hold: res.nowOnHold, _on_hold_at: res.nowOnHold ? new Date().toISOString() : null } as any : r));
+        // Décocher si mis en attente
+        if (res.nowOnHold) setCheckedIds(prev => { const n = new Set(prev); n.delete(caseId); return n; });
+      }
+    } finally { setHoldBusy(null); }
+  }
+
   function validateFinRow(_row: any): string[] {
     // Finition : pas de champs obligatoires, la validation est l'action finale
     return [];
@@ -175,15 +190,23 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
 
   const filtered = useMemo(() => {
     const base = rows.filter(row => {
+      const isOnHold = (row as any)._on_hold;
       if (!filter || filter === "all") return true;
+      // Les cas en attente n'apparaissent pas dans today/tomorrow/late
+      if (isOnHold) return false;
       const ref = ((row as any)._dateRef ?? row.date_expedition)?.slice(0,10);
       if (filter === "today")    return ref === today;
       if (filter === "tomorrow") return ref === tomorrow;
       if (filter === "late")     return ref !== undefined && ref !== null && ref < today;
       return true;
     });
-    // Tri par date de réception (urgents d'abord)
-    return [...base].sort((a, b) => (((a as any)._dateRef ?? a.date_expedition) ?? "9999").localeCompare(((b as any)._dateRef ?? b.date_expedition) ?? "9999"));
+    // Tri : on_hold en bas, puis par date de réception (urgents d'abord)
+    return [...base].sort((a, b) => {
+      const aHold = (a as any)._on_hold ? 1 : 0;
+      const bHold = (b as any)._on_hold ? 1 : 0;
+      if (aHold !== bHold) return aHold - bHold;
+      return (((a as any)._dateRef ?? a.date_expedition) ?? "9999").localeCompare(((b as any)._dateRef ?? b.date_expedition) ?? "9999");
+    });
   }, [rows, filter, today, tomorrow]);
 
 
@@ -277,6 +300,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
               const isHighlighted = highlightId === String(row.id);
               const isChecked     = checkedIds.has(String(row.id));
               const isProvisoire  = row.nature_du_travail === "Provisoire Résine";
+              const isOnHold      = Boolean((row as any)._on_hold);
 
               const teintes   = ur.teintes_override ?? dr.teintes_associees ?? dm.teintes_associees ?? null;
               // DM est la source de vérité pour type_de_dents (DR force toujours "Dents usinées")
@@ -315,8 +339,9 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                   style={{
                     ...DELAI_STYLES[status],
                     borderBottom:"1px solid #1a1a1a",
-                    transition:"background 300ms",
+                    transition:"background 300ms, opacity 300ms",
                     outline: isHighlighted ? "1px solid #4ade80" : "none",
+                    opacity: isOnHold ? 0.45 : 1,
                   }}
                 >
                   <td style={{
@@ -327,6 +352,20 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                       <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                         {status==="late"  && <span style={{ fontSize:10, color:"#f87171" }}>●</span>}
                         {status==="today" && <span style={{ fontSize:10, color:"#f59e0b" }}>●</span>}
+                        <button
+                          onClick={() => handleToggleHold(String(row.id))}
+                          disabled={holdBusy === String(row.id)}
+                          title={isOnHold ? "Réactiver le cas" : "Mettre en attente"}
+                          style={{
+                            background:"none", border:"none", padding:0, cursor:"pointer",
+                            fontSize:13, lineHeight:1, color: isOnHold ? "#f59e0b" : "#555",
+                            transition:"color 150ms", opacity: holdBusy === String(row.id) ? 0.4 : 1,
+                          }}
+                          onMouseEnter={e => { if (!isOnHold) e.currentTarget.style.color = "#f59e0b"; }}
+                          onMouseLeave={e => { if (!isOnHold) e.currentTarget.style.color = "#555"; }}
+                        >
+                          {isOnHold ? "▶" : "⏸"}
+                        </button>
                         <button
                           onClick={() => setDetailCaseId(String(row.id))}
                           title="Voir le détail des tâches"
@@ -343,6 +382,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                           {row.case_number}
                         </button>
                         {row.is_physical && <PhysicalBadge />}
+                        {isOnHold && <span style={{ fontSize:9, fontWeight:700, color:"#f59e0b", background:"rgba(245,158,11,0.10)", border:"1px solid rgba(245,158,11,0.25)", borderRadius:4, padding:"1px 6px" }}>En attente</span>}
                       </div>
                       {(row as any).sent_by_name && <span style={{ fontSize: 9, color: "#818cf8", fontWeight: 600, whiteSpace: "nowrap" as const }}>via {(row as any).sent_by_name}</span>}
                     </div>
@@ -399,6 +439,8 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                   <td style={{ ...tdBase, width:48 }}>
                     {validated ? (
                       <div style={{ display:"inline-flex", padding:"3px 10px", borderRadius:6, background:"rgba(74,222,128,0.12)", border:"1px solid rgba(74,222,128,0.35)", color:"#4ade80", fontWeight:700, fontSize:11 }}>✓ Validé</div>
+                    ) : isOnHold ? (
+                      <span style={{ fontSize:10, color:"#f59e0b" }} title="En attente">⏸</span>
                     ) : (
                       <input type="checkbox" checked={isChecked}
                         onChange={e => {

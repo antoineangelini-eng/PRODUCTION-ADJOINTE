@@ -13,6 +13,7 @@ import {
   type BatchResult,
 } from "@/app/app/usinage-titane/actions";
 import { DeleteConfirmModal } from "@/components/sheet/DeleteConfirmModal";
+import { toggleOnHoldAction } from "@/lib/on-hold";
 
 // ── Constantes ───────────────────────────────────────────────────
 const NATURE_META: Record<string, { color: string }> = {
@@ -403,6 +404,7 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [foundRowId, setFoundRowId]   = useState<string | null>(null);
   const [editingDate, setEditingDate] = useState<{ caseId: string; column: string; value: string; rect: DOMRect } | null>(null);
+  const [holdBusy, setHoldBusy] = useState<string | null>(null);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) { setLoading(true); setError(null); }
@@ -461,9 +463,12 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
     return () => clearInterval(itv);
   }, [load]);
 
-  // Tri par date d'expédition — les plus urgents (proches) d'abord
+  // Tri par date d'expédition — les plus urgents (proches) d'abord, on_hold en bas
   const sortedRows = useMemo(() => {
     return [...rows].sort((a, b) => {
+      const aH = (a as any)._on_hold ? 1 : 0;
+      const bH = (b as any)._on_hold ? 1 : 0;
+      if (aH !== bH) return aH - bH;
       const da = a.date_expedition ? new Date(a.date_expedition).getTime() : Number.POSITIVE_INFINITY;
       const db = b.date_expedition ? new Date(b.date_expedition).getTime() : Number.POSITIVE_INFINITY;
       return da - db;
@@ -496,6 +501,18 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
     const t = setTimeout(() => setFoundRowId(null), 2200);
     return () => clearTimeout(t);
   }, [focusId, loading, rows]);
+
+  async function handleToggleHold(caseId: string) {
+    if (holdBusy) return;
+    setHoldBusy(caseId);
+    try {
+      const res = await toggleOnHoldAction(caseId, "usinage_titane");
+      if (res.ok) {
+        setRows(prev => prev.map(r => String(r.id) === caseId ? { ...r, _on_hold: res.nowOnHold, _on_hold_at: res.nowOnHold ? new Date().toISOString() : null } as any : r));
+        if (res.nowOnHold) setCheckedIds(prev => { const n = new Set(prev); n.delete(caseId); return n; });
+      }
+    } finally { setHoldBusy(null); }
+  }
 
   function patchRow(caseId: string, field: "ut" | "case", column: string, value: any) {
     setRows(prev => prev.map(r => {
@@ -700,6 +717,7 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
               const isHovered = hoveredId === String(row.id);
               const isActive  = activeRowId === String(row.id);
               const isFound   = foundRowId === String(row.id);
+              const isOnHold  = Boolean((row as any)._on_hold);
 
               const rowBg     = getRowBg(isChecked, isHovered, isActive);
               const rowBorder = getRowBorder(isChecked, isHovered, isActive);
@@ -721,16 +739,18 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
                   onClick={() => setActiveRowId(String(row.id))}
                   onMouseEnter={() => setHoveredId(String(row.id))}
                   onMouseLeave={() => setHoveredId(null)}
-                  style={{ cursor: "pointer", animation: isFound ? "row-found 2.2s ease-in-out forwards" : "none", background: isFound ? undefined : "transparent" }}>
+                  style={{ cursor: "pointer", animation: isFound ? "row-found 2.2s ease-in-out forwards" : "none", background: isFound ? undefined : "transparent", opacity: isOnHold ? 0.45 : 1, transition: "opacity 300ms" }}>
 
                   {/* N° cas */}
                   <td style={tdCardFirst}>
                     <div style={{ display: "flex", flexDirection: "column" as const, gap: 2 }}>
                       <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <button onClick={e => { e.stopPropagation(); handleToggleHold(String(row.id)); }} disabled={holdBusy === String(row.id)} title={isOnHold ? "Réactiver le cas" : "Mettre en attente"} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 13, lineHeight: 1, color: isOnHold ? "#f59e0b" : "#555", transition: "color 150ms", opacity: holdBusy === String(row.id) ? 0.4 : 1 }} onMouseEnter={e => { if (!isOnHold) e.currentTarget.style.color = "#f59e0b"; }} onMouseLeave={e => { if (!isOnHold) e.currentTarget.style.color = "#555"; }}>{isOnHold ? "▶" : "⏸"}</button>
                         <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 24, padding: "2px 8px", borderRadius: 8, color: "#ffffff", background: isActive ? "rgba(255,255,255,0.04)" : "transparent", border: isActive ? "1px solid rgba(255,255,255,0.06)" : "1px solid transparent", transition: "all 160ms" }}>
                           {row.case_number}
                         </div>
                         {row.is_physical && <PhysicalBadge />}
+                        {isOnHold && <span style={{ fontSize: 9, fontWeight: 700, color: "#f59e0b", background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 4, padding: "1px 6px" }}>En attente</span>}
                       </div>
                       {(row as any).sent_by_name && <span style={{ fontSize: 9, color: "#818cf8", fontWeight: 600, whiteSpace: "nowrap" as const, paddingLeft: 8 }}>via {(row as any).sent_by_name}</span>}
                     </div>
@@ -839,11 +859,15 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
 
                   {/* Sélection */}
                   <td style={tdCard} onClick={e => e.stopPropagation()}>
+                    {isOnHold ? (
+                      <span style={{ fontSize: 10, color: "#f59e0b" }} title="En attente">⏸</span>
+                    ) : (
                     <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 8, background: isChecked ? "rgba(74,222,128,0.18)" : "#181818", border: "1.5px solid rgba(255,255,255,0.85)", boxShadow: isChecked ? "0 0 0 3px rgba(74,222,128,0.12)" : "none", transition: "all 160ms ease" }}>
                       <input type="checkbox" checked={isChecked}
                         onChange={e => { const checked = e.target.checked; setCheckedIds(prev => { const n = new Set(prev); checked ? n.add(String(row.id)) : n.delete(String(row.id)); return n; }); if (checked) autoFillOnSelect(row); }}
                         style={{ width: 14, height: 14, cursor: "pointer", accentColor: "#4ade80", margin: 0 }} />
                     </div>
+                    )}
                   </td>
 
                   {/* Supprimer */}

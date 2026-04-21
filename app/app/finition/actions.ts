@@ -79,6 +79,7 @@ export async function loadFinitionRowsAction(): Promise<FinitionRow[]> {
   const { data } = await supabase
     .from("case_assignments")
     .select(`
+      status, on_hold_at, on_hold_reason,
       cases:case_id (
         id, created_at, case_number, date_expedition, nature_du_travail, is_physical,
         sector_design_metal ( reception_metal, reception_metal_date, type_de_dents, teintes_associees, modele_a_faire ),
@@ -89,10 +90,10 @@ export async function loadFinitionRowsAction(): Promise<FinitionRow[]> {
       )
     `)
     .eq("sector_code", "finition")
-    .in("status", ["active", "in_progress"]);
+    .in("status", ["active", "in_progress", "on_hold"]);
 
   const rows = ((data ?? []) as any[])
-    .map((r: any) => r.cases)
+    .map((r: any) => r.cases ? { ...r.cases, _on_hold: r.status === "on_hold", _on_hold_at: r.on_hold_at ?? null, _on_hold_reason: r.on_hold_reason ?? null } : null)
     .filter(Boolean)
     .sort((a: any, b: any) => {
       const da = a.date_expedition ?? "9999-12-31";
@@ -265,7 +266,7 @@ export async function resolveCaseForFinition(caseNumber: string): Promise<{
     .select("case_id")
     .eq("case_id", caseData.id)
     .eq("sector_code", "finition")
-    .in("status", ["active", "in_progress"])
+    .in("status", ["active", "in_progress", "on_hold"])
     .maybeSingle();
 
   if (!assignment) return null;
@@ -278,6 +279,7 @@ export async function getFinitionStatsAction(): Promise<{
   late: number;
   countToday: number;
   countTomorrow: number;
+  onHold: number;
 }> {
   const supabase = await createClient();
   const today    = new Date().toISOString().split("T")[0];
@@ -313,19 +315,22 @@ export async function getFinitionStatsAction(): Promise<{
     return metalDate ?? resineDate;
   }
 
-  const todayRows      = rows.filter((r) => (getDateRef(r) ?? r.cases?.date_expedition)?.slice(0, 10) === today);
+  // Exclure les cas on_hold des compteurs
+  const activeRows     = rows.filter((r) => r.status !== "on_hold");
+  const todayRows      = activeRows.filter((r) => (getDateRef(r) ?? r.cases?.date_expedition)?.slice(0, 10) === today);
   const totalToday     = todayRows.length;
   const validatedToday = todayRows.filter((r) => r.status === "done").length;
   const countToday     = todayRows.filter((r) => r.status !== "done").length;
-  const countTomorrow  = rows.filter(
+  const countTomorrow  = activeRows.filter(
     (r) => (getDateRef(r) ?? r.cases?.date_expedition)?.slice(0, 10) === tomorrow && r.status !== "done"
   ).length;
-  const late = rows.filter((r) => {
+  const late = activeRows.filter((r) => {
     const ref = (getDateRef(r) ?? r.cases?.date_expedition)?.slice(0, 10);
     return ref && ref < today && r.status !== "done";
   }).length;
+  const onHold = rows.filter((r) => r.status === "on_hold").length;
 
-  return { validatedToday, totalToday, late, countToday, countTomorrow };
+  return { validatedToday, totalToday, late, countToday, countTomorrow, onHold };
 }
 
 export async function removeCaseFromSectorAction(formData: FormData) {

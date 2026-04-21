@@ -103,7 +103,8 @@ export async function loadOpsDashboardAction(): Promise<OpsDashboard> {
     const rows = assignGroup.get(c.id) ?? [];
     const current = rows.find(r => r.status === "active" || r.status === "in_progress")?.sector_code ?? null;
     const done = rows.length > 0 && rows.every(r => r.status === "done");
-    sectorByCase.set(c.id, current);
+    const hasOnHold = rows.some(r => r.status === "on_hold");
+    sectorByCase.set(c.id, hasOnHold && !current ? "on_hold" : current);
     isDoneByCase.set(c.id, done);
   }
 
@@ -152,7 +153,8 @@ export async function loadOpsDashboardAction(): Promise<OpsDashboard> {
     const daysSinceActivity = la ? Math.floor(hoursSince(la.at) / 24) : null;
     const isLate = daysUntilExp !== null && daysUntilExp < 0;
     const isUrgent = daysUntilExp !== null && daysUntilExp >= 0 && daysUntilExp <= URGENT_DAYS;
-    const isStuck = daysSinceActivity !== null && daysSinceActivity >= STUCK_DAYS;
+    const isOnHold = sector === "on_hold";
+    const isStuck = !isOnHold && daysSinceActivity !== null && daysSinceActivity >= STUCK_DAYS;
     activeEnriched.push({
       id: c.id,
       case_number: c.case_number,

@@ -14,6 +14,7 @@ import {
 } from "@/app/app/usinage-resine/actions";
 import { printUrLabelAction } from "@/app/app/usinage-resine/print-actions";
 import { DeleteConfirmModal } from "@/components/sheet/DeleteConfirmModal";
+import { toggleOnHoldAction } from "@/lib/on-hold";
 import type { ToastCase } from "@/components/sheet/CaseToast";
 
 const NATURE_META: Record<string, { color: string }> = {
@@ -54,7 +55,12 @@ function fmtDT(iso: string | null | undefined) {
   return { date: d.toLocaleDateString("fr-FR"), time: d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) };
 }
 function sortByExp(rows: UsinageResineRow[]) {
-  return [...rows].sort((a, b) => (a.date_expedition ?? "9999").localeCompare(b.date_expedition ?? "9999"));
+  return [...rows].sort((a, b) => {
+    const aH = (a as any)._on_hold ? 1 : 0;
+    const bH = (b as any)._on_hold ? 1 : 0;
+    if (aH !== bH) return aH - bH;
+    return (a.date_expedition ?? "9999").localeCompare(b.date_expedition ?? "9999");
+  });
 }
 function Lbl({ children, color = "#e0e0e0" }: { children: React.ReactNode; color?: string }) {
   return <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase" as const, color, lineHeight: 1, display: "block", textAlign: "center" }}>{children}</span>;
@@ -287,6 +293,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
   const [searchNotFound, setSearchNotFound] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string|null>(null);
   const [editingDate, setEditingDate] = useState<{caseId:string;column:string;value:string;rect:DOMRect}|null>(null);
+  const [holdBusy, setHoldBusy] = useState<string|null>(null);
   const [isEditing, setIsEditing]   = useState(false);
   const [dualMachineIds, setDualMachineIds] = useState<Set<string>>(new Set());
   const [dualDisqueIds, setDualDisqueIds]   = useState<Set<string>>(new Set());
@@ -364,6 +371,18 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
     setSearchNotFound(false);
     setTimeout(() => document.getElementById(`card-ur-${found.id}`)?.scrollIntoView({ behavior:"smooth", block:"center" }), 100);
   }, [focusId, loading, rows]);
+
+  async function handleToggleHold(caseId: string) {
+    if (holdBusy) return;
+    setHoldBusy(caseId);
+    try {
+      const res = await toggleOnHoldAction(caseId, "usinage_resine");
+      if (res.ok) {
+        setRows(prev => prev.map(r => String(r.id) === caseId ? { ...r, _on_hold: res.nowOnHold, _on_hold_at: res.nowOnHold ? new Date().toISOString() : null } as any : r));
+        if (res.nowOnHold) setCheckedIds(prev => { const n = new Set(prev); n.delete(caseId); return n; });
+      }
+    } finally { setHoldBusy(null); }
+  }
 
   function patchRow(caseId: string, sector: "ur"|"case", column: string, value: any) {
     setRows(prev => prev.map(r => {
@@ -520,16 +539,19 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
             const isNew = newRowIds.has(String(row.id));
             const isLotFilled = lotFilledIds?.has(String(row.id)) ?? false;
             const isDone = Boolean(ur.usinage_dents_resine);
+            const isOnHold = Boolean((row as any)._on_hold);
             const effectiveTD = ur.type_de_dents_override ?? dm.type_de_dents ?? dr.type_de_dents ?? "";
             const dt = fmtDT(dr.design_dents_resine_at);
             return (
-              <div key={row.id} id={`card-ur-${row.id}`} data-nav-row={String(row.id)} style={{ background:BG_CARD, border:`1px solid ${isChecked?"#2d4d3a":isDone?"#2d3d35":isLotFilled?"#2d2b4a":"#272727"}`, borderRadius:12, overflow:"hidden", animation:isFocused?"card-found 2s ease forwards":isNew?"card-new 2.5s ease forwards":"none", transition:"border-color 150ms" }}>
+              <div key={row.id} id={`card-ur-${row.id}`} data-nav-row={String(row.id)} style={{ background:BG_CARD, border:`1px solid ${isChecked?"#2d4d3a":isDone?"#2d3d35":isLotFilled?"#2d2b4a":"#272727"}`, borderRadius:12, overflow:"hidden", animation:isFocused?"card-found 2s ease forwards":isNew?"card-new 2.5s ease forwards":"none", transition:"border-color 150ms, opacity 300ms", opacity:isOnHold?0.45:1 }}>
                 <div style={{ height:3, background:natColor, opacity:0.8 }} />
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 14px", borderBottom:"2px solid #2a2a2a" }}>
                   <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
                     <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                      <button onClick={() => handleToggleHold(String(row.id))} disabled={holdBusy===String(row.id)} title={isOnHold?"Réactiver le cas":"Mettre en attente"} style={{ background:"none", border:"none", padding:0, cursor:"pointer", fontSize:15, lineHeight:1, color:isOnHold?"#f59e0b":"#555", transition:"color 150ms", opacity:holdBusy===String(row.id)?0.4:1 }} onMouseEnter={e => { if(!isOnHold) e.currentTarget.style.color="#f59e0b"; }} onMouseLeave={e => { if(!isOnHold) e.currentTarget.style.color="#555"; }}>{isOnHold?"▶":"⏸"}</button>
                       <span style={{ fontSize:18, fontWeight:800, color:"white", lineHeight:1 }}>{row.case_number}</span>
                       {nat && <span style={{ display:"inline-flex", padding:"2px 9px", borderRadius:5, fontSize:10, fontWeight:700, background:`${natColor}18`, border:`1px solid ${natColor}40`, color:natColor, whiteSpace:"nowrap" }}>{nat}</span>}
+                      {isOnHold && <span style={{ fontSize:9, fontWeight:700, color:"#f59e0b", background:"rgba(245,158,11,0.10)", border:"1px solid rgba(245,158,11,0.25)", borderRadius:4, padding:"1px 6px" }}>En attente</span>}
                     </div>
                     {row.is_physical && <PhysicalBadge size="md" />}
                     {(row as any).sent_by_name && <span style={{ fontSize: 9, color: "#818cf8", fontWeight: 600, whiteSpace: "nowrap" as const }}>via {(row as any).sent_by_name}</span>}
@@ -538,7 +560,11 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
                     {(() => { const rawExp = row.date_expedition?.slice(0,10) ?? ""; const today = new Date().toISOString().split("T")[0]; const expColor = rawExp && rawExp < today ? "#f87171" : rawExp && rawExp === today ? "#f59e0b" : "#e0e0e0"; return (
                     <div style={{ textAlign:"right" }}><span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:expColor, display:"block", marginBottom:2 }}>Expédition</span><span style={{ fontSize:13, color:expColor, fontWeight:700 }}>{fmtDate(row.date_expedition)}</span></div>
                     ); })()}
-                    <input type="checkbox" checked={isChecked} onChange={e => { const id=String(row.id); setCheckedIds(prev => { const n=new Set(prev); e.target.checked?n.add(id):n.delete(id); return n; }); }} style={{ width:15, height:15, cursor:"pointer", accentColor:"#4ade80", flexShrink:0 }} />
+                    {isOnHold ? (
+                      <span style={{ fontSize:12, color:"#f59e0b" }} title="En attente">⏸</span>
+                    ) : (
+                      <input type="checkbox" checked={isChecked} onChange={e => { const id=String(row.id); setCheckedIds(prev => { const n=new Set(prev); e.target.checked?n.add(id):n.delete(id); return n; }); }} style={{ width:15, height:15, cursor:"pointer", accentColor:"#4ade80", flexShrink:0 }} />
+                    )}
                     {(isAdmin || !(row as any).created_by || (row as any).created_by === currentUserId) && <button onClick={() => setConfirmDeleteId(String(row.id))} title="Supprimer le cas" style={{ background:"none", border:"none", color:"#f87171", cursor:"pointer", fontSize:14, padding:4, opacity:0.6, transition:"opacity 150ms" }} onMouseEnter={e => e.currentTarget.style.opacity="1"} onMouseLeave={e => e.currentTarget.style.opacity="0.6"}>🗑</button>}
                   </div>
                 </div>

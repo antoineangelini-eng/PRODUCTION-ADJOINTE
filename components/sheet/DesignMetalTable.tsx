@@ -15,6 +15,7 @@ import {
   type DesignMetalRow,
 } from "@/app/app/design-metal/actions";
 import { DeleteConfirmModal } from "@/components/sheet/DeleteConfirmModal";
+import { toggleOnHoldAction } from "@/lib/on-hold";
 
 const TYPE_OPTIONS = [
   { value: "Dents usinées", color: "#7c8196" },
@@ -455,6 +456,7 @@ export function DesignMetalTable({
   const [foundRowId, setFoundRowId] = useState<string | null>(null);
   const [searchNotFound, setSearchNotFound] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [holdBusy, setHoldBusy] = useState<string | null>(null);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) {
@@ -533,6 +535,18 @@ export function DesignMetalTable({
         await load(true);
       }
     }
+  }
+
+  async function handleToggleHold(caseId: string) {
+    if (holdBusy) return;
+    setHoldBusy(caseId);
+    try {
+      const res = await toggleOnHoldAction(caseId, "design_metal");
+      if (res.ok) {
+        setRows(prev => prev.map(r => String(r.id) === caseId ? { ...r, _on_hold: res.nowOnHold, _on_hold_at: res.nowOnHold ? new Date().toISOString() : null } as any : r));
+        if (res.nowOnHold) setCheckedIds(prev => { const n = new Set(prev); n.delete(caseId); return n; });
+      }
+    } finally { setHoldBusy(null); }
   }
 
   async function saveBool(caseId: string, column: string, current: boolean) {
@@ -913,6 +927,7 @@ export function DesignMetalTable({
               const isHovered = hoveredId === String(row.id);
               const isActive = activeRowId === String(row.id);
               const isFound = foundRowId === String(row.id);
+              const isOnHold = Boolean((row as any)._on_hold);
 
               const rowBg = getRowBg(isChecked, isHovered, isActive);
               const rowBorder = getRowBorder(isChecked, isHovered, isActive);
@@ -967,6 +982,8 @@ export function DesignMetalTable({
                     cursor: "pointer",
                     animation: isFound ? "row-found 2.2s ease-in-out forwards" : "none",
                     background: isFound ? undefined : "transparent",
+                    opacity: isOnHold ? 0.45 : 1,
+                    transition: "opacity 300ms",
                   }}
                 >
                   {COLUMNS.map((col) => {
@@ -977,6 +994,20 @@ export function DesignMetalTable({
                           title="Double-clic pour basculer physique / numérique"
                         >
                           <div style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "default" }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleToggleHold(String(row.id)); }}
+                              disabled={holdBusy === String(row.id)}
+                              title={isOnHold ? "Réactiver le cas" : "Mettre en attente"}
+                              style={{
+                                background:"none", border:"none", padding:0, cursor:"pointer",
+                                fontSize:13, lineHeight:1, color: isOnHold ? "#f59e0b" : "#555",
+                                transition:"color 150ms", opacity: holdBusy === String(row.id) ? 0.4 : 1,
+                              }}
+                              onMouseEnter={e => { if (!isOnHold) e.currentTarget.style.color = "#f59e0b"; }}
+                              onMouseLeave={e => { if (!isOnHold) e.currentTarget.style.color = "#555"; }}
+                            >
+                              {isOnHold ? "▶" : "⏸"}
+                            </button>
                             <div
                               style={{
                                 display: "inline-flex",
@@ -994,6 +1025,7 @@ export function DesignMetalTable({
                               {row.case_number ?? "—"}
                             </div>
                             {row.is_physical && <PhysicalBadge />}
+                            {isOnHold && <span style={{ fontSize:9, fontWeight:700, color:"#f59e0b", background:"rgba(245,158,11,0.10)", border:"1px solid rgba(245,158,11,0.25)", borderRadius:4, padding:"1px 6px" }}>En attente</span>}
                           </div>
                         </td>
                       );
@@ -1231,6 +1263,9 @@ export function DesignMetalTable({
 
                   {/* ── Checkbox sélection ── */}
                   <td style={tdCard} onClick={(e) => e.stopPropagation()}>
+                    {isOnHold ? (
+                      <span style={{ fontSize:10, color:"#f59e0b" }} title="En attente">⏸</span>
+                    ) : (
                     <div
                       style={{
                         display: "inline-flex",
@@ -1268,6 +1303,7 @@ export function DesignMetalTable({
                         }}
                       />
                     </div>
+                    )}
                   </td>
 
                   {/* ── Supprimer ── */}

@@ -14,6 +14,7 @@ import {
   type BatchResult,
 } from "@/app/app/design-resine/actions";
 import { DeleteConfirmModal } from "@/components/sheet/DeleteConfirmModal";
+import { toggleOnHoldAction } from "@/lib/on-hold";
 
 const NATURE_META: Record<string, { color: string }> = {
   "Chassis Argoat":    { color: "#e07070" },
@@ -186,6 +187,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
   const [editingExpId,setEditingExpId]=useState<string|null>(null);
   const [editingExpRect,setEditingExpRect]=useState<DOMRect|null>(null);
   const [foundRowId,setFoundRowId]=useState<string|null>(null);
+  const [holdBusy,setHoldBusy]=useState<string|null>(null);
 
   const load=useCallback(async(silent=false)=>{
     if(!silent){setLoading(true);setError(null);}
@@ -253,7 +255,13 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
     const fromDm = rows.filter(r => !isDrOrigin(r)).sort((a, b) =>
       (a.date_expedition ?? "9999").localeCompare(b.date_expedition ?? "9999")
     );
-    return [...drCreated, ...fromDm];
+    const all = [...drCreated, ...fromDm];
+    // on_hold en bas
+    return all.sort((a, b) => {
+      const aH = (a as any)._on_hold ? 1 : 0;
+      const bH = (b as any)._on_hold ? 1 : 0;
+      return aH - bH;
+    });
   }, [rows]);
   useEffect(()=>{
     if(!focusId||loading)return;
@@ -283,6 +291,17 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
       patchRow(caseId,null,"is_physical",currentPhysical);
       await load(true);
     }
+  }
+  async function handleToggleHold(caseId:string){
+    if(holdBusy)return;
+    setHoldBusy(caseId);
+    try{
+      const res=await toggleOnHoldAction(caseId,"design_resine");
+      if(res.ok){
+        setRows(prev=>prev.map(r=>String(r.id)===caseId?{...r,_on_hold:res.nowOnHold,_on_hold_at:res.nowOnHold?new Date().toISOString():null} as any:r));
+        if(res.nowOnHold) setCheckedIds(prev=>{const n=new Set(prev);n.delete(caseId);return n;});
+      }
+    }finally{setHoldBusy(null);}
   }
   async function saveBool(caseId:string,column:string,current:boolean){
     const newVal=!current;
@@ -417,6 +436,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
               const isProvisoire=nat==="Provisoire Résine";
               const natureMeta=NATURE_META[nat];
               const isC=checkedIds.has(String(row.id)),isA=activeRowId===String(row.id),isH=hoveredId===String(row.id),isF=foundRowId===String(row.id);
+              const isOnHold=Boolean((row as any)._on_hold);
               const typeDents=dr.type_de_dents??dm.type_de_dents??"";
               const effectiveTypeDents=typeDents||(isProvisoire?"Dents usinées":"");
               const typeMeta=TYPE_DENTS_OPTIONS.find(o=>o.value===effectiveTypeDents)??{color:"#555"};
@@ -431,9 +451,11 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
 
               return (
                 <tr key={row.id} id={`row-dr-${row.id}`} onClick={()=>setActiveRowId(String(row.id))} onMouseEnter={()=>setHoveredId(String(row.id))} onMouseLeave={()=>setHoveredId(null)}
-                  style={{cursor:"pointer",animation:isF?"row-found 2.2s ease-in-out forwards":"none",background:isF?undefined:"transparent"}}>
+                  style={{cursor:"pointer",animation:isF?"row-found 2.2s ease-in-out forwards":"none",background:isF?undefined:"transparent",opacity:isOnHold?0.45:1,transition:"opacity 300ms"}}>
 
-                  <td style={tdCardFirst} onDoubleClick={e=>{e.stopPropagation();handleTogglePhysical(String(row.id),Boolean(row.is_physical));}} title="Double-clic pour basculer physique / numérique"><div style={{display:"flex",flexDirection:"column",gap:2,cursor:"default"}}><div style={{display:"inline-flex",alignItems:"center",gap:6}}><div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:24,padding:"2px 8px",borderRadius:8,color:"#ffffff",background:isA?"rgba(255,255,255,0.04)":"transparent",border:isA?"1px solid rgba(255,255,255,0.06)":"1px solid transparent",transition:"all 160ms"}}>{row.case_number}</div>{row.is_physical&&<PhysicalBadge/>}</div>{(row as any).sent_by_name&&<span style={{fontSize:9,color:"#818cf8",fontWeight:600,whiteSpace:"nowrap",paddingLeft:8}}>via {(row as any).sent_by_name}</span>}</div></td>
+                  <td style={tdCardFirst} onDoubleClick={e=>{e.stopPropagation();handleTogglePhysical(String(row.id),Boolean(row.is_physical));}} title="Double-clic pour basculer physique / numérique"><div style={{display:"flex",flexDirection:"column",gap:2,cursor:"default"}}><div style={{display:"inline-flex",alignItems:"center",gap:6}}>
+                    <button onClick={e=>{e.stopPropagation();handleToggleHold(String(row.id));}} disabled={holdBusy===String(row.id)} title={isOnHold?"Réactiver le cas":"Mettre en attente"} style={{background:"none",border:"none",padding:0,cursor:"pointer",fontSize:13,lineHeight:1,color:isOnHold?"#f59e0b":"#555",transition:"color 150ms",opacity:holdBusy===String(row.id)?0.4:1}} onMouseEnter={e=>{if(!isOnHold)e.currentTarget.style.color="#f59e0b";}} onMouseLeave={e=>{if(!isOnHold)e.currentTarget.style.color="#555";}}>{isOnHold?"▶":"⏸"}</button>
+                    <div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:24,padding:"2px 8px",borderRadius:8,color:"#ffffff",background:isA?"rgba(255,255,255,0.04)":"transparent",border:isA?"1px solid rgba(255,255,255,0.06)":"1px solid transparent",transition:"all 160ms"}}>{row.case_number}</div>{row.is_physical&&<PhysicalBadge/>}{isOnHold&&<span style={{fontSize:9,fontWeight:700,color:"#f59e0b",background:"rgba(245,158,11,0.10)",border:"1px solid rgba(245,158,11,0.25)",borderRadius:4,padding:"1px 6px"}}>En attente</span>}</div>{(row as any).sent_by_name&&<span style={{fontSize:9,color:"#818cf8",fontWeight:600,whiteSpace:"nowrap",paddingLeft:8}}>via {(row as any).sent_by_name}</span>}</div></td>
                   <td style={tdCard}>{fmtDate(row.created_at)}</td>
 
                   {(() => { const rawExp = row.date_expedition?.slice(0,10) ?? ""; const today = new Date().toISOString().split("T")[0]; const expColor = rawExp && rawExp < today ? "#f87171" : rawExp && rawExp === today ? "#f59e0b" : undefined; return (
@@ -471,9 +493,13 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
                   <td style={tdCard} onClick={e=>e.stopPropagation()}><TextInput value={teintes} onSave={v=>{const val=v||dm.teintes_associees||null;patchRow(String(row.id),"sector_design_resine","teintes_associees",val);saveText(String(row.id),"teintes_associees",val??"");}} width={52}/></td>
 
                   <td style={tdCard} onClick={e=>e.stopPropagation()}>
+                    {isOnHold ? (
+                      <span style={{fontSize:10,color:"#f59e0b"}} title="En attente">⏸</span>
+                    ) : (
                     <div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:26,height:26,borderRadius:8,background:isC?"rgba(74,222,128,0.18)":"#181818",border:"1.5px solid rgba(255,255,255,0.85)",boxShadow:isC?"0 0 0 3px rgba(74,222,128,0.12)":"inset 0 0 0 1px rgba(255,255,255,0.03)",transition:"all 160ms ease"}}>
                       <input type="checkbox" checked={isC} onChange={e=>{const checked=e.target.checked;setCheckedIds(prev=>{const next=new Set(prev);checked?next.add(String(row.id)):next.delete(String(row.id));return next;});if(checked)autoFillOnSelect(row);}} style={{width:14,height:14,cursor:"pointer",accentColor:"#4ade80",margin:0}}/>
                     </div>
+                    )}
                   </td>
 
                   <td style={tdCardLast}>

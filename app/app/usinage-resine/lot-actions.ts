@@ -38,7 +38,7 @@ export async function resolveCaseForLotUR(caseNumber: string): Promise<LotCaseUR
       )
     `)
     .eq("sector_code", "usinage_resine")
-    .in("status", ["active", "in_progress"])
+    .in("status", ["active", "in_progress", "on_hold"])
     .limit(50);
 
   if (error || !data) throw new Error(error?.message ?? "Erreur serveur");

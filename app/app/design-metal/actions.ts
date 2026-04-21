@@ -52,7 +52,7 @@ export async function loadDesignMetalRowsAction(): Promise<DesignMetalRow[]> {
   const { data } = await supabase
     .from("case_assignments")
     .select(`
-      created_by,
+      created_by, status, on_hold_at, on_hold_reason,
       cases:case_id (
         id, created_at, case_number, date_expedition, nature_du_travail, is_physical,
         sector_design_metal (
@@ -63,13 +63,16 @@ export async function loadDesignMetalRowsAction(): Promise<DesignMetalRow[]> {
       )
     `)
     .eq("sector_code", "design_metal")
-    .in("status", ["active", "in_progress"])
+    .in("status", ["active", "in_progress", "on_hold"])
     .order("activated_at", { ascending: false })
     .limit(200);
 
   return ((data ?? []) as any[]).map((r: any) => ({
     ...r.cases,
     created_by: r.created_by ?? null,
+    _on_hold: r.status === "on_hold",
+    _on_hold_at: r.on_hold_at ?? null,
+    _on_hold_reason: r.on_hold_reason ?? null,
   }));
 }
 
@@ -237,7 +240,7 @@ export async function createCaseAction(formData: FormData) {
       .select("status")
       .eq("case_id", sameNature.id)
       .eq("sector_code", "design_metal")
-      .in("status", ["active", "in_progress"])
+      .in("status", ["active", "in_progress", "on_hold"])
       .maybeSingle();
 
     if (activeAssign) {

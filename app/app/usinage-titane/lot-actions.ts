@@ -70,7 +70,7 @@ export async function resolveCaseForLotTitane(caseNumber: string): Promise<{
     `
     )
     .eq("sector_code", "usinage_titane")
-    .in("status", ["active", "in_progress"])
+    .in("status", ["active", "in_progress", "on_hold"])
     .eq("cases.case_number", caseNumber)
     .single();
 

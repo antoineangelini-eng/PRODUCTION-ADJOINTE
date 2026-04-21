@@ -52,7 +52,7 @@ export async function loadUsinageTitaneRowsAction(): Promise<UsinageTitaneRow[]>
   const { data } = await supabase
     .from("case_assignments")
     .select(`
-      created_by,
+      created_by, status, on_hold_at, on_hold_reason,
       cases:case_id (
         id, created_at, case_number, date_expedition, nature_du_travail, is_physical,
         sector_design_metal ( design_chassis, design_chassis_at, reception_metal_date, modele_a_faire_ok ),
@@ -68,11 +68,11 @@ export async function loadUsinageTitaneRowsAction(): Promise<UsinageTitaneRow[]>
       )
     `)
     .eq("sector_code", "usinage_titane")
-    .in("status", ["active", "in_progress"])
+    .in("status", ["active", "in_progress", "on_hold"])
     .limit(200);
 
   const rows = ((data ?? []) as any[])
-    .map((r: any) => r.cases ? { ...r.cases, created_by: r.created_by ?? null } : null)
+    .map((r: any) => r.cases ? { ...r.cases, created_by: r.created_by ?? null, _on_hold: r.status === "on_hold", _on_hold_at: r.on_hold_at ?? null, _on_hold_reason: r.on_hold_reason ?? null } : null)
     .filter(Boolean)
     // UT ne reçoit que les cas "Chassis Argoat"
     .filter((r: any) => r.nature_du_travail === "Chassis Argoat")

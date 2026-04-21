@@ -69,7 +69,7 @@ export async function checkCaseForLotDR(rawNumber: string): Promise<LotCheckResu
     .select("status")
     .eq("case_id", existing.id)
     .eq("sector_code", "design_resine")
-    .in("status", ["active", "in_progress"])
+    .in("status", ["active", "in_progress", "on_hold"])
     .maybeSingle();
 
   if (activeAssign) return { caseNumber, status: "in_table" };

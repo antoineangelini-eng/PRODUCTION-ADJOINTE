@@ -56,7 +56,7 @@ export async function loadUsinageResineRowsAction(): Promise<UsinageResineRow[]>
   const { data } = await supabase
     .from("case_assignments")
     .select(`
-      created_by,
+      created_by, status, on_hold_at, on_hold_reason,
       cases:case_id (
         id, created_at, case_number, date_expedition, nature_du_travail, is_physical,
         sector_design_resine ( type_de_dents, design_dents_resine, design_dents_resine_at, nb_blocs_de_dents, modele_a_realiser_ok, teintes_associees ),
@@ -66,11 +66,11 @@ export async function loadUsinageResineRowsAction(): Promise<UsinageResineRow[]>
       )
     `)
     .eq("sector_code", "usinage_resine")
-    .in("status", ["active", "in_progress"])
+    .in("status", ["active", "in_progress", "on_hold"])
     .limit(200);
 
   const rows = ((data ?? []) as any[])
-    .map((r: any) => r.cases ? { ...r.cases, created_by: r.created_by ?? null } : null)
+    .map((r: any) => r.cases ? { ...r.cases, created_by: r.created_by ?? null, _on_hold: r.status === "on_hold", _on_hold_at: r.on_hold_at ?? null, _on_hold_reason: r.on_hold_reason ?? null } : null)
     .filter(Boolean)
     .sort((a: any, b: any) => {
       const da = a.date_expedition ?? "9999-12-31";
