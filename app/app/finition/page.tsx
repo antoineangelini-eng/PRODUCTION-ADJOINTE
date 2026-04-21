@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { FinitionPageClient } from "@/components/sheet/FinitionPageClient";
 import { FinitionHistoryWrapper } from "@/app/app/finition/FinitionHistoryWrapper";
+import { AnnouncementsBanner } from "@/components/sheet/AnnouncementsBanner";
 
 export default async function FinitionPage({ searchParams }: { searchParams?: Promise<{ tab?: string }> }) {
   const supabase = await createClient();
@@ -16,6 +17,7 @@ export default async function FinitionPage({ searchParams }: { searchParams?: Pr
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <AnnouncementsBanner sectorCode="finition" />
       <div style={{ flexShrink: 0, background: "#0b0b0b", padding: "10px 20px 0", borderBottom: "1px solid #1a1a1a" }}>
         <h1 style={{ margin: "0 0 12px", fontSize: 18 }}>Finition</h1>
         <div style={{ display: "flex", gap: 0 }}>

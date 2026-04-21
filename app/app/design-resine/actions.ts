@@ -307,6 +307,20 @@ export async function toggleCasePhysicalAction(caseId: string): Promise<boolean>
   return Boolean(data);
 }
 
+export async function removeCaseFromSectorAction(formData: FormData) {
+  const caseId = String(formData.get("case_id") ?? "").trim();
+  if (!caseId) return { error: "ID manquant" };
+
+  const { checkDeletePermission } = await import("@/lib/delete-permission");
+  const perm = await checkDeletePermission(caseId, "design_resine");
+  if (!perm.allowed) return { error: perm.error };
+
+  const admin = createAdminClient();
+  await admin.from("case_assignments").delete().eq("case_id", caseId).eq("sector_code", "design_resine");
+  revalidatePath("/app/design-resine");
+  return { ok: true };
+}
+
 export async function deleteCaseAction(formData: FormData) {
   const caseId = String(formData.get("case_id") ?? "").trim();
   if (!caseId) return { error: "ID manquant" };
@@ -315,7 +329,6 @@ export async function deleteCaseAction(formData: FormData) {
   const perm = await checkDeletePermission(caseId, "design_resine");
   if (!perm.allowed) return { error: perm.error };
 
-  // Admin client pour bypasser le check interne de la RPC
   const admin = createAdminClient();
   const { error } = await admin.from("case_events").delete().eq("case_id", caseId);
   if (error) return { error: error.message };

@@ -6,6 +6,7 @@ import { createCaseAction, scanCaseAction } from "@/app/app/design-resine/action
 import { CaseNumberInput } from "@/components/sheet/CaseNumberInput";
 import { DesignResineHistoryWrapper } from "@/app/app/design-resine/DesignResineHistoryWrapper";
 import { FlashMessage } from "@/components/sheet/FlashMessage";
+import { AnnouncementsBanner } from "@/components/sheet/AnnouncementsBanner";
 
 export default async function Page({
   searchParams,
@@ -26,6 +27,7 @@ export default async function Page({
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <FlashMessage />
+      <AnnouncementsBanner sectorCode="design_resine" />
       <div style={{ flexShrink: 0, background: "#0b0b0b", padding: "10px 20px 0", borderBottom: "1px solid #1a1a1a" }}>
         <h1 style={{ margin: "0 0 12px", fontSize: 18 }}>Design Résine</h1>
         <div style={{ display: "flex", gap: 0 }}>

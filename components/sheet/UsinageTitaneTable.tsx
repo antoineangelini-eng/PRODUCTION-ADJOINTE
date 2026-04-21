@@ -8,9 +8,11 @@ import {
   saveUsinageTitaneCellAction,
   completeUsinageTitaneBatchAction,
   deleteCaseAction,
+  removeCaseFromSectorAction,
   type UsinageTitaneRow,
   type BatchResult,
 } from "@/app/app/usinage-titane/actions";
+import { DeleteConfirmModal } from "@/components/sheet/DeleteConfirmModal";
 
 // ── Constantes ───────────────────────────────────────────────────
 const NATURE_META: Record<string, { color: string }> = {
@@ -574,7 +576,14 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
     }
   }
 
-  async function handleDelete(caseId: string) {
+  async function handleDeleteFromSector(caseId: string) {
+    const fd = new FormData(); fd.set("case_id", caseId);
+    await removeCaseFromSectorAction(fd);
+    setRows(prev => prev.filter(r => String(r.id) !== caseId));
+    setConfirmDeleteId(null);
+  }
+
+  async function handleDeleteFromAll(caseId: string) {
     const fd = new FormData(); fd.set("case_id", caseId);
     await deleteCaseAction(fd);
     setRows(prev => prev.filter(r => String(r.id) !== caseId));
@@ -824,14 +833,6 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
                   <td style={tdCardLast}>
                     {!(isAdmin || !(row as any).created_by || (row as any).created_by === currentUserId) ? (
                       <span style={{ fontSize: 9, color: "#333" }} title="Seul le créateur peut supprimer">—</span>
-                    ) : confirmDeleteId === String(row.id) ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "center" }}>
-                        <span style={{ fontSize: 9, color: "#f87171", whiteSpace: "nowrap" }}>Supprimer ?</span>
-                        <div style={{ display: "flex", gap: 3 }}>
-                          <button onClick={e => { e.stopPropagation(); handleDelete(String(row.id)); }} style={{ padding: "2px 8px", border: "1px solid #f87171", background: "rgba(239,68,68,0.15)", color: "#f87171", cursor: "pointer", fontSize: 10, fontWeight: 700, borderRadius: 4 }}>Oui</button>
-                          <button onClick={e => { e.stopPropagation(); setConfirmDeleteId(null); }} style={{ padding: "2px 7px", border: "1px solid #444", background: "transparent", color: "#888", cursor: "pointer", fontSize: 10, borderRadius: 4 }}>Non</button>
-                        </div>
-                      </div>
                     ) : (
                       <button onClick={e => { e.stopPropagation(); setConfirmDeleteId(String(row.id)); }}
                         style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 7, border: "1px solid #2a2a2a", background: "transparent", color: "#555", cursor: "pointer", transition: "all 150ms" }}
@@ -849,6 +850,19 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
           </tbody>
         </table>
       </div>
+
+      {confirmDeleteId && (() => {
+        const row = rows.find(r => String(r.id) === confirmDeleteId);
+        return (
+          <DeleteConfirmModal
+            caseNumber={row?.case_number ?? null}
+            sectorLabel="Usinage Titane"
+            onDeleteFromSector={() => handleDeleteFromSector(confirmDeleteId)}
+            onDeleteFromAll={() => handleDeleteFromAll(confirmDeleteId)}
+            onCancel={() => setConfirmDeleteId(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

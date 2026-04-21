@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { UsinageResinePageClient } from "@/components/sheet/UsinageResinePageClient";
 import { UsinageResineHistoryWrapper } from "@/app/app/usinage-resine/UsinageResineHistoryWrapper";
 import { EmaxPaletteTracker } from "@/app/app/usinage-resine/EmaxPaletteTracker";
+import { AnnouncementsBanner } from "@/components/sheet/AnnouncementsBanner";
 
 const EmaxIcon = ({ color }: { color: string }) => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -50,6 +51,7 @@ export default async function Page({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <AnnouncementsBanner sectorCode="usinage_resine" />
       <div style={{
         flexShrink: 0, background: "#0b0b0b",
         padding: "10px 20px 0", borderBottom: "1px solid #1a1a1a",

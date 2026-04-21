@@ -74,6 +74,8 @@ export async function loadUsinageTitaneRowsAction(): Promise<UsinageTitaneRow[]>
   const rows = ((data ?? []) as any[])
     .map((r: any) => r.cases ? { ...r.cases, created_by: r.created_by ?? null } : null)
     .filter(Boolean)
+    // UT ne reçoit que les cas "Chassis Argoat"
+    .filter((r: any) => r.nature_du_travail === "Chassis Argoat")
     .sort((a: any, b: any) => {
       const da = a.date_expedition ?? "9999-12-31";
       const db = b.date_expedition ?? "9999-12-31";
@@ -157,6 +159,20 @@ export async function completeUsinageTitaneBatchAction(
   }
   revalidatePath("/app/usinage-titane");
   return { okIds, errors };
+}
+
+export async function removeCaseFromSectorAction(formData: FormData) {
+  const caseId = String(formData.get("case_id") ?? "").trim();
+  if (!caseId) return { error: "ID manquant" };
+
+  const { checkDeletePermission } = await import("@/lib/delete-permission");
+  const perm = await checkDeletePermission(caseId, "usinage_titane");
+  if (!perm.allowed) return { error: perm.error };
+
+  const admin = createAdminClient();
+  await admin.from("case_assignments").delete().eq("case_id", caseId).eq("sector_code", "usinage_titane");
+  revalidatePath("/app/usinage-titane");
+  return { ok: true };
 }
 
 export async function deleteCaseAction(formData: FormData) {

@@ -8,11 +8,12 @@ import {
   saveUsinageResineCellAction,
   completeUsinageResineBatchAction,
   deleteCaseAction,
-  removeCaseFromUsinageResineAction,
+  removeCaseFromSectorAction,
   type UsinageResineRow,
   type BatchResult,
 } from "@/app/app/usinage-resine/actions";
 import { printUrLabelAction } from "@/app/app/usinage-resine/print-actions";
+import { DeleteConfirmModal } from "@/components/sheet/DeleteConfirmModal";
 import type { ToastCase } from "@/components/sheet/CaseToast";
 
 const NATURE_META: Record<string, { color: string }> = {
@@ -421,13 +422,17 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
     }
   }
 
-  async function handleDelete(caseId: string) {
+  async function handleDeleteFromSector(caseId: string) {
     const fd = new FormData(); fd.set("case_id", caseId);
-    const res = await removeCaseFromUsinageResineAction(fd);
-    if ((res as any)?.error) {
-      alert(`Erreur: ${(res as any).error}`);
-      return;
-    }
+    const res = await removeCaseFromSectorAction(fd);
+    if ((res as any)?.error) { alert(`Erreur: ${(res as any).error}`); return; }
+    setRows(prev => prev.filter(r => String(r.id) !== caseId));
+    setConfirmDeleteId(null);
+  }
+  async function handleDeleteFromAll(caseId: string) {
+    const fd = new FormData(); fd.set("case_id", caseId);
+    const res = await deleteCaseAction(fd);
+    if ((res as any)?.error) { alert(`Erreur: ${(res as any).error}`); return; }
     setRows(prev => prev.filter(r => String(r.id) !== caseId));
     setConfirmDeleteId(null);
   }
@@ -572,43 +577,14 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
       {/* Modal de confirmation de suppression */}
       {confirmDeleteId && (() => {
         const row = rows.find(r => String(r.id) === confirmDeleteId);
-        if (!row) return null;
         return (
-          <div
-            onClick={e => { if (e.target === e.currentTarget) setConfirmDeleteId(null); }}
-            style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", zIndex:2000, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}
-          >
-            <div style={{ background:"#111", border:"1px solid #2a2a2a", borderRadius:12, padding:"24px 28px", minWidth:320, maxWidth:420, boxShadow:"0 20px 60px rgba(0,0,0,0.5)" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
-                <span style={{ fontSize:22 }}>🗑</span>
-                <span style={{ fontSize:15, fontWeight:700, color:"white" }}>Supprimer le cas ?</span>
-              </div>
-              <div style={{ background:"#0b0b0b", border:"1px solid #1e1e1e", borderRadius:8, padding:"12px 14px", marginBottom:18, display:"flex", alignItems:"center", gap:10 }}>
-                <span style={{ fontSize:20, fontWeight:800, color:"white" }}>{row.case_number}</span>
-                {row.is_physical && <PhysicalBadge size="md" />}
-                {row.nature_du_travail && (
-                  <span style={{ fontSize:11, fontWeight:600, padding:"3px 9px", borderRadius:5, background:"rgba(255,255,255,0.05)", color:"#aaa" }}>{row.nature_du_travail}</span>
-                )}
-              </div>
-              <p style={{ fontSize:12, color:"#888", margin:"0 0 20px 0", lineHeight:1.5 }}>
-                Le cas sera retiré de Usinage Résine uniquement. Les autres secteurs ne sont pas affectés.
-              </p>
-              <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
-                <button
-                  onClick={() => setConfirmDeleteId(null)}
-                  style={{ padding:"9px 18px", border:"1px solid #333", background:"transparent", color:"#aaa", cursor:"pointer", fontSize:13, fontWeight:600, borderRadius:7 }}
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={() => handleDelete(confirmDeleteId)}
-                  style={{ padding:"9px 18px", border:"1px solid #f87171", background:"rgba(239,68,68,0.12)", color:"#f87171", cursor:"pointer", fontSize:13, fontWeight:700, borderRadius:7 }}
-                >
-                  Supprimer
-                </button>
-              </div>
-            </div>
-          </div>
+          <DeleteConfirmModal
+            caseNumber={row?.case_number ?? null}
+            sectorLabel="Usinage Résine"
+            onDeleteFromSector={() => handleDeleteFromSector(confirmDeleteId)}
+            onDeleteFromAll={() => handleDeleteFromAll(confirmDeleteId)}
+            onCancel={() => setConfirmDeleteId(null)}
+          />
         );
       })()}
     </div>

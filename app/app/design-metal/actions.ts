@@ -159,6 +159,20 @@ export async function updateCaseInfoAction(formData: FormData) {
   revalidatePath("/app/design-metal");
 }
 
+export async function removeCaseFromSectorAction(formData: FormData) {
+  const caseId = String(formData.get("case_id") ?? "").trim();
+  if (!caseId) return { error: "ID manquant" };
+
+  const { checkDeletePermission } = await import("@/lib/delete-permission");
+  const perm = await checkDeletePermission(caseId, "design_metal");
+  if (!perm.allowed) return { error: perm.error };
+
+  const admin = createAdminClient();
+  await admin.from("case_assignments").delete().eq("case_id", caseId).eq("sector_code", "design_metal");
+  revalidatePath("/app/design-metal");
+  return { ok: true };
+}
+
 export async function deleteCaseAction(formData: FormData) {
   const caseId = String(formData.get("case_id") ?? "").trim();
   if (!caseId) return { error: "ID manquant" };

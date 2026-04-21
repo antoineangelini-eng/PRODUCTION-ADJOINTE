@@ -183,14 +183,21 @@ export async function deleteCaseAction(formData: FormData) {
 }
 
 /** Retire le cas uniquement du secteur Usinage Résine (les autres secteurs restent intacts). */
-export async function removeCaseFromUsinageResineAction(formData: FormData) {
-  const supabase = await createClient();
+export async function removeCaseFromSectorAction(formData: FormData) {
   const caseId = String(formData.get("case_id") ?? "").trim();
   if (!caseId) return { error: "ID manquant" };
 
-  const { error } = await supabase.rpc("rpc_remove_case_from_usinage_resine", { p_case_id: caseId });
-  if (error) return { error: error.message };
+  const { checkDeletePermission } = await import("@/lib/delete-permission");
+  const perm = await checkDeletePermission(caseId, "usinage_resine");
+  if (!perm.allowed) return { error: perm.error };
 
+  const admin = createAdminClient();
+  await admin.from("case_assignments").delete().eq("case_id", caseId).eq("sector_code", "usinage_resine");
   revalidatePath("/app/usinage-resine");
   return { ok: true };
+}
+
+/** @deprecated — utiliser removeCaseFromSectorAction */
+export async function removeCaseFromUsinageResineAction(formData: FormData) {
+  return removeCaseFromSectorAction(formData);
 }

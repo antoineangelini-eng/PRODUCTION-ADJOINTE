@@ -8,10 +8,12 @@ import {
   saveDesignResineMultiAction,
   completeDesignResineBatchAction,
   deleteCaseAction,
+  removeCaseFromSectorAction,
   toggleCasePhysicalAction,
   type DesignResineRow,
   type BatchResult,
 } from "@/app/app/design-resine/actions";
+import { DeleteConfirmModal } from "@/components/sheet/DeleteConfirmModal";
 
 const NATURE_META: Record<string, { color: string }> = {
   "Chassis Argoat":    { color: "#e07070" },
@@ -311,7 +313,13 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
     const fd=new FormData();fd.set("case_id",caseId);fd.set("column","date_expedition");fd.set("kind","date");fd.set("value",date);
     await saveDesignResineCellAction(fd);
   }
-  async function handleDelete(caseId:string){
+  async function handleDeleteFromSector(caseId:string){
+    const fd=new FormData();fd.set("case_id",caseId);
+    const r=await removeCaseFromSectorAction(fd);
+    if((r as any)?.error){alert((r as any).error);return;}
+    setConfirmDeleteId(null);setRows(prev=>prev.filter(x=>String(x.id)!==caseId));
+  }
+  async function handleDeleteFromAll(caseId:string){
     const fd=new FormData();fd.set("case_id",caseId);
     const r=await deleteCaseAction(fd);
     if((r as any)?.error){alert((r as any).error);return;}
@@ -469,14 +477,6 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
                   <td style={tdCardLast}>
                     {!(isAdmin || !(row as any).created_by || (row as any).created_by === currentUserId) ? (
                       <span style={{fontSize:9,color:"#333"}} title="Seul le créateur peut supprimer">—</span>
-                    ) : confirmDeleteId===String(row.id)?(
-                      <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"center"}}>
-                        <span style={{fontSize:10,color:"#f87171",whiteSpace:"nowrap"}}>Supprimer ?</span>
-                        <div style={{display:"flex",gap:4}}>
-                          <button onClick={e=>{e.stopPropagation();handleDelete(String(row.id));}} style={{padding:"3px 10px",border:"1px solid #f87171",background:"rgba(239,68,68,0.15)",color:"#f87171",cursor:"pointer",fontSize:11,fontWeight:700,borderRadius:4}}>Oui</button>
-                          <button onClick={e=>{e.stopPropagation();setConfirmDeleteId(null);}} style={{padding:"3px 8px",border:"1px solid #444",background:"transparent",color:"#888",cursor:"pointer",fontSize:11,borderRadius:4}}>Non</button>
-                        </div>
-                      </div>
                     ):(
                       <button onClick={e=>{e.stopPropagation();setConfirmDeleteId(String(row.id));}}
                         style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:28,height:28,borderRadius:6,border:"1px solid #3d3d3d",background:"transparent",color:"white",cursor:"pointer",transition:"all 150ms"}}
@@ -493,6 +493,19 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
           </tbody>
         </table>
       </div>
+
+      {confirmDeleteId && (() => {
+        const row = rows.find(r => String(r.id) === confirmDeleteId);
+        return (
+          <DeleteConfirmModal
+            caseNumber={row?.case_number ?? null}
+            sectorLabel="Design Résine"
+            onDeleteFromSector={() => handleDeleteFromSector(confirmDeleteId)}
+            onDeleteFromAll={() => handleDeleteFromAll(confirmDeleteId)}
+            onCancel={() => setConfirmDeleteId(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

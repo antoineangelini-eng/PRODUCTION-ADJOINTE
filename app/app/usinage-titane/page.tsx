@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { SearchBar } from "@/components/sheet/SearchBar";
 import { UsinageTitanePageClient } from "@/components/sheet/UsinageTitanePageClient";
 import { UsinageTitaneHistoryWrapper } from "@/app/app/usinage-titane/UsinageTitaneHistoryWrapper";
+import { AnnouncementsBanner } from "@/components/sheet/AnnouncementsBanner";
 
 export default async function Page({ searchParams }: { searchParams?: Promise<{ focus?: string; tab?: string }> }) {
   const supabase = await createClient();
@@ -18,6 +19,7 @@ export default async function Page({ searchParams }: { searchParams?: Promise<{ 
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <AnnouncementsBanner sectorCode="usinage_titane" />
       <div style={{ flexShrink: 0, background: "#0b0b0b", padding: "10px 20px 0", borderBottom: "1px solid #1a1a1a" }}>
         <h1 style={{ margin: "0 0 12px", fontSize: 18 }}>Usinage Titane</h1>
         <div style={{ display: "flex", gap: 0 }}>

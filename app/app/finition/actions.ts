@@ -280,3 +280,38 @@ export async function getFinitionStatsAction(): Promise<{
 
   return { validatedToday, totalToday, late, countToday, countTomorrow };
 }
+
+export async function removeCaseFromSectorAction(formData: FormData) {
+  const caseId = String(formData.get("case_id") ?? "").trim();
+  if (!caseId) return { error: "ID manquant" };
+
+  const { checkDeletePermission } = await import("@/lib/delete-permission");
+  const perm = await checkDeletePermission(caseId, "finition");
+  if (!perm.allowed) return { error: perm.error };
+
+  const admin = createAdminClient();
+  await admin.from("case_assignments").delete().eq("case_id", caseId).eq("sector_code", "finition");
+  revalidatePath("/app/finition");
+  return { ok: true };
+}
+
+export async function deleteCaseAction(formData: FormData) {
+  const caseId = String(formData.get("case_id") ?? "").trim();
+  if (!caseId) return { error: "ID manquant" };
+
+  const { checkDeletePermission } = await import("@/lib/delete-permission");
+  const perm = await checkDeletePermission(caseId, "finition");
+  if (!perm.allowed) return { error: perm.error };
+
+  const admin = createAdminClient();
+  await admin.from("case_events").delete().eq("case_id", caseId);
+  await admin.from("case_assignments").delete().eq("case_id", caseId);
+  await admin.from("sector_design_metal").delete().eq("case_id", caseId);
+  await admin.from("sector_design_resine").delete().eq("case_id", caseId);
+  await admin.from("sector_usinage_titane").delete().eq("case_id", caseId);
+  await admin.from("sector_usinage_resine").delete().eq("case_id", caseId);
+  await admin.from("sector_finition").delete().eq("case_id", caseId);
+  const { error } = await admin.from("cases").delete().eq("id", caseId);
+  if (error) return { error: error.message };
+  return { ok: true };
+}

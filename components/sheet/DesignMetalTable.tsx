@@ -9,10 +9,12 @@ import {
   loadDesignMetalRowsAction,
   updateCaseInfoAction,
   deleteCaseAction,
+  removeCaseFromSectorAction,
   toggleCasePhysicalAction,
   type BatchResult,
   type DesignMetalRow,
 } from "@/app/app/design-metal/actions";
+import { DeleteConfirmModal } from "@/components/sheet/DeleteConfirmModal";
 
 const TYPE_OPTIONS = [
   { value: "Dents usinées", color: "#7c8196" },
@@ -668,7 +670,15 @@ export function DesignMetalTable({
     await load();
   }
 
-  async function handleDelete(caseId: string) {
+  async function handleDeleteFromSector(caseId: string) {
+    const fd = new FormData(); fd.set("case_id", caseId);
+    const result = await removeCaseFromSectorAction(fd);
+    if (result?.error) { alert(result.error); return; }
+    setConfirmDeleteId(null);
+    setRows(prev => prev.filter(r => String(r.id) !== caseId));
+  }
+
+  async function handleDeleteFromAll(caseId: string) {
     const fd = new FormData();
     fd.set("case_id", caseId);
     const result = await deleteCaseAction(fd);
@@ -1248,82 +1258,20 @@ export function DesignMetalTable({
                   <td style={tdCardLast}>
                     {!(isAdmin || !(row as any).created_by || (row as any).created_by === currentUserId) ? (
                       <span style={{ fontSize: 9, color: "#333" }} title="Seul le créateur peut supprimer">—</span>
-                    ) : confirmDeleteId === String(row.id) ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "center" }}>
-                        <span style={{ fontSize: 9, color: "#f87171", whiteSpace: "nowrap" }}>Supprimer ?</span>
-                        <div style={{ display: "flex", gap: 3 }}>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(String(row.id));
-                            }}
-                            style={{
-                              padding: "2px 8px",
-                              border: "1px solid #f87171",
-                              background: "rgba(239,68,68,0.15)",
-                              color: "#f87171",
-                              cursor: "pointer",
-                              fontSize: 10,
-                              fontWeight: 700,
-                              borderRadius: 4,
-                            }}
-                          >
-                            Oui
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setConfirmDeleteId(null);
-                            }}
-                            style={{
-                              padding: "2px 7px",
-                              border: "1px solid #444",
-                              background: "transparent",
-                              color: "#888",
-                              cursor: "pointer",
-                              fontSize: 10,
-                              borderRadius: 4,
-                            }}
-                          >
-                            Non
-                          </button>
-                        </div>
-                      </div>
                     ) : (
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setConfirmDeleteId(String(row.id));
-                        }}
+                        onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(String(row.id)); }}
                         style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          width: 28,
-                          height: 28,
-                          borderRadius: 7,
-                          border: "1px solid #2a2a2a",
-                          background: "transparent",
-                          color: "#555",
-                          cursor: "pointer",
-                          transition: "all 150ms",
+                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                          width: 28, height: 28, borderRadius: 7,
+                          border: "1px solid #2a2a2a", background: "transparent",
+                          color: "#555", cursor: "pointer", transition: "all 150ms",
                         }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.border = "1px solid rgba(239,68,68,0.5)";
-                          e.currentTarget.style.background = "rgba(239,68,68,0.1)";
-                          e.currentTarget.style.color = "#f87171";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.border = "1px solid #2a2a2a";
-                          e.currentTarget.style.background = "transparent";
-                          e.currentTarget.style.color = "#555";
-                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.border = "1px solid rgba(239,68,68,0.5)"; e.currentTarget.style.background = "rgba(239,68,68,0.1)"; e.currentTarget.style.color = "#f87171"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.border = "1px solid #2a2a2a"; e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#555"; }}
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6l-1 14H6L5 6" />
-                          <path d="M10 11v6M14 11v6" />
-                          <path d="M9 6V4h6v2" />
+                          <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4h6v2" />
                         </svg>
                       </button>
                     )}
@@ -1334,6 +1282,19 @@ export function DesignMetalTable({
           </tbody>
         </table>
       </div>
+
+      {confirmDeleteId && (() => {
+        const row = rows.find(r => String(r.id) === confirmDeleteId);
+        return (
+          <DeleteConfirmModal
+            caseNumber={row?.case_number ?? null}
+            sectorLabel="Design Métal"
+            onDeleteFromSector={() => handleDeleteFromSector(confirmDeleteId)}
+            onDeleteFromAll={() => handleDeleteFromAll(confirmDeleteId)}
+            onCancel={() => setConfirmDeleteId(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
