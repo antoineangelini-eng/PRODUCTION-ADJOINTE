@@ -272,9 +272,9 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
               const receptionMetalDate  = ut.reception_metal_at ?? dm.reception_metal_date ?? null;
               const receptionResineDate = ur.reception_resine_at ?? null;
 
-              // Déterminer si le cas a besoin de métal (passé par UT) et/ou résine (passé par UR)
-              const needsMetal  = Boolean(ut.envoye_usinage || ut.reception_metal_at);
-              const needsResine = Boolean(ur.usinage_dents_resine || ur.reception_resine_at);
+              // Déterminer si le cas a besoin de métal (assigné à UT) et/ou résine (assigné à UR)
+              const needsMetal  = Boolean((row as any).has_ut_assignment);
+              const needsResine = Boolean((row as any).has_ur_assignment);
 
               const d1 = receptionMetalDate  ? new Date(receptionMetalDate.slice(0,10))  : null;
               const d2 = receptionResineDate ? new Date(receptionResineDate.slice(0,10)) : null;

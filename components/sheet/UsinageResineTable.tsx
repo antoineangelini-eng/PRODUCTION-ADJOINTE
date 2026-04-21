@@ -144,7 +144,7 @@ function MachineDropdown({ options, value, onChange, buttonStyle }: {
 }) {
   const [open, setOpen] = React.useState(false);
   const btnRef = React.useRef<HTMLButtonElement>(null);
-  const [pos, setPos] = React.useState({ top: 0, left: 0 });
+  const [pos, setPos] = React.useState({ top: 0, left: 0, openUp: false });
 
   React.useEffect(() => {
     if (!open) return;
@@ -163,7 +163,14 @@ function MachineDropdown({ options, value, onChange, buttonStyle }: {
     e.stopPropagation();
     if (!open && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
-      setPos({ top: rect.bottom + 4, left: rect.left + rect.width / 2 });
+      const dropdownHeight = (options.length + 1) * 32 + 14; // estimation hauteur
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUp = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
+      setPos({
+        top: openUp ? rect.top - 4 : rect.bottom + 4,
+        left: rect.left + rect.width / 2,
+        openUp,
+      });
     }
     setOpen(o => !o);
   }
@@ -184,7 +191,10 @@ function MachineDropdown({ options, value, onChange, buttonStyle }: {
       </button>
       {open && typeof document !== "undefined" && ReactDOM.createPortal(
         <div id="machine-dropdown-portal"
-          style={{ position: "fixed", top: pos.top, left: pos.left, transform: "translateX(-50%)",
+          style={{ position: "fixed",
+            top: pos.openUp ? undefined : pos.top,
+            bottom: pos.openUp ? (window.innerHeight - pos.top) : undefined,
+            left: pos.left, transform: "translateX(-50%)",
             background: "#1c1c1c", border: "1px solid #2e2e2e", borderRadius: 8, padding: 5,
             zIndex: 9999, display: "flex", flexDirection: "column", gap: 2, minWidth: 80,
             boxShadow: "0 8px 24px rgba(0,0,0,0.6)" }}>

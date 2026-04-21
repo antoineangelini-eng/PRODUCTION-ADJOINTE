@@ -100,8 +100,31 @@ export async function loadFinitionRowsAction(): Promise<FinitionRow[]> {
       return da.localeCompare(db);
     });
 
-  // Résoudre "Envoyé par" = qui a validé le cas en UT ou UR (secteur précédent)
   const caseIds = rows.map((r: any) => r.id).filter(Boolean);
+
+  // Déterminer quels secteurs (UT / UR) sont assignés à chaque cas
+  let assignedSectors: Record<string, Set<string>> = {};
+  if (caseIds.length > 0) {
+    const admin = createAdminClient();
+    const { data: assignData } = await admin
+      .from("case_assignments")
+      .select("case_id, sector_code")
+      .in("case_id", caseIds)
+      .in("sector_code", ["usinage_titane", "usinage_resine"]);
+    for (const a of assignData ?? []) {
+      if (!assignedSectors[a.case_id]) assignedSectors[a.case_id] = new Set();
+      assignedSectors[a.case_id].add(a.sector_code);
+    }
+  }
+
+  // Ajouter has_ut / has_ur à chaque row
+  for (const r of rows) {
+    const sectors = assignedSectors[r.id] ?? new Set();
+    (r as any).has_ut_assignment = sectors.has("usinage_titane");
+    (r as any).has_ur_assignment = sectors.has("usinage_resine");
+  }
+
+  // Résoudre "Envoyé par" = qui a validé le cas en UT ou UR (secteur précédent)
   let senderMap: Record<string, string> = {};
   if (caseIds.length > 0) {
     const admin = createAdminClient();
