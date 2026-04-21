@@ -151,9 +151,12 @@ export async function updateCaseInfoAction(formData: FormData) {
   const allowed = ["nature_du_travail"];
   if (!allowed.includes(field)) return;
 
-  await supabase.from("cases").update({
+  const admin = createAdminClient();
+  await admin.from("cases").update({
     [field]: value === "" ? null : value,
   }).eq("id", caseId);
+
+  revalidatePath("/app/design-metal");
 }
 
 export async function deleteCaseAction(formData: FormData) {
