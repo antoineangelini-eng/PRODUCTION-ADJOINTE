@@ -285,20 +285,44 @@ export async function getFinitionStatsAction(): Promise<{
 
   const { data: allRows } = await supabase
     .from("case_assignments")
-    .select("status, cases:case_id ( date_expedition )")
+    .select(`status, cases:case_id (
+      date_expedition, nature_du_travail,
+      sector_design_metal ( reception_metal_date, type_de_dents ),
+      sector_design_resine ( type_de_dents ),
+      sector_usinage_titane ( reception_metal_at ),
+      sector_usinage_resine ( reception_resine_at, type_de_dents_override )
+    )`)
     .eq("sector_code", "finition");
 
   const rows = (allRows ?? []) as any[];
-  const todayRows      = rows.filter((r) => r.cases?.date_expedition?.slice(0, 10) === today);
+
+  // Date de référence = la plus récente date de réception disponible
+  function getDateRef(r: any): string | null {
+    const c = r.cases;
+    if (!c) return null;
+    const dm = c.sector_design_metal ?? {};
+    const ur = c.sector_usinage_resine ?? {};
+    const ut = c.sector_usinage_titane ?? {};
+    const metalDate  = ut.reception_metal_at ?? dm.reception_metal_date ?? null;
+    const resineDate = ur.reception_resine_at ?? null;
+    // Prendre la plus récente des dates de réception disponibles
+    if (metalDate && resineDate) {
+      const a = new Date(metalDate.slice(0,10)), b = new Date(resineDate.slice(0,10));
+      return a >= b ? metalDate : resineDate;
+    }
+    return metalDate ?? resineDate;
+  }
+
+  const todayRows      = rows.filter((r) => (getDateRef(r) ?? r.cases?.date_expedition)?.slice(0, 10) === today);
   const totalToday     = todayRows.length;
   const validatedToday = todayRows.filter((r) => r.status === "done").length;
   const countToday     = todayRows.filter((r) => r.status !== "done").length;
   const countTomorrow  = rows.filter(
-    (r) => r.cases?.date_expedition?.slice(0, 10) === tomorrow && r.status !== "done"
+    (r) => (getDateRef(r) ?? r.cases?.date_expedition)?.slice(0, 10) === tomorrow && r.status !== "done"
   ).length;
   const late = rows.filter((r) => {
-    const exp = r.cases?.date_expedition?.slice(0, 10);
-    return exp && exp < today && r.status !== "done";
+    const ref = (getDateRef(r) ?? r.cases?.date_expedition)?.slice(0, 10);
+    return ref && ref < today && r.status !== "done";
   }).length;
 
   return { validatedToday, totalToday, late, countToday, countTomorrow };

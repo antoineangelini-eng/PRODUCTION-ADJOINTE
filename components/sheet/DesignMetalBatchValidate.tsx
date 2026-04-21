@@ -301,8 +301,7 @@ export function DesignMetalBatchValidate({
             <ul style={{ margin: 0, paddingLeft: 16 }}>
               {state.errors.map((e, idx) => (
                 <li key={`${e.case_id}-${idx}`} style={{ fontSize: 12, marginBottom: 4 }}>
-                  <span style={{ fontWeight: 600 }}>{e.case_id ? idToCaseNumber.get(e.case_id) ?? e.case_id : "Sélection"}</span>
-                  <span style={{ opacity: 0.8 }}> — {e.error_message}</span>
+                  {e.error_message}
                 </li>
               ))}
             </ul>

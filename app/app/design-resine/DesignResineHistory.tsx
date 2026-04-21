@@ -38,7 +38,6 @@ export function DesignResineHistory() {
   const [natFilter, setNatFilter]   = useState("");
   const [yearFilter, setYearFilter] = useState("");
   const [reopenRow, setReopenRow]   = useState<DrHistoryRow | null>(null);
-  const [note, setNote]             = useState("");
   const [saving, setSaving]         = useState(false);
   const [error, setError]           = useState<string | null>(null);
 
@@ -56,10 +55,10 @@ export function DesignResineHistory() {
   async function handleReopen() {
     if (!reopenRow) return;
     setSaving(true); setError(null);
-    const res = await reopenDrCaseAction(reopenRow.id, note.trim() || null);
+    const res = await reopenDrCaseAction(reopenRow.id, null);
     setSaving(false);
     if (!res.ok) { setError(res.error ?? "Erreur"); return; }
-    setReopenRow(null); setNote(""); load();
+    setReopenRow(null); load();
   }
 
   return (
@@ -77,8 +76,8 @@ export function DesignResineHistory() {
       {reopenRow && (
         <ReopenModal caseNumber={reopenRow.case_number} natureDuTravail={reopenRow.nature_du_travail}
           dateExpedition={reopenRow.date_expedition} sectorLabel="Design Résine"
-          saving={saving} error={error} note={note} setNote={setNote}
-          onClose={() => { setReopenRow(null); setNote(""); setError(null); }} onConfirm={handleReopen} />
+          saving={saving} error={error}
+          onClose={() => { setReopenRow(null); setError(null); }} onConfirm={handleReopen} />
       )}
     </div>
   );

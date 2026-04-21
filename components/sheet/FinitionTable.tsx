@@ -57,9 +57,9 @@ function SelectReadOnly({ value, color }: { value:string; options?:{value:string
   );
 }
 
-function DateCell({ value }: { value: string | null }) {
+function DateCell({ value, color = "white" }: { value: string | null; color?: string }) {
   if (!value) return <span style={{ color:"white" }}>—</span>;
-  return <span style={{ color:"white" }}>{new Date(value.slice(0,10)+"T00:00:00").toLocaleDateString("fr-FR")}</span>;
+  return <span style={{ color }}>{new Date(value.slice(0,10)+"T00:00:00").toLocaleDateString("fr-FR")}</span>;
 }
 
 export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelectionChange }: {
@@ -81,6 +81,21 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
     if (!silent) setLoading(true);
     try {
       const data = await loadFinitionRowsAction();
+      // Enrichir chaque row avec _dateRef (date de réception pour le statut de délai)
+      // = la plus récente date de réception disponible (métal ou résine)
+      for (const r of data as any[]) {
+        const dm = r.sector_design_metal ?? {};
+        const ur = r.sector_usinage_resine ?? {};
+        const ut = r.sector_usinage_titane ?? {};
+        const metalDate  = ut.reception_metal_at ?? dm.reception_metal_date ?? null;
+        const resineDate = ur.reception_resine_at ?? null;
+        if (metalDate && resineDate) {
+          const a = new Date(metalDate.slice(0,10)), b = new Date(resineDate.slice(0,10));
+          r._dateRef = a >= b ? metalDate : resineDate;
+        } else {
+          r._dateRef = metalDate ?? resineDate;
+        }
+      }
       setRows(data);
       setError(null);
     }
@@ -161,14 +176,14 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
   const filtered = useMemo(() => {
     const base = rows.filter(row => {
       if (!filter || filter === "all") return true;
-      const exp = row.date_expedition?.slice(0,10);
-      if (filter === "today")    return exp === today;
-      if (filter === "tomorrow") return exp === tomorrow;
-      if (filter === "late")     return exp !== undefined && exp !== null && exp < today;
+      const ref = ((row as any)._dateRef ?? row.date_expedition)?.slice(0,10);
+      if (filter === "today")    return ref === today;
+      if (filter === "tomorrow") return ref === tomorrow;
+      if (filter === "late")     return ref !== undefined && ref !== null && ref < today;
       return true;
     });
-    // Tri par date d'expédition (urgents d'abord)
-    return [...base].sort((a, b) => (a.date_expedition ?? "9999").localeCompare(b.date_expedition ?? "9999"));
+    // Tri par date de réception (urgents d'abord)
+    return [...base].sort((a, b) => (((a as any)._dateRef ?? a.date_expedition) ?? "9999").localeCompare(((b as any)._dateRef ?? b.date_expedition) ?? "9999"));
   }, [rows, filter, today, tomorrow]);
 
 
@@ -259,7 +274,6 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
               const ut  = (row as any).sector_usinage_titane ?? {};
 
               const validated     = Boolean(fin.validation);
-              const status        = getDelaiStatus(row.date_expedition, validated);
               const isHighlighted = highlightId === String(row.id);
               const isChecked     = checkedIds.has(String(row.id));
               const isProvisoire  = row.nature_du_travail === "Provisoire Résine";
@@ -272,18 +286,15 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
               const receptionMetalDate  = ut.reception_metal_at ?? dm.reception_metal_date ?? null;
               const receptionResineDate = ur.reception_resine_at ?? null;
 
-              // Déterminer si le cas a besoin de métal (assigné à UT) et/ou résine (assigné à UR)
-              const needsMetal  = Boolean((row as any).has_ut_assignment);
-              const needsResine = Boolean((row as any).has_ur_assignment);
+              // Déterminer si le cas a besoin de métal et/ou résine selon la nature et le type de dents
+              const needsMetal  = row.nature_du_travail === "Chassis Argoat";
+              const needsResine = typeDents !== "Dents du commerce";
 
               const d1 = receptionMetalDate  ? new Date(receptionMetalDate.slice(0,10))  : null;
               const d2 = receptionResineDate ? new Date(receptionResineDate.slice(0,10)) : null;
 
-              // Si le cas a besoin des deux, réception complète = la plus tardive quand les deux sont remplies
-              // Si le cas n'a besoin que d'une seule, celle-ci suffit
               let receptionCompleteDate: string | null = null;
               if (needsMetal && needsResine) {
-                // Les deux sont requises → complète uniquement quand les deux sont là
                 if (d1 && d2) {
                   receptionCompleteDate = d1 >= d2 ? receptionMetalDate : receptionResineDate;
                 }
@@ -291,11 +302,10 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                 receptionCompleteDate = receptionMetalDate;
               } else if (needsResine) {
                 receptionCompleteDate = receptionResineDate;
-              } else {
-                // Aucun besoin identifié → fallback ancien comportement
-                receptionCompleteDate = d1 && d2 ? (d1 >= d2 ? receptionMetalDate : receptionResineDate)
-                  : d1 ? receptionMetalDate : d2 ? receptionResineDate : null;
               }
+
+              // Délai basé sur la plus récente date de réception disponible
+              const status = getDelaiStatus((row as any)._dateRef ?? null, validated);
 
               const typeMeta   = TYPE_DENTS_OPTIONS.find(o => o.value === typeDents) ?? { color:"white" };
               const natureMeta = NATURE_META[row.nature_du_travail ?? ""];
@@ -342,9 +352,11 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                     {row.created_at ? new Date(row.created_at).toLocaleDateString("fr-FR") : "—"}
                   </td>
 
-                  <td style={{ ...tdRead, color:status==="late"?"#f87171":status==="today"?"#f59e0b":"white", fontWeight:status==="late"||status==="today"?700:400 }}>
-                    {row.date_expedition ? new Date(row.date_expedition.slice(0,10)+"T00:00:00").toLocaleDateString("fr-FR") : "—"}
+                  {(() => { const rawExp = row.date_expedition?.slice(0,10) ?? ""; const today = new Date().toISOString().split("T")[0]; const expColor = rawExp && rawExp < today ? "#f87171" : rawExp && rawExp === today ? "#f59e0b" : "white"; return (
+                  <td style={tdRead}>
+                    <span style={{ color: expColor, fontWeight: rawExp && rawExp <= today ? 700 : undefined }}>{row.date_expedition ? new Date(row.date_expedition.slice(0,10)+"T00:00:00").toLocaleDateString("fr-FR") : "—"}</span>
                   </td>
+                  ); })()}
 
                   <td style={tdBase}><NatureBadge nature={row.nature_du_travail} /></td>
 
@@ -360,21 +372,29 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                   } : tdRead} title={isDentsCommerce ? "Non applicable pour Dents du commerce" : undefined}>
                     {isDentsCommerce ? "⊘" : (nbBlocs ?? "—")}
                   </td>
-                  <td style={isProvisoire ? {
-                    ...tdBase,
-                    background:"repeating-linear-gradient(135deg, rgba(239,68,68,0.07) 0px, rgba(239,68,68,0.07) 4px, transparent 4px, transparent 8px)",
-                    cursor:"not-allowed", color:"rgba(239,68,68,0.5)",
-                  } : tdRead} title={isProvisoire ? "Non applicable pour Provisoire Résine" : undefined}>
-                    {isProvisoire ? "⊘" : <DateCell value={receptionMetalDate} />}
-                  </td>
-                  <td style={isDentsCommerce ? {
-                    ...tdBase,
-                    background:"repeating-linear-gradient(135deg, rgba(239,68,68,0.07) 0px, rgba(239,68,68,0.07) 4px, transparent 4px, transparent 8px)",
-                    cursor:"not-allowed", color:"rgba(239,68,68,0.5)",
-                  } : tdRead} title={isDentsCommerce ? "Non applicable pour Dents du commerce" : undefined}>
-                    {isDentsCommerce ? "⊘" : <DateCell value={receptionResineDate} />}
-                  </td>
-                  <td style={tdRead}><DateCell value={receptionCompleteDate} /></td>
+                  {(() => {
+                    const urgentColor = status==="late"?"#f87171":status==="today"?"#f59e0b":undefined;
+                    const urgentWeight = (status==="late"||status==="today") ? 700 : 400;
+                    const rcStyle = urgentColor ? { ...tdRead, fontWeight: urgentWeight } : tdRead;
+                    const dateColor = urgentColor ?? "white";
+                    return (<>
+                      <td style={isProvisoire ? {
+                        ...tdBase,
+                        background:"repeating-linear-gradient(135deg, rgba(239,68,68,0.07) 0px, rgba(239,68,68,0.07) 4px, transparent 4px, transparent 8px)",
+                        cursor:"not-allowed", color:"rgba(239,68,68,0.5)",
+                      } : rcStyle} title={isProvisoire ? "Non applicable pour Provisoire Résine" : undefined}>
+                        {isProvisoire ? "⊘" : <DateCell value={receptionMetalDate} color={receptionMetalDate ? dateColor : "white"} />}
+                      </td>
+                      <td style={isDentsCommerce ? {
+                        ...tdBase,
+                        background:"repeating-linear-gradient(135deg, rgba(239,68,68,0.07) 0px, rgba(239,68,68,0.07) 4px, transparent 4px, transparent 8px)",
+                        cursor:"not-allowed", color:"rgba(239,68,68,0.5)",
+                      } : rcStyle} title={isDentsCommerce ? "Non applicable pour Dents du commerce" : undefined}>
+                        {isDentsCommerce ? "⊘" : <DateCell value={receptionResineDate} color={receptionResineDate ? dateColor : "white"} />}
+                      </td>
+                      <td style={rcStyle}><DateCell value={receptionCompleteDate} color={receptionCompleteDate ? dateColor : "white"} /></td>
+                    </>);
+                  })()}
 
                   <td style={{ ...tdBase, width:48 }}>
                     {validated ? (

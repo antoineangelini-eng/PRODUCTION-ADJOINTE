@@ -78,35 +78,28 @@ export function FieldBlocked({ label }: { label: string }) {
   );
 }
 
-export function ReopenModal({ caseNumber, natureDuTravail, dateExpedition, sectorLabel, saving, error, note, setNote, onClose, onConfirm }: {
+export function ReopenModal({ caseNumber, natureDuTravail, dateExpedition, sectorLabel, saving, error, onClose, onConfirm, note, setNote }: {
   caseNumber: string | null; natureDuTravail: string | null; dateExpedition: string | null;
   sectorLabel: string; saving: boolean; error: string | null;
-  note: string; setNote: (v: string) => void;
   onClose: () => void; onConfirm: () => void;
+  note?: string; setNote?: (v: string) => void;
 }) {
   const natColor = NATURE_META[natureDuTravail ?? ""]?.color ?? "#555";
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "#1c1c1c", border: "1px solid #333", borderRadius: 12, padding: 20, width: 340 }}>
-        <div style={{ background: "#141414", border: "1px solid #222", borderRadius: 8, padding: "10px 14px", marginBottom: 12 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-            <span style={{ fontSize: 16, fontWeight: 700, color: "white" }}>{caseNumber}</span>
-            <span style={{ fontSize: 9, fontWeight: 600, padding: "2px 7px", borderRadius: 4, background: `${natColor}18`, border: `1px solid ${natColor}40`, color: natColor }}>{natureDuTravail}</span>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#1c1c1c", border: "1px solid #333", borderRadius: 12, padding: 20, width: 360 }}>
+        <div style={{ background: "#141414", border: "1px solid #222", borderRadius: 8, padding: "10px 14px", marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+            <span style={{ fontSize: 18, fontWeight: 800, color: "white" }}>{caseNumber}</span>
+            <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4, background: `${natColor}18`, border: `1px solid ${natColor}40`, color: natColor }}>{natureDuTravail}</span>
           </div>
-          <div style={{ fontSize: 11, color: "#666" }}>Expédition : {fmtDate(dateExpedition)}</div>
+          <div style={{ fontSize: 11, color: "#555" }}>Expédition : {fmtDate(dateExpedition)}</div>
         </div>
-        <div style={{ background: "#141414", border: "1px solid #2a2a2a", borderRadius: 7, padding: "8px 12px", fontSize: 12, color: "#888", marginBottom: 10 }}>
+        <div style={{ background: "#141414", border: "1px solid #2a2a2a", borderRadius: 7, padding: "9px 12px", fontSize: 12, color: "#e0e0e0", marginBottom: 12 }}>
           Réinsertion dans <span style={{ color: "#e0e0e0", fontWeight: 600 }}>{sectorLabel}</span>
         </div>
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 9, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.06em", color: "#666", marginBottom: 5 }}>
-            Note <span style={{ color: "#444", fontWeight: 400 }}>(optionnel)</span>
-          </div>
-          <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Ex : correction teinte, modèle à revoir…" rows={2}
-            style={{ width: "100%", background: "#141414", border: "1px solid #2a2a2a", borderRadius: 6, color: "white", fontSize: 11, padding: "7px 10px", outline: "none", resize: "none" as const, boxSizing: "border-box" as const, fontFamily: "inherit" }} />
-        </div>
-        <div style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 7, padding: "8px 12px", fontSize: 11, color: "#f59e0b", marginBottom: 14 }}>
-          ⚠ Les données des autres secteurs sont conservées. Un bandeau apparaîtra sur le cas.
+        <div style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 7, padding: "9px 12px", fontSize: 11, color: "#f59e0b", marginBottom: 14 }}>
+          ⚠ Les données existantes sont conservées. Le cas repassera en actif.
         </div>
         {error && <div style={{ fontSize: 11, color: "#f87171", marginBottom: 8 }}>✕ {error}</div>}
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>

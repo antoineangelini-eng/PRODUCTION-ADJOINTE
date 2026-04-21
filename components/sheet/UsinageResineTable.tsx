@@ -399,6 +399,19 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
         blockers.push({ case_id: id, error_message: `Cas ${row.case_number} — champs manquants : ${miss.join(", ")}` });
       }
     }
+    // Vérification : date de réception résine ne dépasse pas la date d'expédition
+    for (const id of checkedIds) {
+      const row = rows.find(r => String(r.id) === id);
+      if (!row) continue;
+      const ur = (row as any).sector_usinage_resine ?? {};
+      const receptionDate = ur.reception_resine_at?.slice(0, 10);
+      const expeditionDate = (row as any).date_expedition?.slice(0, 10);
+      if (receptionDate && expeditionDate && receptionDate > expeditionDate) {
+        const fmtR = new Date(receptionDate + "T00:00:00").toLocaleDateString("fr-FR");
+        const fmtE = new Date(expeditionDate + "T00:00:00").toLocaleDateString("fr-FR");
+        blockers.push({ case_id: id, error_message: `Cas ${row.case_number} : date de réception résine (${fmtR}) postérieure à la date d'expédition (${fmtE}). Validation impossible.` });
+      }
+    }
     if (blockers.length > 0) {
       setBatchResult({ okIds: [], errors: blockers });
       return;
@@ -522,7 +535,9 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
                     {(row as any).sent_by_name && <span style={{ fontSize: 9, color: "#818cf8", fontWeight: 600, whiteSpace: "nowrap" as const }}>via {(row as any).sent_by_name}</span>}
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                    <div style={{ textAlign:"right" }}><span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:"#e0e0e0", display:"block", marginBottom:2 }}>Expédition</span><span style={{ fontSize:13, color:"#e0e0e0", fontWeight:700 }}>{fmtDate(row.date_expedition)}</span></div>
+                    {(() => { const rawExp = row.date_expedition?.slice(0,10) ?? ""; const today = new Date().toISOString().split("T")[0]; const expColor = rawExp && rawExp < today ? "#f87171" : rawExp && rawExp === today ? "#f59e0b" : "#e0e0e0"; return (
+                    <div style={{ textAlign:"right" }}><span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", color:expColor, display:"block", marginBottom:2 }}>Expédition</span><span style={{ fontSize:13, color:expColor, fontWeight:700 }}>{fmtDate(row.date_expedition)}</span></div>
+                    ); })()}
                     <input type="checkbox" checked={isChecked} onChange={e => { const id=String(row.id); setCheckedIds(prev => { const n=new Set(prev); e.target.checked?n.add(id):n.delete(id); return n; }); }} style={{ width:15, height:15, cursor:"pointer", accentColor:"#4ade80", flexShrink:0 }} />
                     {(isAdmin || !(row as any).created_by || (row as any).created_by === currentUserId) && <button onClick={() => setConfirmDeleteId(String(row.id))} title="Supprimer le cas" style={{ background:"none", border:"none", color:"#f87171", cursor:"pointer", fontSize:14, padding:4, opacity:0.6, transition:"opacity 150ms" }} onMouseEnter={e => e.currentTarget.style.opacity="1"} onMouseLeave={e => e.currentTarget.style.opacity="0.6"}>🗑</button>}
                   </div>
@@ -539,7 +554,9 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
                 <div style={{ ...grid2, background:BG_LABEL_SAISIE, borderBottom:BD_LIGHT }}><Lbl color="#4ade80">Production</Lbl><Lbl color="#4ade80">Réception</Lbl></div>
                 <div style={{ ...vals2, background:BG_VAL_SAISIE, borderBottom:BD_MED }}>
                   <button onClick={() => { const newVal=!isDone; patchRow(String(row.id),"ur","usinage_dents_resine",newVal); if(newVal){const j1=addBusinessDays(new Date(),1).toISOString().split("T")[0];patchRow(String(row.id),"ur","reception_resine_at",j1);saveCell(String(row.id),"usinage_with_reception",JSON.stringify({usinage_dents_resine:true,reception_resine_at:j1}));}else{patchRow(String(row.id),"ur","reception_resine_at",null);saveCell(String(row.id),"usinage_with_reception",JSON.stringify({usinage_dents_resine:false,reception_resine_at:null}));} }} style={{ background:isDone?"rgba(74,222,128,0.15)":"#232323", border:isDone?"1px solid rgba(74,222,128,0.4)":"1px solid #333", color:isDone?"#4ade80":"#555", padding:"3px 0", borderRadius:5, cursor:"pointer", fontWeight:700, fontSize:12, transition:"all 150ms", width:"90%", textAlign:"center" as const }}>{isDone?"✓ Usiné":"—"}</button>
-                  <button onClick={e => { const rect=e.currentTarget.getBoundingClientRect(); setEditingDate({caseId:String(row.id),column:"reception_resine_at",value:ur.reception_resine_at?.slice(0,10)??"",rect}); }} style={{ background:"#1a1a1a", border:"1px solid #2a2a2a", borderRadius:5, color:ur.reception_resine_at?"#d0d0d0":"#3a3a3a", fontSize:12, cursor:"pointer", padding:"3px 0", width:"90%", textAlign:"center" as const, transition:"background 100ms" }} onMouseEnter={e => e.currentTarget.style.background="#222"} onMouseLeave={e => e.currentTarget.style.background="#1a1a1a"}>{ur.reception_resine_at?fmtDate(ur.reception_resine_at.slice(0,10)):"—"}</button>
+                  {(() => { const isReceptionLate = ur.reception_resine_at && row.date_expedition?.slice(0,10) && ur.reception_resine_at.slice(0,10) > row.date_expedition.slice(0,10); return (
+                  <button onClick={e => { const rect=e.currentTarget.getBoundingClientRect(); setEditingDate({caseId:String(row.id),column:"reception_resine_at",value:ur.reception_resine_at?.slice(0,10)??"",rect}); }} style={{ background:isReceptionLate?"rgba(248,113,113,0.1)":"#1a1a1a", border:isReceptionLate?"1px solid rgba(248,113,113,0.3)":"1px solid #2a2a2a", borderRadius:5, color:isReceptionLate?"#f87171":ur.reception_resine_at?"#d0d0d0":"#3a3a3a", fontWeight:isReceptionLate?700:undefined, fontSize:12, cursor:"pointer", padding:"3px 0", width:"90%", textAlign:"center" as const, transition:"background 100ms" }} onMouseEnter={e => e.currentTarget.style.background=isReceptionLate?"rgba(248,113,113,0.15)":"#222"} onMouseLeave={e => e.currentTarget.style.background=isReceptionLate?"rgba(248,113,113,0.1)":"#1a1a1a"}>{ur.reception_resine_at?fmtDate(ur.reception_resine_at.slice(0,10)):"—"}</button>
+                  ); })()}
                 </div>
                 {/* ── Machine / N° disque — double-clic active le mode double ── */}
                 {(() => {

@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
 import { PhysicalBadge } from "@/components/sheet/PhysicalBadge";
+import { ReopenModal as SharedReopenModal } from "@/components/history/history-shared";
 import { loadDmHistoryAction, reopenCaseAction, type DmHistoryRow } from "./history-actions";
 
 const NATURE_META: Record<string, { color: string }> = {
@@ -93,7 +94,6 @@ function ReopenModal({ row, sectorCode, sectorLabel, onClose, onDone }: {
 }) {
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState<string | null>(null);
-  const natColor = NATURE_META[row.nature_du_travail ?? ""]?.color ?? "#555";
 
   async function confirm() {
     setSaving(true); setError(null);
@@ -104,30 +104,16 @@ function ReopenModal({ row, sectorCode, sectorLabel, onClose, onDone }: {
   }
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "#1c1c1c", border: "1px solid #333", borderRadius: 12, padding: 20, width: 360 }}>
-        <div style={{ background: "#141414", border: "1px solid #222", borderRadius: 8, padding: "10px 14px", marginBottom: 14 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-            <span style={{ fontSize: 18, fontWeight: 800, color: "white" }}>{row.case_number}</span>
-            <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4, background: `${natColor}18`, border: `1px solid ${natColor}40`, color: natColor }}>{row.nature_du_travail}</span>
-          </div>
-          <div style={{ fontSize: 11, color: "#555" }}>Expédition : {fmtDate(row.date_expedition)}</div>
-        </div>
-        <div style={{ background: "#141414", border: "1px solid #2a2a2a", borderRadius: 7, padding: "9px 12px", fontSize: 12, color: "#e0e0e0", marginBottom: 12 }}>
-          Réinsertion dans <span style={{ color: "#e0e0e0", fontWeight: 600 }}>{sectorLabel}</span>
-        </div>
-        <div style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 7, padding: "9px 12px", fontSize: 11, color: "#f59e0b", marginBottom: 14 }}>
-          ⚠ Les données existantes sont conservées. Le cas repassera en actif.
-        </div>
-        {error && <div style={{ fontSize: 11, color: "#f87171", marginBottom: 8 }}>✕ {error}</div>}
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button onClick={onClose} style={{ background: "#1e1e1e", border: "1px solid #2e2e2e", color: "#ccc", padding: "7px 14px", borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Annuler</button>
-          <button onClick={confirm} disabled={saving} style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.4)", color: "#4ade80", padding: "7px 18px", borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
-            {saving ? "…" : "↩ Confirmer"}
-          </button>
-        </div>
-      </div>
-    </div>
+    <SharedReopenModal
+      caseNumber={row.case_number}
+      natureDuTravail={row.nature_du_travail}
+      dateExpedition={row.date_expedition}
+      sectorLabel={sectorLabel}
+      saving={saving}
+      error={error}
+      onClose={onClose}
+      onConfirm={confirm}
+    />
   );
 }
 

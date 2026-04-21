@@ -653,6 +653,19 @@ export function DesignMetalTable({
         blockers.push({ case_id: id, error_message: `Cas ${row.case_number} — champs manquants : ${miss.join(", ")}` });
       }
     }
+    // Vérification : date de réception métal ne dépasse pas la date d'expédition
+    for (const id of checkedIds) {
+      const row = rows.find(r => String(r.id) === id);
+      if (!row) continue;
+      const dm = (row as any).sector_design_metal ?? {};
+      const receptionDate = dm.reception_metal_date?.slice(0, 10);
+      const expeditionDate = (row as any).date_expedition?.slice(0, 10);
+      if (receptionDate && expeditionDate && receptionDate > expeditionDate) {
+        const fmtR = new Date(receptionDate + "T00:00:00").toLocaleDateString("fr-FR");
+        const fmtE = new Date(expeditionDate + "T00:00:00").toLocaleDateString("fr-FR");
+        blockers.push({ case_id: id, error_message: `Cas ${row.case_number} : date de réception métal (${fmtR}) postérieure à la date d'expédition (${fmtE}). Validation impossible.` });
+      }
+    }
     if (blockers.length > 0) {
       setBatchResult({ okIds: [], errors: blockers });
       return;
@@ -847,7 +860,7 @@ export function DesignMetalTable({
               <ul style={{ margin: 0, paddingLeft: 16 }}>
                 {batchResult.errors.map((e, i) => (
                   <li key={i} style={{ fontSize: 12, marginBottom: 4 }}>
-                    <span style={{ fontWeight: 600 }}>{e.case_id ?? "?"}</span> — {e.error_message}
+                    {e.error_message}
                   </li>
                 ))}
               </ul>
@@ -1023,9 +1036,11 @@ export function DesignMetalTable({
                             setEditingDate({ caseId: String(row.id), column: "date_expedition", rect: e.currentTarget.getBoundingClientRect() });
                           }}
                         >
-                          <span style={{ fontSize: 12, color: raw ? "#d0d0d0" : "#3a3a3a" }}>
+                          {(() => { const today = new Date().toISOString().split("T")[0]; const expColor = raw && raw < today ? "#f87171" : raw && raw === today ? "#f59e0b" : raw ? "#d0d0d0" : "#3a3a3a"; return (
+                          <span style={{ fontSize: 12, color: expColor, fontWeight: raw && raw <= today ? 700 : undefined }}>
                             {raw ? fmtDate(raw) : "—"}
                           </span>
+                          ); })()}
                         </td>
                       );
                     }
@@ -1194,6 +1209,7 @@ export function DesignMetalTable({
 
                     if (col.type === "date") {
                       const raw = dm[col.column!]?.slice(0, 10) ?? "";
+                      const isReceptionLate = col.column === "reception_metal_date" && raw && row.date_expedition?.slice(0, 10) && raw > row.date_expedition.slice(0, 10);
                       return (
                         <td
                           key={col.key}
@@ -1203,7 +1219,7 @@ export function DesignMetalTable({
                             setEditingDate({ caseId: String(row.id), column: col.column!, rect: e.currentTarget.getBoundingClientRect() });
                           }}
                         >
-                          <span style={{ fontSize: 12, color: raw ? "#d0d0d0" : "#3a3a3a" }}>
+                          <span style={{ fontSize: 12, color: isReceptionLate ? "#f87171" : raw ? "#d0d0d0" : "#3a3a3a", fontWeight: isReceptionLate ? 700 : undefined }}>
                             {raw ? fmtDate(raw) : "—"}
                           </span>
                         </td>

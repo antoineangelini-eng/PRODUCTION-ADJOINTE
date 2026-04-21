@@ -560,6 +560,19 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
         blockers.push({ case_id: id, error_message: `Cas ${row.case_number} — champs manquants : ${miss.join(", ")}` });
       }
     }
+    // Vérification : date de réception métal ne dépasse pas la date d'expédition
+    for (const id of checkedIds) {
+      const row = rows.find(r => String(r.id) === id);
+      if (!row) continue;
+      const ut = (row as any).sector_usinage_titane ?? {};
+      const receptionDate = ut.reception_metal_at?.slice(0, 10);
+      const expeditionDate = (row as any).date_expedition?.slice(0, 10);
+      if (receptionDate && expeditionDate && receptionDate > expeditionDate) {
+        const fmtR = new Date(receptionDate + "T00:00:00").toLocaleDateString("fr-FR");
+        const fmtE = new Date(expeditionDate + "T00:00:00").toLocaleDateString("fr-FR");
+        blockers.push({ case_id: id, error_message: `Cas ${row.case_number} : date de réception métal (${fmtR}) postérieure à la date d'expédition (${fmtE}). Validation impossible.` });
+      }
+    }
     if (blockers.length > 0) {
       setBatchResult({ okIds: [], errors: blockers });
       return;
@@ -724,7 +737,9 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
                   </td>
 
                   <td style={tdCard}>{row.created_at ? new Date(row.created_at).toLocaleDateString("fr-FR") : "—"}</td>
-                  <td style={tdCard}>{row.date_expedition ? new Date(row.date_expedition).toLocaleDateString("fr-FR") : "—"}</td>
+                  {(() => { const raw = row.date_expedition?.slice(0,10) ?? ""; const today = new Date().toISOString().split("T")[0]; const expColor = raw && raw < today ? "#f87171" : raw && raw === today ? "#f59e0b" : undefined; return (
+                  <td style={tdCard}><span style={{ color: expColor, fontWeight: expColor ? 700 : undefined }}>{row.date_expedition ? new Date(row.date_expedition).toLocaleDateString("fr-FR") : "—"}</span></td>
+                  ); })()}
                   <td style={tdCard}><NatureBadge nature={nat} /></td>
                   <td style={tdCard}><BoolReadOnly value={dm.design_chassis ?? null} /></td>
                   <td style={tdCard}><DateTimeCell value={dm.design_chassis_at ?? null} /></td>
@@ -807,11 +822,13 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
                   />
 
                   {/* Réception métal */}
+                  {(() => { const isReceptionLate = rawDate && row.date_expedition?.slice(0,10) && rawDate > row.date_expedition.slice(0,10); return (
                   <td style={{ ...tdCard, cursor: "pointer" }} onClick={e => { e.stopPropagation(); setEditingDate({ caseId: String(row.id), column: "reception_metal_at", value: rawDate, rect: (e.currentTarget as HTMLElement).getBoundingClientRect() }); }}>
-                    <span style={{ color: rawDate ? "white" : "#555", borderBottom: "1px solid #333", padding: "2px 6px" }}>
+                    <span style={{ color: isReceptionLate ? "#f87171" : rawDate ? "white" : "#555", fontWeight: isReceptionLate ? 700 : undefined, borderBottom: "1px solid #333", padding: "2px 6px" }}>
                       {rawDate ? new Date(rawDate + "T00:00:00").toLocaleDateString("fr-FR") : "—"}
                     </span>
                   </td>
+                  ); })()}
 
                   {/* Modèle à faire */}
                   <td style={tdCard}>

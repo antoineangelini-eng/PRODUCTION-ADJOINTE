@@ -436,12 +436,14 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
                   <td style={tdCardFirst} onDoubleClick={e=>{e.stopPropagation();handleTogglePhysical(String(row.id),Boolean(row.is_physical));}} title="Double-clic pour basculer physique / numérique"><div style={{display:"flex",flexDirection:"column",gap:2,cursor:"default"}}><div style={{display:"inline-flex",alignItems:"center",gap:6}}><div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:24,padding:"2px 8px",borderRadius:8,color:"#ffffff",background:isA?"rgba(255,255,255,0.04)":"transparent",border:isA?"1px solid rgba(255,255,255,0.06)":"1px solid transparent",transition:"all 160ms"}}>{row.case_number}</div>{row.is_physical&&<PhysicalBadge/>}</div>{(row as any).sent_by_name&&<span style={{fontSize:9,color:"#818cf8",fontWeight:600,whiteSpace:"nowrap",paddingLeft:8}}>via {(row as any).sent_by_name}</span>}</div></td>
                   <td style={tdCard}>{fmtDate(row.created_at)}</td>
 
+                  {(() => { const rawExp = row.date_expedition?.slice(0,10) ?? ""; const today = new Date().toISOString().split("T")[0]; const expColor = rawExp && rawExp < today ? "#f87171" : rawExp && rawExp === today ? "#f59e0b" : undefined; return (
                   <td style={{...tdCard,cursor:"pointer"}} onClick={(e)=>{e.stopPropagation();const rect=(e.currentTarget as HTMLElement).getBoundingClientRect();setEditingExpId(String(row.id));setEditingExpRect(rect);}}>
-                    {row.date_expedition?new Date(row.date_expedition).toLocaleDateString("fr-FR"):<span style={{color:"#555",fontSize:11}}>— cliquer —</span>}
+                    {row.date_expedition?<span style={{color:expColor,fontWeight:expColor?700:undefined}}>{new Date(row.date_expedition).toLocaleDateString("fr-FR")}</span>:<span style={{color:"#555",fontSize:11}}>— cliquer —</span>}
                     {editingExpId===String(row.id)&&editingExpRect&&(
                       <MiniCalendar value={row.date_expedition?String(row.date_expedition).slice(0,10):""} onSelect={date=>{patchRow(String(row.id),null,"date_expedition",date||null);saveCaseDateExpedition(String(row.id),date);setEditingExpId(null);}} onClose={()=>setEditingExpId(null)} rect={editingExpRect}/>
                     )}
                   </td>
+                  ); })()}
 
                   <td style={tdCard}><span style={{display:"inline-flex",alignItems:"center",padding:"2px 10px",borderRadius:6,background:(natureMeta?.color??"#fff")+"18",border:`1px solid ${(natureMeta?.color??"#fff")}44`,color:natureMeta?.color??"#fff",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{nat||"—"}</span></td>
 
