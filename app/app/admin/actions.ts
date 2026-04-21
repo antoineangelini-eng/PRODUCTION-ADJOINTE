@@ -64,6 +64,7 @@ export type AdminUser = {
   sector: string;
   sectors: string[];
   display_name: string;
+  custom_display_name: string | null;
   password_hint: string | null;
 };
 
@@ -227,12 +228,12 @@ export async function loadUsersAction(): Promise<AdminUser[]> {
   }
   console.log("[loadUsersAction] authUsers.length =", authUsers.length);
 
-  // 2. Récupérer les profils existants — on essaie d'abord avec email, fallback sans
+  // 2. Récupérer les profils existants — on essaie d'abord avec email + display_name, fallback sans
   let profiles: any[] | null = null;
   {
     const { data, error } = await supabase
       .from("profiles")
-      .select("user_id, sector, sectors, email, password_hint");
+      .select("user_id, sector, sectors, email, password_hint, display_name");
     if (error) {
       console.error("[loadUsersAction] profiles select error (with email):", error);
       // Retry sans email (au cas où la colonne n'existe pas)
@@ -323,7 +324,8 @@ export async function loadUsersAction(): Promise<AdminUser[]> {
       email: p.email ?? "",
       sector: p.sector ?? "",
       sectors,
-      display_name: (p.email ?? "").split(".")[0] ?? p.user_id,
+      display_name: p.display_name || ((p.email ?? "").split("@")[0] ?? "").split(".").map((w: string) => w ? w[0].toUpperCase() + w.slice(1) : "").join(" ") || p.user_id,
+      custom_display_name: p.display_name ?? null,
       password_hint: p.password_hint ?? null,
     };
   });
@@ -438,6 +440,23 @@ export async function adminResetPasswordAction(userId: string, newPassword: stri
   const supabase = createAdminClient();
   const { error } = await supabase.auth.admin.updateUserById(userId, { password: newPassword });
   if (error) throw new Error(error.message);
+}
+
+export async function updateDisplayNameAction(userId: string, displayName: string): Promise<{ ok: boolean; error?: string }> {
+  const supabase = createAdminClient();
+  // Mettre à jour le profil
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .update({ display_name: displayName.trim() || null })
+    .eq("user_id", userId);
+  if (profileError) return { ok: false, error: profileError.message };
+  // Mettre à jour la vue matérialisée / table user_display_names si c'est une vraie table
+  await supabase
+    .from("user_display_names")
+    .upsert({ user_id: userId, display_name: displayName.trim() || null }, { onConflict: "user_id" })
+    .then(() => {});
+  revalidatePath("/app/admin");
+  return { ok: true };
 }
 
 export async function loadWorkingDaysAction(): Promise<WorkingDayConfig[]> {

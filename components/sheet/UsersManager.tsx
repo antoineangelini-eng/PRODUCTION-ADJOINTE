@@ -7,6 +7,7 @@ import {
   deleteUserAction,
   adminResetPasswordAction,
   updatePasswordHintAction,
+  updateDisplayNameAction,
   type AdminUser,
 } from "@/app/app/admin/actions";
 
@@ -165,6 +166,57 @@ function PasswordCell({ password, onReset }: { password: string | null; onReset:
       </button>
       <button onClick={onReset} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 5, border: "1px solid #2a2a2a", background: "#1a1a1a", color: "#666", cursor: "pointer" }}>
         Changer
+      </button>
+    </div>
+  );
+}
+
+/* ── Inline display name editor ── */
+function DisplayNameEditor({ userId, currentName, emailName, onSaved }: {
+  userId: string; currentName: string | null; emailName: string; onSaved: (name: string | null) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(currentName ?? "");
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    setSaving(true);
+    const trimmed = value.trim();
+    await updateDisplayNameAction(userId, trimmed);
+    onSaved(trimmed || null);
+    setSaving(false);
+    setEditing(false);
+  }
+
+  if (!editing) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "white", marginBottom: 2 }}>
+          {currentName || emailName}
+        </div>
+        <button onClick={() => { setValue(currentName ?? ""); setEditing(true); }}
+          title="Modifier le nom affiché"
+          style={{ background: "none", border: "1px solid #2a2a2a", color: "#555", width: 22, height: 22, borderRadius: 5, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, transition: "all 150ms" }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = "#4ade80"; e.currentTarget.style.color = "#4ade80"; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = "#2a2a2a"; e.currentTarget.style.color = "#555"; }}
+        >✎</button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+      <input value={value} onChange={e => setValue(e.target.value)} autoFocus
+        placeholder={emailName}
+        onKeyDown={e => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
+        style={{ background: "#141414", border: "1px solid #4ade80", borderRadius: 5, color: "white", fontSize: 12, fontWeight: 700, padding: "3px 8px", width: 160, outline: "none" }} />
+      <button onClick={save} disabled={saving}
+        style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.4)", color: "#4ade80", fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 5, cursor: "pointer" }}>
+        {saving ? "…" : "✓"}
+      </button>
+      <button onClick={() => setEditing(false)}
+        style={{ background: "none", border: "1px solid #333", color: "#888", fontSize: 10, padding: "3px 8px", borderRadius: 5, cursor: "pointer" }}>
+        ✕
       </button>
     </div>
   );
@@ -406,7 +458,12 @@ export function UsersManager() {
                       </div>
 
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: "white", marginBottom: 2 }}>{name}</div>
+                        <DisplayNameEditor
+                          userId={user.user_id}
+                          currentName={user.custom_display_name}
+                          emailName={name}
+                          onSaved={(newName) => setUsers(prev => prev.map(u => u.user_id === user.user_id ? { ...u, custom_display_name: newName, display_name: newName || name } : u))}
+                        />
                         <div style={{ fontSize: 11, color: "#555" }}>{user.email || user.user_id}</div>
                       </div>
 
