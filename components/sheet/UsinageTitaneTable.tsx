@@ -14,6 +14,7 @@ import {
 } from "@/app/app/usinage-titane/actions";
 import { DeleteConfirmModal } from "@/components/sheet/DeleteConfirmModal";
 import { toggleOnHoldAction } from "@/lib/on-hold";
+import { OnHoldReasonModal, OnHoldReasonTooltip } from "@/components/sheet/OnHoldModal";
 
 // ── Constantes ───────────────────────────────────────────────────
 const NATURE_META: Record<string, { color: string }> = {
@@ -405,6 +406,8 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
   const [foundRowId, setFoundRowId]   = useState<string | null>(null);
   const [editingDate, setEditingDate] = useState<{ caseId: string; column: string; value: string; rect: DOMRect } | null>(null);
   const [holdBusy, setHoldBusy] = useState<string | null>(null);
+  const [holdModalCaseId, setHoldModalCaseId] = useState<string | null>(null);
+  const [reasonTooltip, setReasonTooltip] = useState<{ id: string; rect: { top: number; left: number; width: number; bottom: number } } | null>(null);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) { setLoading(true); setError(null); }
@@ -502,13 +505,20 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
     return () => clearTimeout(t);
   }, [focusId, loading, rows]);
 
-  async function handleToggleHold(caseId: string) {
+  function handlePauseClick(caseId: string) {
+    const row = rows.find(r => String(r.id) === caseId);
+    if ((row as any)?._on_hold) { doToggleHold(caseId, null); }
+    else { setHoldModalCaseId(caseId); }
+  }
+
+  async function doToggleHold(caseId: string, reason: string | null) {
     if (holdBusy) return;
     setHoldBusy(caseId);
+    setHoldModalCaseId(null);
     try {
-      const res = await toggleOnHoldAction(caseId, "usinage_titane");
+      const res = await toggleOnHoldAction(caseId, "usinage_titane", reason);
       if (res.ok) {
-        setRows(prev => prev.map(r => String(r.id) === caseId ? { ...r, _on_hold: res.nowOnHold, _on_hold_at: res.nowOnHold ? new Date().toISOString() : null } as any : r));
+        setRows(prev => prev.map(r => String(r.id) === caseId ? { ...r, _on_hold: res.nowOnHold, _on_hold_at: res.nowOnHold ? new Date().toISOString() : null, _on_hold_reason: res.nowOnHold ? reason : null } as any : r));
         if (res.nowOnHold) setCheckedIds(prev => { const n = new Set(prev); n.delete(caseId); return n; });
       }
     } finally { setHoldBusy(null); }
@@ -745,12 +755,12 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
                   <td style={tdCardFirst}>
                     <div style={{ display: "flex", flexDirection: "column" as const, gap: 2 }}>
                       <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                        <button onClick={e => { e.stopPropagation(); handleToggleHold(String(row.id)); }} disabled={holdBusy === String(row.id)} title={isOnHold ? "Réactiver le cas" : "Mettre en attente"} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 13, lineHeight: 1, color: isOnHold ? "#f59e0b" : "#555", transition: "color 150ms", opacity: holdBusy === String(row.id) ? 0.4 : 1 }} onMouseEnter={e => { if (!isOnHold) e.currentTarget.style.color = "#f59e0b"; }} onMouseLeave={e => { if (!isOnHold) e.currentTarget.style.color = "#555"; }}>{isOnHold ? "▶" : "⏸"}</button>
+                        <button onClick={e => { e.stopPropagation(); handlePauseClick(String(row.id)); }} disabled={holdBusy === String(row.id)} title={isOnHold ? "Réactiver le cas" : "Mettre en attente"} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 13, lineHeight: 1, color: isOnHold ? "#f59e0b" : "#555", transition: "color 150ms", opacity: holdBusy === String(row.id) ? 0.4 : 1 }} onMouseEnter={e => { if (!isOnHold) e.currentTarget.style.color = "#f59e0b"; }} onMouseLeave={e => { if (!isOnHold) e.currentTarget.style.color = "#555"; }}>{isOnHold ? "▶" : "⏸"}</button>
                         <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 24, padding: "2px 8px", borderRadius: 8, color: "#ffffff", background: isActive ? "rgba(255,255,255,0.04)" : "transparent", border: isActive ? "1px solid rgba(255,255,255,0.06)" : "1px solid transparent", transition: "all 160ms" }}>
                           {row.case_number}
                         </div>
                         {row.is_physical && <PhysicalBadge />}
-                        {isOnHold && <span style={{ fontSize: 9, fontWeight: 700, color: "#f59e0b", background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 4, padding: "1px 6px" }}>En attente</span>}
+                        {isOnHold && <button onClick={e => { e.stopPropagation(); const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setReasonTooltip(prev => prev?.id === String(row.id) ? null : { id: String(row.id), rect: { top: r.top, left: r.left, width: r.width, bottom: r.bottom } }); }} style={{ fontSize: 9, fontWeight: 700, color: "#f59e0b", background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 4, padding: "1px 6px", cursor: "pointer" }}>En attente {(row as any)._on_hold_reason ? "💬" : ""}</button>}
                       </div>
                       {(row as any).sent_by_name && <span style={{ fontSize: 9, color: "#818cf8", fontWeight: 600, whiteSpace: "nowrap" as const, paddingLeft: 8 }}>via {(row as any).sent_by_name}</span>}
                     </div>
@@ -903,6 +913,14 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
             onCancel={() => setConfirmDeleteId(null)}
           />
         );
+      })()}
+      {holdModalCaseId && (() => {
+        const r = rows.find(r => String(r.id) === holdModalCaseId);
+        return <OnHoldReasonModal caseNumber={r?.case_number ?? ""} presetReasons={["__other_first__", "Teinte", "Attente matière"]} onConfirm={(reason) => doToggleHold(holdModalCaseId, reason || null)} onCancel={() => setHoldModalCaseId(null)} />;
+      })()}
+      {reasonTooltip && (() => {
+        const r = rows.find(r => String(r.id) === reasonTooltip.id);
+        return <OnHoldReasonTooltip reason={(r as any)?._on_hold_reason} onHoldAt={(r as any)?._on_hold_at} anchorRect={reasonTooltip.rect} onClose={() => setReasonTooltip(null)} />;
       })()}
     </div>
   );

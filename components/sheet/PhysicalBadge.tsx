@@ -5,7 +5,7 @@
  */
 export function PhysicalBadge({ size = "sm" }: { size?: "sm" | "md" }) {
   const fs = size === "md" ? 10 : 9;
-  const pad = size === "md" ? "2px 7px" : "2px 6px";
+  const pad = size === "md" ? "2px 7px" : "1px 4px";
   const dot = size === "md" ? 5 : 4;
   return (
     <span
@@ -29,6 +29,7 @@ export function PhysicalBadge({ size = "sm" }: { size?: "sm" | "md" }) {
         fontFamily: "ui-sans-serif, system-ui, -apple-system, sans-serif",
         flexShrink: 0,
         whiteSpace: "nowrap",
+        alignSelf: "flex-start",
       }}
     >
       <span>Physique</span>

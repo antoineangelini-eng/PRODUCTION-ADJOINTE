@@ -103,26 +103,49 @@ export async function loadFinitionRowsAction(): Promise<FinitionRow[]> {
 
   const caseIds = rows.map((r: any) => r.id).filter(Boolean);
 
-  // Déterminer quels secteurs (UT / UR) sont assignés à chaque cas
+  // Déterminer quels secteurs (UT / UR) sont assignés à chaque cas + on_hold des autres secteurs
   let assignedSectors: Record<string, Set<string>> = {};
+  const SECTOR_LABELS: Record<string, string> = {
+    design_metal: "Design Métal",
+    design_resine: "Design Résine",
+    usinage_titane: "Usinage Titane",
+    usinage_resine: "Usinage Résine",
+  };
+  let otherOnHold: Record<string, { sector: string; sectorLabel: string; reason: string | null; at: string | null }> = {};
   if (caseIds.length > 0) {
     const admin = createAdminClient();
     const { data: assignData } = await admin
       .from("case_assignments")
-      .select("case_id, sector_code")
+      .select("case_id, sector_code, status, on_hold_at, on_hold_reason")
       .in("case_id", caseIds)
-      .in("sector_code", ["usinage_titane", "usinage_resine"]);
+      .in("sector_code", ["usinage_titane", "usinage_resine", "design_metal", "design_resine"]);
     for (const a of assignData ?? []) {
       if (!assignedSectors[a.case_id]) assignedSectors[a.case_id] = new Set();
       assignedSectors[a.case_id].add(a.sector_code);
+      // Capturer le premier on_hold trouvé pour ce cas
+      if (a.status === "on_hold" && !otherOnHold[a.case_id]) {
+        otherOnHold[a.case_id] = {
+          sector: a.sector_code,
+          sectorLabel: SECTOR_LABELS[a.sector_code] ?? a.sector_code,
+          reason: a.on_hold_reason ?? null,
+          at: a.on_hold_at ?? null,
+        };
+      }
     }
   }
 
-  // Ajouter has_ut / has_ur à chaque row
+  // Ajouter has_ut / has_ur + info on_hold d'un autre secteur
   for (const r of rows) {
     const sectors = assignedSectors[r.id] ?? new Set();
     (r as any).has_ut_assignment = sectors.has("usinage_titane");
     (r as any).has_ur_assignment = sectors.has("usinage_resine");
+    const oh = otherOnHold[r.id];
+    if (oh) {
+      (r as any)._other_on_hold = true;
+      (r as any)._other_on_hold_sector = oh.sectorLabel;
+      (r as any)._other_on_hold_reason = oh.reason;
+      (r as any)._other_on_hold_at = oh.at;
+    }
   }
 
   // Résoudre "Envoyé par" = qui a validé le cas en UT ou UR (secteur précédent)
