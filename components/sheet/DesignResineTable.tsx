@@ -499,7 +499,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
                     locked={!isProvisoire}
                     onToggle={()=>{const newVal=!modeleOk;patchRow(String(row.id),"sector_design_resine","modele_a_realiser_ok",newVal);const fd=new FormData();fd.set("case_id",String(row.id));fd.set("column","modele_a_realiser_ok");fd.set("kind","boolean");fd.set("current",String(modeleOk));saveDesignResineCellAction(fd);}}
                   /></td>
-                  <td style={tdCard} onClick={e=>e.stopPropagation()}><TextInput value={teintes} onSave={v=>{const val=v||dm.teintes_associees||null;patchRow(String(row.id),"sector_design_resine","teintes_associees",val);saveText(String(row.id),"teintes_associees",val??"");}} width={52}/></td>
+                  <td style={tdCard} onClick={e=>e.stopPropagation()}><TextInput value={teintes} onSave={v=>{const val=v||dm.teintes_associees||null;patchRow(String(row.id),"sector_design_resine","teintes_associees",val);saveText(String(row.id),"teintes_associees",val??"");}} width={120}/></td>
 
                   <td style={tdCard} onClick={e=>e.stopPropagation()}>
                     {isOnHold ? (

@@ -40,6 +40,10 @@ export type FinitionRow = {
   sector_finition: {
     validation: boolean | null;
     validation_at: string | null;
+    reception_metal_ok: boolean | null;
+    reception_metal_ok_at: string | null;
+    reception_resine_ok: boolean | null;
+    reception_resine_ok_at: string | null;
   } | null;
 };
 
@@ -86,7 +90,7 @@ export async function loadFinitionRowsAction(): Promise<FinitionRow[]> {
         sector_design_resine ( design_dents_resine, nb_blocs_de_dents, teintes_associees, type_de_dents, modele_a_realiser_ok ),
         sector_usinage_resine ( usinage_dents_resine, reception_resine_at ),
         sector_usinage_titane ( reception_metal, reception_metal_at, envoye_usinage, envoye_usinage_at ),
-        sector_finition ( validation, validation_at )
+        sector_finition ( validation, validation_at, reception_metal_ok, reception_metal_ok_at, reception_resine_ok, reception_resine_ok_at )
       )
     `)
     .eq("sector_code", "finition")
@@ -294,6 +298,30 @@ export async function resolveCaseForFinition(caseNumber: string): Promise<{
 
   if (!assignment) return null;
   return caseData;
+}
+
+/** Cocher réception métal ou résine pour un cas en Finition */
+export async function toggleFinitionReceptionAction(
+  caseId: string,
+  field: "reception_metal_ok" | "reception_resine_ok",
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = createAdminClient();
+  // Lire l'état actuel
+  const { data: current } = await supabase
+    .from("sector_finition")
+    .select(`${field}, reception_metal_ok, reception_resine_ok`)
+    .eq("case_id", caseId)
+    .single();
+  if (!current) return { ok: false, error: "Cas non trouvé en finition" };
+
+  const newVal = !current[field];
+  const atField = field + "_at";
+  const { error } = await supabase
+    .from("sector_finition")
+    .update({ [field]: newVal, [atField]: newVal ? new Date().toISOString() : null })
+    .eq("case_id", caseId);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
 }
 
 export async function getFinitionStatsAction(): Promise<{

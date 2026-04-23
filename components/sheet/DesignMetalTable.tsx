@@ -1259,7 +1259,7 @@ export function DesignMetalTable({
                           </td>
                         );
                       }
-                      const w = col.column === "dentall_case_number" ? 80 : col.column === "teintes_associees" ? 60 : 90;
+                      const w = col.column === "dentall_case_number" ? 80 : col.column === "teintes_associees" ? 120 : 90;
                       return (
                         <td key={col.key} style={tdCard} onClick={(e) => e.stopPropagation()}>
                           <InlineTextInput defaultValue={dm[col.column!] ?? ""} width={w} onSave={(v) => saveText(String(row.id), col.column!, v)} />

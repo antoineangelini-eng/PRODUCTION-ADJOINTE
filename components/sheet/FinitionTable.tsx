@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { loadFinitionRowsAction, validateFinitionBatchAction, type FinitionRow } from "@/app/app/finition/actions";
+import { loadFinitionRowsAction, validateFinitionBatchAction, toggleFinitionReceptionAction, type FinitionRow } from "@/app/app/finition/actions";
 import { OnHoldReasonTooltip } from "@/components/sheet/OnHoldModal";
 import { CaseDetailModal } from "@/components/sheet/CaseDetailModal";
 import { PhysicalBadge } from "@/components/sheet/PhysicalBadge";
@@ -79,6 +79,8 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
   const [batchResult, setBatchResult]   = useState<{ok:string[];errors:{id:string;msg:string}[]}|null>(null);
   const [detailCaseId, setDetailCaseId] = useState<string | null>(null);
   const [reasonTooltip, setReasonTooltip] = useState<{ id: string; rect: { top: number; left: number; width: number; bottom: number } } | null>(null);
+  const [receptionMode, setReceptionMode] = useState<"metal"|"resine"|null>(null);
+  const [receptionBusy, setReceptionBusy] = useState<string | null>(null);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -173,6 +175,23 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
     if (errors.length === 0) setTimeout(() => setBatchResult(null), 4000);
   }
 
+  async function handleReceptionToggle(caseId: string, field: "reception_metal_ok" | "reception_resine_ok") {
+    if (receptionBusy) return;
+    setReceptionBusy(caseId);
+    const res = await toggleFinitionReceptionAction(caseId, field);
+    if (res.ok) {
+      setRows(prev => prev.map(r => {
+        if (String(r.id) !== caseId) return r;
+        const fin = { ...((r as any).sector_finition ?? {}) };
+        const newVal = !fin[field];
+        fin[field] = newVal;
+        fin[field.replace("_ok", "_ok_at")] = newVal ? new Date().toISOString() : null;
+        return { ...r, sector_finition: fin } as any;
+      }));
+    }
+    setReceptionBusy(null);
+  }
+
   const today    = toDateStr(new Date());
   const tomorrow = toDateStr(new Date(Date.now() + 86400000));
 
@@ -244,6 +263,23 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
           )}
         </div>
         <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+          {/* Sélecteur mode réception */}
+          <div style={{ display:"flex", gap:2, background:"#111", borderRadius:8, border:"1px solid #333", padding:2 }}>
+            {(["metal","resine"] as const).map(mode => {
+              const active = receptionMode === mode;
+              return (
+                <button key={mode} onClick={() => setReceptionMode(prev => prev === mode ? null : mode)} style={{
+                  padding:"6px 14px", fontSize:11, fontWeight:700, cursor:"pointer",
+                  borderRadius:6, border:"none",
+                  background: active ? (mode === "metal" ? "rgba(96,165,250,0.15)" : "rgba(168,85,247,0.15)") : "transparent",
+                  color: active ? (mode === "metal" ? "#60a5fa" : "#a855f7") : "#666",
+                  transition:"all 150ms",
+                }}>
+                  {mode === "metal" ? "Réception métal" : "Réception résine"}
+                </button>
+              );
+            })}
+          </div>
           {lotPanel}
           <button onClick={handleBatch} disabled={batchPending || checkedIds.size === 0} style={{
             padding:"9px 18px",
@@ -269,9 +305,9 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
               <th style={thRead}>Type de dents</th>
               <th style={thRead}>Teintes</th>
               <th style={thRead}>Nb blocs</th>
-              <th style={thRead}>Réception métal</th>
-              <th style={thRead}>Réception résine</th>
-              <th style={thRead}>Réception complète</th>
+              <th style={{ ...thBase, color:"#60a5fa" }}>Réception métal</th>
+              <th style={{ ...thBase, color:"#a855f7" }}>Réception résine</th>
+              <th style={{ ...thBase, color:"#4ade80" }}>Réception complète</th>
               <th style={thEdit}>Validation</th>
             </tr>
           </thead>
@@ -304,32 +340,79 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
 
               // Déterminer si le cas a besoin de métal et/ou résine selon la nature et le type de dents
               const needsMetal  = row.nature_du_travail === "Chassis Argoat";
-              const needsResine = typeDents !== "Dents du commerce";
+              const needsResine = !isDentsCommerce;
 
+              // Réceptions Finition (checkboxes)
+              const metalOk  = Boolean(fin.reception_metal_ok);
+              const resineOk = Boolean(fin.reception_resine_ok);
+              const receptionComplete = (needsMetal ? metalOk : true) && (needsResine ? resineOk : true);
+
+              // Dates de réception (depuis UT/UR, pour info)
               const d1 = receptionMetalDate  ? new Date(receptionMetalDate.slice(0,10))  : null;
               const d2 = receptionResineDate ? new Date(receptionResineDate.slice(0,10)) : null;
 
+              // Date réception complète
               let receptionCompleteDate: string | null = null;
-              if (needsMetal && needsResine) {
-                if (d1 && d2) {
-                  receptionCompleteDate = d1 >= d2 ? receptionMetalDate : receptionResineDate;
+              if (receptionComplete) {
+                // Cochée : afficher la date du clic
+                const metalAt  = fin.reception_metal_ok_at ?? null;
+                const resineAt = fin.reception_resine_ok_at ?? null;
+                if (needsMetal && needsResine) {
+                  if (metalAt && resineAt) receptionCompleteDate = metalAt > resineAt ? metalAt : resineAt;
+                  else receptionCompleteDate = metalAt ?? resineAt;
+                } else if (needsMetal) {
+                  receptionCompleteDate = metalAt;
+                } else if (needsResine) {
+                  receptionCompleteDate = resineAt;
                 }
-              } else if (needsMetal) {
-                receptionCompleteDate = receptionMetalDate;
-              } else if (needsResine) {
-                receptionCompleteDate = receptionResineDate;
+              }
+              // Date prévisionnelle de réception complète (pour affichage quand pas encore cochée)
+              let receptionCompletePrevue: string | null = null;
+              if (!receptionComplete) {
+                if (needsMetal && needsResine) {
+                  // La plus tardive des deux dates prévues
+                  if (receptionMetalDate && receptionResineDate) {
+                    receptionCompletePrevue = receptionMetalDate.slice(0,10) > receptionResineDate.slice(0,10) ? receptionMetalDate : receptionResineDate;
+                  } else {
+                    receptionCompletePrevue = receptionMetalDate ?? receptionResineDate;
+                  }
+                } else if (needsMetal) {
+                  receptionCompletePrevue = receptionMetalDate;
+                } else if (needsResine) {
+                  receptionCompletePrevue = receptionResineDate;
+                }
               }
 
-              // Délai basé sur la plus récente date de réception disponible
-              const status = getDelaiStatus((row as any)._dateRef ?? null, validated);
+              // Délai basé sur le différentiel réception complète / expédition
+              // Si réception complète : écart entre date réception complète et date expédition
+              // Sinon : ancien système basé sur _dateRef
+              let status = getDelaiStatus((row as any)._dateRef ?? null, validated);
+              let expUrgency: "critical"|"urgent"|"warning"|"ok"|null = null;
+              if (!validated && receptionComplete && receptionCompleteDate && row.date_expedition) {
+                const rcDate = new Date(receptionCompleteDate.slice(0,10)+"T00:00:00");
+                const expDate = new Date(row.date_expedition.slice(0,10)+"T00:00:00");
+                const diffDays = Math.round((expDate.getTime() - rcDate.getTime()) / 86400000);
+                if (diffDays <= 0) expUrgency = "critical";      // même jour ou retard
+                else if (diffDays === 1) expUrgency = "urgent";  // 1 jour
+                else if (diffDays === 2) expUrgency = "warning"; // 2 jours
+                else expUrgency = "ok";                          // 3+ jours
+              }
 
               const typeMeta   = TYPE_DENTS_OPTIONS.find(o => o.value === typeDents) ?? { color:"white" };
               const natureMeta = NATURE_META[row.nature_du_travail ?? ""];
 
+              const urgencyStyle: React.CSSProperties = expUrgency === "critical"
+                ? { background: "rgba(239,68,68,0.08)", boxShadow: "inset 3px 0 0 #ef4444" }
+                : expUrgency === "urgent"
+                ? { background: "rgba(245,158,11,0.06)", boxShadow: "inset 3px 0 0 #f59e0b" }
+                : expUrgency === "warning"
+                ? { background: "rgba(234,179,8,0.04)", boxShadow: "inset 3px 0 0 #eab308" }
+                : {};
+
               return (
                 <tr key={row.id} id={`row-fin-${row.id}`}
                   style={{
-                    ...DELAI_STYLES[status],
+                    ...(expUrgency && expUrgency !== "ok" ? urgencyStyle : DELAI_STYLES[status]),
                     borderBottom:"1px solid #1a1a1a",
                     transition:"background 300ms, opacity 300ms",
                     outline: isHighlighted ? "1px solid #4ade80" : "none",
@@ -404,26 +487,54 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                     {isDentsCommerce ? "⊘" : (nbBlocs ?? "—")}
                   </td>
                   {(() => {
-                    const urgentColor = status==="late"?"#f87171":status==="today"?"#f59e0b":undefined;
-                    const urgentWeight = (status==="late"||status==="today") ? 700 : 400;
-                    const rcStyle = urgentColor ? { ...tdRead, fontWeight: urgentWeight } : tdRead;
-                    const dateColor = urgentColor ?? "white";
+                    const disabledStyle = { ...tdBase, background:"repeating-linear-gradient(135deg, rgba(239,68,68,0.07) 0px, rgba(239,68,68,0.07) 4px, transparent 4px, transparent 8px)", cursor:"not-allowed", color:"rgba(239,68,68,0.5)" };
+                    const checkStyle = (checked: boolean, color: string): React.CSSProperties => ({
+                      ...tdBase,
+                      cursor: receptionBusy ? "not-allowed" : "pointer",
+                    });
+
                     return (<>
-                      <td style={isProvisoire ? {
-                        ...tdBase,
-                        background:"repeating-linear-gradient(135deg, rgba(239,68,68,0.07) 0px, rgba(239,68,68,0.07) 4px, transparent 4px, transparent 8px)",
-                        cursor:"not-allowed", color:"rgba(239,68,68,0.5)",
-                      } : rcStyle} title={isProvisoire ? "Non applicable pour Provisoire Résine" : undefined}>
-                        {isProvisoire ? "⊘" : <DateCell value={receptionMetalDate} color={receptionMetalDate ? dateColor : "white"} />}
+                      {/* Réception métal */}
+                      <td style={!needsMetal ? disabledStyle : checkStyle(metalOk, "#60a5fa")}
+                        onClick={() => { if (needsMetal && !receptionBusy) handleReceptionToggle(String(row.id), "reception_metal_ok"); }}
+                        title={!needsMetal ? "Non applicable" : metalOk ? "Métal reçu — cliquer pour annuler" : "Cliquer pour confirmer réception métal"}
+                      >
+                        {!needsMetal ? "⊘" : metalOk ? (
+                          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:2 }}>
+                            <span style={{ fontSize:14, color:"#60a5fa" }}>✓</span>
+                            {fin.reception_metal_ok_at && <DateCell value={fin.reception_metal_ok_at} color="#60a5fa" />}
+                          </div>
+                        ) : (
+                          receptionMetalDate ? <DateCell value={receptionMetalDate} color="white" /> : <span style={{ color:"white" }}>—</span>
+                        )}
                       </td>
-                      <td style={isDentsCommerce ? {
-                        ...tdBase,
-                        background:"repeating-linear-gradient(135deg, rgba(239,68,68,0.07) 0px, rgba(239,68,68,0.07) 4px, transparent 4px, transparent 8px)",
-                        cursor:"not-allowed", color:"rgba(239,68,68,0.5)",
-                      } : rcStyle} title={isDentsCommerce ? "Non applicable pour Dents du commerce" : undefined}>
-                        {isDentsCommerce ? "⊘" : <DateCell value={receptionResineDate} color={receptionResineDate ? dateColor : "white"} />}
+                      {/* Réception résine */}
+                      <td style={!needsResine ? disabledStyle : checkStyle(resineOk, "#a855f7")}
+                        onClick={() => { if (needsResine && !receptionBusy) handleReceptionToggle(String(row.id), "reception_resine_ok"); }}
+                        title={!needsResine ? "Non applicable" : resineOk ? "Résine reçue — cliquer pour annuler" : "Cliquer pour confirmer réception résine"}
+                      >
+                        {!needsResine ? "⊘" : resineOk ? (
+                          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:2 }}>
+                            <span style={{ fontSize:14, color:"#a855f7" }}>✓</span>
+                            {fin.reception_resine_ok_at && <DateCell value={fin.reception_resine_ok_at} color="#a855f7" />}
+                          </div>
+                        ) : (
+                          receptionResineDate ? <DateCell value={receptionResineDate} color="white" /> : <span style={{ color:"white" }}>—</span>
+                        )}
                       </td>
-                      <td style={rcStyle}><DateCell value={receptionCompleteDate} color={receptionCompleteDate ? dateColor : "white"} /></td>
+                      {/* Réception complète (auto) */}
+                      <td style={tdBase}>
+                        {receptionComplete ? (
+                          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:2 }}>
+                            <span style={{ fontSize:14, color:"#4ade80" }}>✓</span>
+                            {receptionCompleteDate && <DateCell value={receptionCompleteDate} color="#4ade80" />}
+                          </div>
+                        ) : receptionCompletePrevue ? (
+                          <DateCell value={receptionCompletePrevue} color="white" />
+                        ) : (
+                          <span style={{ color:"white" }}>—</span>
+                        )}
+                      </td>
                     </>);
                   })()}
 
