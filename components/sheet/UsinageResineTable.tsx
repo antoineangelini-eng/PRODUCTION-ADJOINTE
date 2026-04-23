@@ -453,7 +453,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
     if (result.okIds.length > 0 && result.errors.length === 0) setTimeout(() => setBatchResult(null), 4000);
     if (result.okIds.length > 0) {
       // ── Impression Zebra via relais local ──
-      const relayUrl = process.env.NEXT_PUBLIC_PRINT_RELAY_URL;
+      const relayUrl = process.env.NEXT_PUBLIC_PRINT_RELAY_URL || "http://192.168.1.30:3001";
       for (const okId of result.okIds) {
         const row = rows.find(r => String(r.id) === okId);
         if (!row) continue;
