@@ -12,7 +12,7 @@ import {
   type UsinageResineRow,
   type BatchResult,
 } from "@/app/app/usinage-resine/actions";
-import { printUrLabelAction } from "@/app/app/usinage-resine/print-actions";
+import { buildUrPrintJobAction } from "@/app/app/usinage-resine/print-actions";
 import { DeleteConfirmModal } from "@/components/sheet/DeleteConfirmModal";
 import { toggleOnHoldAction } from "@/lib/on-hold";
 import { OnHoldReasonModal, OnHoldReasonTooltip } from "@/components/sheet/OnHoldModal";
@@ -452,14 +452,15 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
     setBatchResult(result); setBatchPending(false);
     if (result.okIds.length > 0 && result.errors.length === 0) setTimeout(() => setBatchResult(null), 4000);
     if (result.okIds.length > 0) {
-      // ── Impression Zebra automatique pour chaque cas validé ──
+      // ── Impression Zebra via relais local ──
+      const relayUrl = process.env.NEXT_PUBLIC_PRINT_RELAY_URL;
       for (const okId of result.okIds) {
         const row = rows.find(r => String(r.id) === okId);
         if (!row) continue;
         const ur = (row as any).sector_usinage_resine ?? {};
         const dr = (row as any).sector_design_resine  ?? {};
         const dm = (row as any).sector_design_metal   ?? {};
-        printUrLabelAction({
+        buildUrPrintJobAction({
           caseNumber: row.case_number ?? okId,
           teinte:  ur.teintes_override ?? dr.teintes_associees ?? dm.teintes_associees ?? null,
           machine: ur.identite_machine ?? null,
@@ -468,7 +469,14 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
           disque2: ur.numero_disque_2  ?? null,
           nbBlocs: ur.nb_blocs_override ?? dr.nb_blocs_de_dents ?? null,
           modele:  Boolean(dr.modele_a_realiser_ok ?? dm.modele_a_faire_ok),
-        }).catch(e => console.error("[Zebra]", e));
+        }).then(job => {
+          if (!job || !relayUrl) return;
+          fetch(`${relayUrl}/print`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ zpl: job.zpl, printerIp: job.printerIp }),
+          }).catch(() => {});
+        }).catch(() => {});
       }
       setCheckedIds(prev => { const n = new Set(prev); result.okIds.forEach(id => n.delete(id)); return n; });
       // Refresh complet : enlève les cas validés ET fait entrer les nouveaux cas du bandeau

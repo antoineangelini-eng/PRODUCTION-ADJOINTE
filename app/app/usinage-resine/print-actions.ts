@@ -1,8 +1,14 @@
 "use server";
-import { printLabel } from "@/lib/zebra-print";
+import { buildZPL } from "@/lib/zebra-print";
 import { getCurrentUserPrinterIpAction } from "@/app/app/admin/printer-actions";
 
-export async function printUrLabelAction(data: {
+export type PrintJobData = {
+  zpl: string;
+  printerIp: string;
+} | null;
+
+/** Génère le ZPL + IP imprimante — l'impression se fait côté client via le relais local */
+export async function buildUrPrintJobAction(data: {
   caseNumber: string;
   teinte: string | null;
   machine: string | null;
@@ -11,25 +17,19 @@ export async function printUrLabelAction(data: {
   disque2?: string | null;
   nbBlocs: string | null;
   modele: boolean;
-}): Promise<{ ok: boolean; error?: string }> {
-  // Récupérer l'IP imprimante de l'utilisateur connecté
+}): Promise<PrintJobData> {
   const printerIp = await getCurrentUserPrinterIpAction();
-  if (!printerIp) {
-    // Pas d'imprimante configurée → skip silencieux
-    return { ok: true };
-  }
+  if (!printerIp) return null; // Pas d'imprimante configurée → skip
 
-  // Combiner les valeurs doubles pour l'étiquette
   const mergedMachine = [data.machine, data.machine2].filter(Boolean).join(" / ") || null;
   const mergedDisque  = [data.disque, data.disque2].filter(Boolean).join(" / ") || null;
-  const result = await printLabel({
+  const zpl = buildZPL({
     caseNumber: data.caseNumber,
     teinte: data.teinte,
     machine: mergedMachine,
     disque: mergedDisque,
     nbBlocs: data.nbBlocs,
     modele: data.modele,
-  }, printerIp);
-  if (!result.ok) console.error("[Zebra] Impression échouée:", result.error);
-  return result;
+  });
+  return { zpl, printerIp };
 }

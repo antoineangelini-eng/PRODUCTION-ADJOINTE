@@ -12,7 +12,7 @@ export type LabelData = {
 const ZEBRA_PORT = 9100;
 const TIMEOUT_MS = 5000;
 
-function buildZPL(data: LabelData): string {
+export function buildZPL(data: LabelData): string {
   const teinte  = data.teinte  ?? "—";
   const machine = data.machine ?? "—";
   const disque  = data.disque  ?? "—";
