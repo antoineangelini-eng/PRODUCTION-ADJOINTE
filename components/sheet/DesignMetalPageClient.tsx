@@ -65,14 +65,18 @@ export function DesignMetalPageClient({ focusId }: { focusId: string | null }) {
 
   async function handleCreate() {
     if (!caseNumber.trim() || !nature) return;
+    const cn = caseNumber.trim();
     setCreating(true); setCreateError(null);
     try {
       const fd = new FormData();
-      fd.set("case_number", caseNumber.trim());
+      fd.set("case_number", cn);
       fd.set("nature_du_travail", nature);
       await createCaseAction(fd);
       setCaseNumber(""); setNature("");
+      // Recharger les données puis focus sur le cas créé pour ouvrir le calendrier
+      setActiveFocus(null);
       reloadRef.current?.();
+      setTimeout(() => setActiveFocus(cn), 500);
     } catch (e: any) {
       setCreateError(e?.message ?? "Erreur lors de la création");
     } finally {

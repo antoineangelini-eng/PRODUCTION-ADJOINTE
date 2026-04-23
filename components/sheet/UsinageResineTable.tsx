@@ -462,6 +462,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
         const dm = (row as any).sector_design_metal   ?? {};
         buildUrPrintJobAction({
           caseNumber: row.case_number ?? okId,
+          nature: row.nature_du_travail ?? null,
           teinte:  ur.teintes_override ?? dr.teintes_associees ?? dm.teintes_associees ?? null,
           machine: ur.identite_machine ?? null,
           machine2: ur.identite_machine_2 ?? null,

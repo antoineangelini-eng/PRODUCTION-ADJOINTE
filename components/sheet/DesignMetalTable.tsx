@@ -421,9 +421,9 @@ const COLUMNS = [
   { key: "nature_du_travail", header: "Nature", editable: true, type: undefined, column: undefined },
   { key: "design_chassis", header: "Design Châssis", editable: true, type: "boolean", column: "design_chassis" },
   { key: "design_chassis_at", header: "Date & Heure", sub: "Design châssis terminé", editable: false, type: undefined, column: undefined },
-  { key: "dentall_case_number", header: "N° Dent All", editable: true, type: "text", column: "dentall_case_number" },
   { key: "envoye_dentall", header: "Envoyé DentAll", editable: true, type: "boolean", column: "envoye_dentall" },
   { key: "reception_metal_date", header: "Réception métal", editable: true, type: "date", column: "reception_metal_date" },
+  { key: "dentall_case_number", header: "N° Dent All", editable: true, type: "text", column: "dentall_case_number" },
   { key: "type_de_dents", header: "Type de dents", editable: true, type: "select", column: "type_de_dents" },
   { key: "modele_a_faire_ok", header: "Modèle à faire", editable: true, type: "indicator", column: "modele_a_faire_ok" },
   { key: "teintes_associees", header: "Teintes", editable: true, type: "text", column: "teintes_associees" },
@@ -505,6 +505,13 @@ export function DesignMetalTable({
         behavior: "smooth",
         block: "center",
       });
+      // Ouvrir le calendrier d'expédition automatiquement pour que l'utilisateur vérifie la date
+      setTimeout(() => {
+        const expCell = document.querySelector(`#row-dm-${found.id} [data-col="date_expedition"]`) as HTMLElement | null;
+        if (expCell) {
+          setEditingDate({ caseId: String(found.id), column: "date_expedition", rect: expCell.getBoundingClientRect() });
+        }
+      }, 400);
     }, 100);
     const t = setTimeout(() => setFoundRowId(null), 2200);
     return () => clearTimeout(t);
@@ -1078,6 +1085,7 @@ export function DesignMetalTable({
                       return (
                         <td
                           key={col.key}
+                          data-col="date_expedition"
                           style={{ ...tdCard, cursor: "pointer" }}
                           onClick={(e) => {
                             e.stopPropagation();

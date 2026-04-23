@@ -65,7 +65,7 @@ function DateCell({ value, color = "white" }: { value: string | null; color?: st
 }
 
 export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelectionChange }: {
-  filter?: "today"|"tomorrow"|"all"|"late";
+  filter?: "today"|"tomorrow"|"all"|"late"|"prio_today"|"prio_j1"|"prio_j2";
   onReload?: (fn:()=>void)=>void;
   highlightId?: string|null;
   lotPanel?: React.ReactNode;
@@ -195,12 +195,41 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
   const today    = toDateStr(new Date());
   const tomorrow = toDateStr(new Date(Date.now() + 86400000));
 
+  const day2 = toDateStr(new Date(Date.now() + 2 * 86400000));
+
+  // Calcul réception complète prévue pour un cas (pour filtre priorité)
+  function getReceptionCompletePrevue(row: any): string | null {
+    const dm = row.sector_design_metal ?? {};
+    const ur = row.sector_usinage_resine ?? {};
+    const ut = row.sector_usinage_titane ?? {};
+    const typeDents = ur.type_de_dents_override ?? dm.type_de_dents ?? null;
+    const isDC = typeDents === "Dents du commerce" || typeDents === "Pas de dents";
+    const needsMetal = row.nature_du_travail === "Chassis Argoat";
+    const needsResine = !isDC;
+    const metalDate = ut.reception_metal_at ?? dm.reception_metal_date ?? null;
+    const resineDate = ur.reception_resine_at ?? null;
+    if (needsMetal && needsResine) {
+      if (metalDate && resineDate) return metalDate.slice(0,10) > resineDate.slice(0,10) ? metalDate : resineDate;
+      return metalDate ?? resineDate;
+    }
+    if (needsMetal) return metalDate;
+    if (needsResine) return resineDate;
+    return null;
+  }
+
   const filtered = useMemo(() => {
     const base = rows.filter(row => {
       const isOnHold = (row as any)._other_on_hold;
       if (!filter || filter === "all") return true;
-      // Les cas en attente n'apparaissent pas dans today/tomorrow/late
+      // Les cas en attente n'apparaissent pas dans les filtres
       if (isOnHold) return false;
+      if (filter === "prio_today" || filter === "prio_j1" || filter === "prio_j2") {
+        const targetDay = filter === "prio_today" ? today : filter === "prio_j1" ? tomorrow : day2;
+        const exp = row.date_expedition?.slice(0,10);
+        if (exp !== targetDay) return false;
+        const rc = getReceptionCompletePrevue(row)?.slice(0,10);
+        return rc !== null && rc !== undefined && rc === exp;
+      }
       const ref = ((row as any)._dateRef ?? row.date_expedition)?.slice(0,10);
       if (filter === "today")    return ref === today;
       if (filter === "tomorrow") return ref === tomorrow;
@@ -214,13 +243,16 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
       if (aHold !== bHold) return aHold - bHold;
       return (((a as any)._dateRef ?? a.date_expedition) ?? "9999").localeCompare(((b as any)._dateRef ?? b.date_expedition) ?? "9999");
     });
-  }, [rows, filter, today, tomorrow]);
+  }, [rows, filter, today, tomorrow, day2]);
 
 
   const emptyMessage = () => {
     if (filter === "today")    return "Aucun cas prévu aujourd'hui.";
     if (filter === "tomorrow") return "Aucun cas prévu demain.";
     if (filter === "late")     return "Aucun cas en retard.";
+    if (filter === "prio_today") return "Aucun cas urgent aujourd'hui.";
+    if (filter === "prio_j1") return "Aucun cas prioritaire pour demain.";
+    if (filter === "prio_j2") return "Aucun cas prioritaire pour J+2.";
     return "Aucun cas en cours.";
   };
 
@@ -493,6 +525,15 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                       cursor: receptionBusy ? "not-allowed" : "pointer",
                     });
 
+                    // Couleur date prévue : rouge si dépassée, jaune si aujourd'hui, blanc sinon
+                    function dateColor(d: string | null): string {
+                      if (!d) return "white";
+                      const ds = d.slice(0,10);
+                      if (ds < today) return "#f87171";
+                      if (ds === today) return "#f59e0b";
+                      return "white";
+                    }
+
                     return (<>
                       {/* Réception métal */}
                       <td style={!needsMetal ? disabledStyle : checkStyle(metalOk, "#60a5fa")}
@@ -505,7 +546,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                             {fin.reception_metal_ok_at && <DateCell value={fin.reception_metal_ok_at} color="#60a5fa" />}
                           </div>
                         ) : (
-                          receptionMetalDate ? <DateCell value={receptionMetalDate} color="white" /> : <span style={{ color:"white" }}>—</span>
+                          receptionMetalDate ? <DateCell value={receptionMetalDate} color={dateColor(receptionMetalDate)} /> : <span style={{ color:"white" }}>—</span>
                         )}
                       </td>
                       {/* Réception résine */}
@@ -519,7 +560,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                             {fin.reception_resine_ok_at && <DateCell value={fin.reception_resine_ok_at} color="#a855f7" />}
                           </div>
                         ) : (
-                          receptionResineDate ? <DateCell value={receptionResineDate} color="white" /> : <span style={{ color:"white" }}>—</span>
+                          receptionResineDate ? <DateCell value={receptionResineDate} color={dateColor(receptionResineDate)} /> : <span style={{ color:"white" }}>—</span>
                         )}
                       </td>
                       {/* Réception complète (auto) */}
@@ -530,7 +571,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                             {receptionCompleteDate && <DateCell value={receptionCompleteDate} color="#4ade80" />}
                           </div>
                         ) : receptionCompletePrevue ? (
-                          <DateCell value={receptionCompletePrevue} color="white" />
+                          <DateCell value={receptionCompletePrevue} color={dateColor(receptionCompletePrevue)} />
                         ) : (
                           <span style={{ color:"white" }}>—</span>
                         )}

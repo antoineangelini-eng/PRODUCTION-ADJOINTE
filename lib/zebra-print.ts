@@ -2,6 +2,7 @@ import net from "net";
 
 export type LabelData = {
   caseNumber: string;
+  nature: string | null;
   teinte: string | null;
   machine: string | null;
   disque: string | null;
@@ -19,47 +20,50 @@ export function buildZPL(data: LabelData): string {
   const nbBlocs = data.nbBlocs ?? "—";
   const modele  = data.modele ? "Oui" : "Non";
 
+  const nature = data.nature ?? "";
+
   // 406 x 203 dots — 6 champs sur 2 colonnes
-  // Header: 0→35, Contenu: 40→195
+  // Header: 0→45, Contenu: 50→200
 
   const lines: string[] = [
     "^XA",
     "^CI28",
     "^PW406",
-    "^LL203",
+    "^LL230",
     "^LH0,0",
 
-    // ── En-tête : numéro de cas ──
-    `^FO6,3^A0N,32,32^FD${data.caseNumber}^FS`,
-    "^FO4,38^GB398,2,2^FS",
+    // ── En-tête : numéro de cas + nature à droite ──
+    `^FO6,20^A0N,30,30^FD${data.caseNumber}^FS`,
+    `^FO220,24^A0N,20,20^FD${nature}^FS`,
+    "^FO4,58^GB398,2,2^FS",
 
     // ── Colonne gauche ──
     // Teinte
-    `^FO12,48^A0N,14,14^FDTeinte :^FS`,
-    `^FO12,65^A0N,28,28^FD${teinte}^FS`,
+    `^FO12,70^A0N,14,14^FDTeinte :^FS`,
+    `^FO12,88^A0N,28,28^FD${teinte}^FS`,
 
     // Machine
-    `^FO12,100^A0N,14,14^FDMachine :^FS`,
-    `^FO12,117^A0N,28,28^FD${machine}^FS`,
+    `^FO12,124^A0N,14,14^FDMachine :^FS`,
+    `^FO12,142^A0N,28,28^FD${machine}^FS`,
 
     // Modele — inversé (blanc sur noir) si Non
-    `^FO12,152^A0N,14,14^FDModele :^FS`,
+    `^FO12,178^A0N,14,14^FDModele :^FS`,
     ...(data.modele
-      ? [`^FO12,169^A0N,28,28^FD${modele}^FS`]
+      ? [`^FO12,196^A0N,28,28^FD${modele}^FS`]
       : [
-          `^FO8,165^GB80,34,34^FS`,
-          `^FO12,169^A0N,28,28^FR^FD${modele}^FS`,
+          `^FO8,192^GB80,34,34^FS`,
+          `^FO12,196^A0N,28,28^FR^FD${modele}^FS`,
         ]
     ),
 
     // ── Colonne droite ──
     // Blocs
-    `^FO220,48^A0N,14,14^FDBlocs :^FS`,
-    `^FO220,65^A0N,28,28^FD${nbBlocs}^FS`,
+    `^FO220,70^A0N,14,14^FDBlocs :^FS`,
+    `^FO220,88^A0N,28,28^FD${nbBlocs}^FS`,
 
     // Disque
-    `^FO220,100^A0N,14,14^FDDisque :^FS`,
-    `^FO220,117^A0N,28,28^FD${disque}^FS`,
+    `^FO220,124^A0N,14,14^FDDisque :^FS`,
+    `^FO220,142^A0N,28,28^FD${disque}^FS`,
 
     "^XZ",
   ];

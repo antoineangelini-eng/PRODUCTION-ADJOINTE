@@ -10,6 +10,7 @@ export type PrintJobData = {
 /** Génère le ZPL + IP imprimante — l'impression se fait côté client via le relais local */
 export async function buildUrPrintJobAction(data: {
   caseNumber: string;
+  nature: string | null;
   teinte: string | null;
   machine: string | null;
   machine2?: string | null;
@@ -25,6 +26,7 @@ export async function buildUrPrintJobAction(data: {
   const mergedDisque  = [data.disque, data.disque2].filter(Boolean).join(" / ") || null;
   const zpl = buildZPL({
     caseNumber: data.caseNumber,
+    nature: data.nature,
     teinte: data.teinte,
     machine: mergedMachine,
     disque: mergedDisque,

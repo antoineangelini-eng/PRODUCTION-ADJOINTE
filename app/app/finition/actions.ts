@@ -331,6 +331,9 @@ export async function getFinitionStatsAction(): Promise<{
   countToday: number;
   countTomorrow: number;
   onHold: number;
+  prioToday: number;
+  prioJ1: number;
+  prioJ2: number;
 }> {
   const supabase = await createClient();
   const today    = new Date().toISOString().split("T")[0];
@@ -343,7 +346,8 @@ export async function getFinitionStatsAction(): Promise<{
       sector_design_metal ( reception_metal_date, type_de_dents ),
       sector_design_resine ( type_de_dents ),
       sector_usinage_titane ( reception_metal_at ),
-      sector_usinage_resine ( reception_resine_at, type_de_dents_override )
+      sector_usinage_resine ( reception_resine_at, type_de_dents_override ),
+      sector_finition ( reception_metal_ok, reception_metal_ok_at, reception_resine_ok, reception_resine_ok_at )
     )`)
     .eq("sector_code", "finition");
 
@@ -381,7 +385,46 @@ export async function getFinitionStatsAction(): Promise<{
   }).length;
   const onHold = rows.filter((r) => r.status === "on_hold").length;
 
-  return { validatedToday, totalToday, late, countToday, countTomorrow, onHold };
+  // Priorité : cas dont réception complète prévue = date d'expédition
+  const day1 = tomorrow;
+  const day2 = new Date(Date.now() + 2 * 86400000).toISOString().split("T")[0];
+
+  function getPrioCases(targetDay: string): number {
+    return activeRows.filter((r) => {
+      if (r.status === "done") return false;
+      const c = r.cases;
+      if (!c || !c.date_expedition) return false;
+      const exp = c.date_expedition.slice(0, 10);
+      if (exp !== targetDay) return false;
+      const dm = c.sector_design_metal ?? {};
+      const ur = c.sector_usinage_resine ?? {};
+      const typeDents = ur.type_de_dents_override ?? dm.type_de_dents ?? null;
+      const isDentsCommerce = typeDents === "Dents du commerce" || typeDents === "Pas de dents";
+      const needsMetal  = c.nature_du_travail === "Chassis Argoat";
+      const needsResine = !isDentsCommerce;
+      const ut = c.sector_usinage_titane ?? {};
+      const metalDate  = ut.reception_metal_at ?? dm.reception_metal_date ?? null;
+      const resineDate = ur.reception_resine_at ?? null;
+      let rcPrevue: string | null = null;
+      if (needsMetal && needsResine) {
+        if (metalDate && resineDate) rcPrevue = metalDate.slice(0,10) > resineDate.slice(0,10) ? metalDate : resineDate;
+        else rcPrevue = metalDate ?? resineDate;
+      } else if (needsMetal) {
+        rcPrevue = metalDate;
+      } else if (needsResine) {
+        rcPrevue = resineDate;
+      }
+      if (!rcPrevue) return false;
+      return rcPrevue.slice(0, 10) === exp;
+    }).length;
+  }
+
+  return {
+    validatedToday, totalToday, late, countToday, countTomorrow, onHold,
+    prioToday: getPrioCases(today),
+    prioJ1: getPrioCases(day1),
+    prioJ2: getPrioCases(day2),
+  };
 }
 
 export async function removeCaseFromSectorAction(formData: FormData) {
