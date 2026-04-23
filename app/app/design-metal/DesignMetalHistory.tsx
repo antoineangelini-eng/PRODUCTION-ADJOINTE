@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
 import { PhysicalBadge } from "@/components/sheet/PhysicalBadge";
-import { ReopenModal as SharedReopenModal } from "@/components/history/history-shared";
+import { ReopenModal as SharedReopenModal, FieldBlocked } from "@/components/history/history-shared";
 import { loadDmHistoryAction, reopenCaseAction, type DmHistoryRow } from "./history-actions";
 
 const NATURE_META: Record<string, { color: string }> = {
@@ -231,9 +231,10 @@ function HistoryCard({ row, onReopen }: { row: DmHistoryRow; onReopen: () => voi
               </Field>
             </div>
             <div style={{ flex: 1 }}>
-              <Field label="Teinte">
-                <Txt val={row.teintes_associees} />
-              </Field>
+              {row.type_de_dents === "Pas de dents"
+                ? <FieldBlocked label="Teinte" />
+                : <Field label="Teinte"><Txt val={row.teintes_associees} /></Field>
+              }
             </div>
           </div>
         </div>

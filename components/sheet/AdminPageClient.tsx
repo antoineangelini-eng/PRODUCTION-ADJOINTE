@@ -7,9 +7,10 @@ import { AdminResetPanel }     from "@/components/sheet/AdminResetPanel";
 import { FeedbackManager }        from "@/components/FeedbackManager";
 import { DashboardView }          from "@/components/sheet/DashboardView";
 import { AnnouncementsManager }   from "@/components/sheet/AnnouncementsManager";
+import { PrintersManager }        from "@/components/sheet/PrintersManager";
 import { getFeedbackCountAction } from "@/app/app/feedback-actions";
 
-type Tab = "dashboard" | "global" | "users" | "days" | "announcements" | "reset" | "feedback";
+type Tab = "dashboard" | "global" | "users" | "days" | "announcements" | "printers" | "reset" | "feedback";
 
 const TABS: { id: Tab; label: string; color?: string }[] = [
   { id: "dashboard", label: "📊 Tableau de bord" },
@@ -17,6 +18,7 @@ const TABS: { id: Tab; label: string; color?: string }[] = [
   { id: "users",    label: "Utilisateurs" },
   { id: "days",           label: "Jours ouvrés" },
   { id: "announcements", label: "📢 Nouveautés" },
+  { id: "printers",      label: "🖨️ Imprimantes" },
   { id: "feedback",      label: "💡 Améliorations", color: "#7c8196" },
   { id: "reset",    label: "Réinitialisation", color: "#f87171" },
 ];
@@ -74,6 +76,7 @@ export function AdminPageClient() {
         {tab === "users"    && <UsersManager />}
         {tab === "days"     && <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}><WorkingDaysManager /></div>}
         {tab === "announcements" && <AnnouncementsManager />}
+        {tab === "printers"      && <PrintersManager />}
         {tab === "feedback" && <FeedbackManager onCountChange={setFeedbackCount} />}
         {tab === "reset"    && <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}><AdminResetPanel /></div>}
       </div>

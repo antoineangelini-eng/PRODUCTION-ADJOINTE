@@ -33,6 +33,7 @@ const MACHINE_OPTIONS = [
 const TYPE_DENTS_OPTIONS = [
   { value: "Dents usinées",      color: "#7c8196" },
   { value: "Dents du commerce", color: "#f59e0b" },
+  { value: "Pas de dents", color: "#ef4444" },
 ];
 const BG_CARD = "#1e1e1e", BG_LABEL_ROW = "#181818", BG_VAL_ROW = "#1e1e1e";
 const BG_LABEL_SAISIE = "#151515", BG_VAL_SAISIE = "#161616";
@@ -466,6 +467,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
           disque:  ur.numero_disque    ?? null,
           disque2: ur.numero_disque_2  ?? null,
           nbBlocs: ur.nb_blocs_override ?? dr.nb_blocs_de_dents ?? null,
+          modele:  Boolean(dr.modele_a_realiser_ok ?? dm.modele_a_faire_ok),
         }).catch(e => console.error("[Zebra]", e));
       }
       setCheckedIds(prev => { const n = new Set(prev); result.okIds.forEach(id => n.delete(id)); return n; });

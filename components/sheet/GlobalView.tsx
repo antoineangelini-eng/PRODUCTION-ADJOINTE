@@ -12,6 +12,7 @@ const NATURE_META: Record<string, { color: string }> = {
 const TYPE_DENTS_COLOR: Record<string, string> = {
   "Dents usinées":      "#7c8196",
   "Dents du commerce": "#f59e0b",
+  "Pas de dents":      "#ef4444",
 };
 const NATURES_RESINE = ["Provisoire Résine", "Définitif Résine"];
 

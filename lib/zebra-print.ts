@@ -6,9 +6,9 @@ export type LabelData = {
   machine: string | null;
   disque: string | null;
   nbBlocs: string | null;
+  modele: boolean;
 };
 
-const ZEBRA_IP   = "192.168.1.12";
 const ZEBRA_PORT = 9100;
 const TIMEOUT_MS = 5000;
 
@@ -17,9 +17,10 @@ function buildZPL(data: LabelData): string {
   const machine = data.machine ?? "—";
   const disque  = data.disque  ?? "—";
   const nbBlocs = data.nbBlocs ?? "—";
+  const modele  = data.modele ? "Oui" : "Non";
 
-  // 406 x 203 dots — layout simple sans codes barres de lots
-  // Header: 0→33, Contenu: 34→200
+  // 406 x 203 dots — 6 champs sur 2 colonnes
+  // Header: 0→35, Contenu: 40→195
 
   const lines: string[] = [
     "^XA",
@@ -28,23 +29,37 @@ function buildZPL(data: LabelData): string {
     "^LL203",
     "^LH0,0",
 
-    // En-tête
-    `^FO6,3^A0N,30,30^FD${data.caseNumber}^FS`,
-    `^FO180,3^A0N,24,24^FDNom produit^FS`,
-    "^FO4,36^GB398,2,2^FS",
+    // ── En-tête : numéro de cas ──
+    `^FO6,3^A0N,32,32^FD${data.caseNumber}^FS`,
+    "^FO4,38^GB398,2,2^FS",
 
-    // Contenu — 4 infos centrées sur 164 dots
-    `^FO20,46^A0N,16,16^FDTeinte :^FS`,
-    `^FO20,66^A0N,34,34^FD${teinte}^FS`,
+    // ── Colonne gauche ──
+    // Teinte
+    `^FO12,48^A0N,14,14^FDTeinte :^FS`,
+    `^FO12,65^A0N,28,28^FD${teinte}^FS`,
 
-    `^FO20,106^A0N,16,16^FDMachine :^FS`,
-    `^FO20,126^A0N,34,34^FD${machine}^FS`,
+    // Machine
+    `^FO12,100^A0N,14,14^FDMachine :^FS`,
+    `^FO12,117^A0N,28,28^FD${machine}^FS`,
 
-    `^FO220,46^A0N,16,16^FDBlocs :^FS`,
-    `^FO220,66^A0N,34,34^FD${nbBlocs}^FS`,
+    // Modele — inversé (blanc sur noir) si Non
+    `^FO12,152^A0N,14,14^FDModele :^FS`,
+    ...(data.modele
+      ? [`^FO12,169^A0N,28,28^FD${modele}^FS`]
+      : [
+          `^FO8,165^GB80,34,34^FS`,
+          `^FO12,169^A0N,28,28^FR^FD${modele}^FS`,
+        ]
+    ),
 
-    `^FO220,106^A0N,16,16^FDDisque :^FS`,
-    `^FO220,126^A0N,34,34^FD${disque}^FS`,
+    // ── Colonne droite ──
+    // Blocs
+    `^FO220,48^A0N,14,14^FDBlocs :^FS`,
+    `^FO220,65^A0N,28,28^FD${nbBlocs}^FS`,
+
+    // Disque
+    `^FO220,100^A0N,14,14^FDDisque :^FS`,
+    `^FO220,117^A0N,28,28^FD${disque}^FS`,
 
     "^XZ",
   ];
@@ -52,7 +67,8 @@ function buildZPL(data: LabelData): string {
   return lines.join("\n");
 }
 
-export async function printLabel(data: LabelData): Promise<{ ok: boolean; error?: string }> {
+export async function printLabel(data: LabelData, printerIp: string): Promise<{ ok: boolean; error?: string }> {
+  if (!printerIp) return { ok: false, error: "Aucune IP imprimante configurée" };
   return new Promise((resolve) => {
     const zpl = buildZPL(data);
     const client = new net.Socket();
@@ -61,7 +77,7 @@ export async function printLabel(data: LabelData): Promise<{ ok: boolean; error?
       if (done) return; done = true; client.destroy(); resolve(result);
     };
     client.setTimeout(TIMEOUT_MS);
-    client.connect(ZEBRA_PORT, ZEBRA_IP, () => {
+    client.connect(ZEBRA_PORT, printerIp, () => {
       client.write(zpl, "utf8", (err) => {
         if (err) finish({ ok: false, error: "Erreur écriture : " + err.message });
         else finish({ ok: true });

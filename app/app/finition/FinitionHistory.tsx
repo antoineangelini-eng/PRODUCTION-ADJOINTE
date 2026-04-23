@@ -6,7 +6,7 @@ import { fmtDate, Check, Txt, Field, FieldBlocked, ReopenModal, HistoryFilters, 
 function FinCard({ row, onReopen }: { row: FinHistoryRow; onReopen: () => void }) {
   const [open, setOpen] = useState(false);
   const recepComplete = latestDate(row.reception_metal_at, row.reception_resine_at);
-  const isDentsCommerce = row.type_de_dents === "Dents du commerce";
+  const isDentsCommerce = row.type_de_dents === "Dents du commerce" || row.type_de_dents === "Pas de dents";
 
   return (
     <CardShell
@@ -37,7 +37,7 @@ function FinCard({ row, onReopen }: { row: FinHistoryRow; onReopen: () => void }
       <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
         <div style={{ flex: 1 }}><Field label="Validation"><Check val={row.validation} /></Field></div>
         <div style={{ flex: 1 }}><Field label="Type de dents"><Txt val={row.type_de_dents} color="#7c8196" /></Field></div>
-        <div style={{ flex: 1 }}><Field label="Teintes"><Txt val={row.teintes_associees} /></Field></div>
+        <div style={{ flex: 1 }}>{row.type_de_dents === "Pas de dents" ? <FieldBlocked label="Teintes" /> : <Field label="Teintes"><Txt val={row.teintes_associees} /></Field>}</div>
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         <div style={{ flex: 1 }}>

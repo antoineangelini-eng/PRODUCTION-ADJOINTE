@@ -6,6 +6,7 @@ import { saveTypeDeDentsAction } from "@/app/app/design-metal/actions";
 const OPTIONS = [
   { value: "Dents usinées",      color: "#7c8196" },
   { value: "Dents du commerce", color: "#f59e0b" },
+  { value: "Pas de dents",      color: "#ef4444" },
 ];
 
 export function TypeDeDentsSelect({ caseId, dbValue }: { caseId: string; dbValue: string | null }) {

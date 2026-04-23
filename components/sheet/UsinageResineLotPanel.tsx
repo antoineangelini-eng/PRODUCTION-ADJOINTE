@@ -19,6 +19,7 @@ const MACHINE_OPTIONS = [
 const TYPE_DENTS_OPTIONS = [
   { value: "Dents usinées",      color: "#7c8196" },
   { value: "Dents du commerce", color: "#f59e0b" },
+  { value: "Pas de dents",      color: "#ef4444" },
 ];
 
 const NATURE_COLORS: Record<string, string> = {

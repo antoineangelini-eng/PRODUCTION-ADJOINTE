@@ -35,6 +35,7 @@ const tdSticky: React.CSSProperties = { ...tdBase, position:"sticky", left:0, zI
 const TYPE_DENTS_OPTIONS = [
   { value:"Dents usinées",      color:"#7c8196" },
   { value:"Dents du commerce", color:"#f59e0b" },
+  { value:"Pas de dents",      color:"#ef4444" },
 ];
 
 const NATURE_META: Record<string, { color:string }> = {
@@ -296,7 +297,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
               const teintes   = ur.teintes_override ?? dr.teintes_associees ?? dm.teintes_associees ?? null;
               // DM est la source de vérité pour type_de_dents (DR force toujours "Dents usinées")
               const typeDents = ur.type_de_dents_override ?? dm.type_de_dents ?? dr.type_de_dents ?? null;
-              const isDentsCommerce = typeDents === "Dents du commerce";
+              const isDentsCommerce = typeDents === "Dents du commerce" || typeDents === "Pas de dents";
               const nbBlocs   = ur.nb_blocs_override ?? dr.nb_blocs_de_dents ?? dr.nb_blocs ?? null;
               const receptionMetalDate  = ut.reception_metal_at ?? dm.reception_metal_date ?? null;
               const receptionResineDate = ur.reception_resine_at ?? null;
@@ -388,7 +389,13 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                     <SelectReadOnly value={typeDents??""} color={typeMeta.color} options={TYPE_DENTS_OPTIONS} />
                   </td>
 
-                  <td style={tdRead}>{teintes ?? "—"}</td>
+                  <td style={typeDents === "Pas de dents" ? {
+                    ...tdBase,
+                    background:"repeating-linear-gradient(135deg, rgba(239,68,68,0.07) 0px, rgba(239,68,68,0.07) 4px, transparent 4px, transparent 8px)",
+                    cursor:"not-allowed", color:"rgba(239,68,68,0.5)",
+                  } : tdRead} title={typeDents === "Pas de dents" ? "Non applicable pour Pas de dents" : undefined}>
+                    {typeDents === "Pas de dents" ? "⊘" : (teintes ?? "—")}
+                  </td>
                   <td style={isDentsCommerce ? {
                     ...tdBase,
                     background:"repeating-linear-gradient(135deg, rgba(239,68,68,0.07) 0px, rgba(239,68,68,0.07) 4px, transparent 4px, transparent 8px)",

@@ -21,6 +21,7 @@ import { OnHoldReasonModal, OnHoldReasonTooltip } from "@/components/sheet/OnHol
 const TYPE_OPTIONS = [
   { value: "Dents usinées", color: "#7c8196" },
   { value: "Dents du commerce", color: "#f59e0b" },
+  { value: "Pas de dents", color: "#ef4444" },
 ];
 
 const NATURE_META: Record<string, { color: string }> = {
@@ -665,7 +666,7 @@ export function DesignMetalTable({
     }
     if (!dm.type_de_dents)         missing.push("Type de dents");
     if (dm.modele_a_faire_ok === null || dm.modele_a_faire_ok === undefined) missing.push("Modèle à faire");
-    if (!dm.teintes_associees)     missing.push("Teintes");
+    if (dm.type_de_dents !== "Pas de dents" && !dm.teintes_associees) missing.push("Teintes");
     return missing;
   }
 
@@ -1246,6 +1247,18 @@ export function DesignMetalTable({
                     }
 
                     if (col.type === "text") {
+                      // Désactiver teintes quand "Pas de dents"
+                      if (col.column === "teintes_associees" && dm.type_de_dents === "Pas de dents") {
+                        return (
+                          <td key={col.key} style={{
+                            ...tdCard,
+                            background: `repeating-linear-gradient(135deg, rgba(239,68,68,0.06) 0px, rgba(239,68,68,0.06) 4px, ${rowBg} 4px, ${rowBg} 8px)`,
+                            color: "rgba(239,68,68,0.4)",
+                          }}>
+                            ⊘
+                          </td>
+                        );
+                      }
                       const w = col.column === "dentall_case_number" ? 80 : col.column === "teintes_associees" ? 60 : 90;
                       return (
                         <td key={col.key} style={tdCard} onClick={(e) => e.stopPropagation()}>
