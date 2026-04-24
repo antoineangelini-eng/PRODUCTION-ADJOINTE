@@ -1,6 +1,7 @@
 "use client";
 import ReactDOM from "react-dom";
 import { useState, useRef, useEffect } from "react";
+import { getCurrentUserPrinterIpAction } from "@/app/app/admin/printer-actions";
 
 type ComboKey = string;
 type Materiau = "CAMEO" | "EMPRESS";
@@ -57,9 +58,10 @@ function generateZPL(combos: Set<ComboKey>, code: string, mat: Materiau, cg: str
   z+=`^XZ`; return z;
 }
 
-async function sendPrint(zpl: string) {
+async function sendPrint(zpl: string, printerIp: string) {
+  if (!printerIp) throw new Error("Aucune imprimante configurée");
   const relayUrl = process.env.NEXT_PUBLIC_PRINT_RELAY_URL || "http://192.168.1.30:3001";
-  const r=await fetch(`${relayUrl}/print`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({zpl, printerIp:"192.168.1.12"})});
+  const r=await fetch(`${relayUrl}/print`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({zpl, printerIp})});
   const j=await r.json(); if(!j.ok) throw new Error(j.error??"Erreur");
 }
 
@@ -181,6 +183,9 @@ export function EmaxPaletteTracker() {
   const [combos,  setCombos] = useState<Set<ComboKey>>(new Set());
   const [printing,setPrinting] = useState(false);
   const [attempted,setAttempted] = useState(false);
+  const [printerIp, setPrinterIp] = useState<string|null>(null);
+
+  useEffect(() => { getCurrentUserPrinterIpAction().then(ip => setPrinterIp(ip)); }, []);
 
   const accent = mat ? ACC[mat] : "#888";
   const canPrint = !!(combos.size && code.trim() && mat && cg && teinte);
@@ -194,7 +199,7 @@ export function EmaxPaletteTracker() {
     setAttempted(true);
     if(!canPrint||printing) return;
     setPrinting(true);
-    try { await sendPrint(generateZPL(combos,code.trim(),mat as Materiau,cg,teinte)); }
+    try { await sendPrint(generateZPL(combos,code.trim(),mat as Materiau,cg,teinte), printerIp ?? ""); }
     catch(e:any){ alert("Erreur : "+e.message); }
     finally { setPrinting(false); }
     setCombos(new Set()); setPals(new Set());
