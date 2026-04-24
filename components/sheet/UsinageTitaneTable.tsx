@@ -709,9 +709,9 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
       </div>
 
       {/* Tableau */}
-      <div style={{ overflowX: "auto", overflowY: "auto", flex: 1, minHeight: 0, padding: "0 8px 80px 8px" }}>
+      <div style={{ overflowX: "auto", overflowY: "auto", flex: 1, minHeight: 0, padding: "0 8px 80px 8px", position:"relative", zIndex:0 }}>
         <table style={{ borderCollapse: "separate", borderSpacing: "0 8px", width: "100%", tableLayout: "auto" }}>
-          <thead style={{ position: "sticky", top: 0, zIndex: 5, background: TH_BG }}>
+          <thead style={{ position: "sticky", top: 0, zIndex: 20, background: TH_BG }}>
             <tr>
               <th style={{ ...thSticky, paddingLeft: 12, paddingBottom: 10 }}>N° cas</th>
               <th style={{ ...thRead, paddingBottom: 10 }}>Création</th>

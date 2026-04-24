@@ -11,6 +11,7 @@ import {
   removeCaseFromSectorAction,
   toggleCasePhysicalAction,
   updateCaseNatureAction,
+  createResineVoletAction,
   type DesignResineRow,
   type BatchResult,
 } from "@/app/app/design-resine/actions";
@@ -199,6 +200,8 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
   const [foundRowId,setFoundRowId]=useState<string|null>(null);
   const [holdBusy,setHoldBusy]=useState<string|null>(null);
   const [holdModalCaseId,setHoldModalCaseId]=useState<string|null>(null);
+  const [voletModalCaseNumber, setVoletModalCaseNumber] = useState<string|null>(null);
+  const [voletCreating, setVoletCreating] = useState(false);
   const [reasonTooltip,setReasonTooltip]=useState<{id:string;rect:{top:number;left:number;width:number;bottom:number}}|null>(null);
 
   const load=useCallback(async(silent=false)=>{
@@ -259,6 +262,16 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
   // Tri DR :
   //   1) Cases créés en DR (pas de DM associé) → en tête, plus récents d'abord.
   //   2) Cases venus de DM → ensuite, triés par date d'expédition ascendante.
+  // Set de case_numbers qui ont un volet résine (pour savoir si le bouton "+" doit être caché)
+  const caseNumbersWithVolet = useMemo(() => {
+    const drNatures = new Set(["Provisoire Résine", "Deflex", "Complet"]);
+    const nums = new Set<string>();
+    for (const r of rows) {
+      if (drNatures.has(r.nature_du_travail ?? "")) nums.add(r.case_number ?? "");
+    }
+    return nums;
+  }, [rows]);
+
   const sortedRows = useMemo(()=>{
     const isDrOrigin = (r: DesignResineRow) => !(r as any).sector_design_metal;
     const drCreated = rows.filter(isDrOrigin).sort((a, b) =>
@@ -267,9 +280,25 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
     const fromDm = rows.filter(r => !isDrOrigin(r)).sort((a, b) =>
       (a.date_expedition ?? "9999").localeCompare(b.date_expedition ?? "9999")
     );
-    const all = [...drCreated, ...fromDm];
+    // Regrouper : après chaque cas DM, insérer les volets résine DR du même numéro
+    const result: DesignResineRow[] = [];
+    const usedDrIds = new Set<string>();
+    for (const dmRow of fromDm) {
+      result.push(dmRow);
+      // Chercher les volets résine avec le même case_number
+      for (const drRow of drCreated) {
+        if (drRow.case_number === dmRow.case_number && !usedDrIds.has(String(drRow.id))) {
+          result.push(drRow);
+          usedDrIds.add(String(drRow.id));
+        }
+      }
+    }
+    // Ajouter les cas DR standalone (pas liés à un cas DM)
+    for (const drRow of drCreated) {
+      if (!usedDrIds.has(String(drRow.id))) result.push(drRow);
+    }
     // on_hold en bas
-    return all.sort((a, b) => {
+    return result.sort((a, b) => {
       const aH = (a as any)._on_hold ? 1 : 0;
       const bH = (b as any)._on_hold ? 1 : 0;
       return aH - bH;
@@ -426,9 +455,9 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
       </div>
 
       {/* Table */}
-      <div style={{overflowX:"auto",overflowY:"auto",minHeight:0,paddingBottom:80}}>
+      <div style={{overflowX:"auto",overflowY:"auto",minHeight:0,paddingBottom:80,position:"relative",zIndex:0}}>
         <table style={{borderCollapse:"separate",borderSpacing:"0 8px",width:"100%",tableLayout:"auto"}}>
-          <thead style={{position:"sticky",top:0,zIndex:2,background:"#111"}}>
+          <thead style={{position:"sticky",top:0,zIndex:20,background:"#111"}}>
             <tr>
               <th style={thSticky}>N° cas</th>
               <th style={thRead}>Création</th>
@@ -448,7 +477,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
             </tr>
           </thead>
           <tbody>
-            {sortedRows.map(row=>{
+            {sortedRows.map((row, rowIdx)=>{
               const dm=(row as any).sector_design_metal??{};
               const dr=(row as any).sector_design_resine??{};
               const nat=row.nature_du_travail??"";
@@ -466,20 +495,31 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
               const typeMeta=TYPE_DENTS_OPTIONS.find(o=>o.value===effectiveTypeDents)??{color:"#555"};
               const modeleOk=dr.modele_a_realiser_ok!==null&&dr.modele_a_realiser_ok!==undefined?dr.modele_a_realiser_ok:(isDrOnly?true:dm.modele_a_faire_ok??null);
               const teintes=dr.teintes_associees??dm.teintes_associees??null;
+
+              // Détection regroupement : est-ce un volet du même cas ?
+              const prevRow = rowIdx > 0 ? sortedRows[rowIdx - 1] : null;
+              const nextRow = rowIdx < sortedRows.length - 1 ? sortedRows[rowIdx + 1] : null;
+              const isVoletOfPrev = prevRow && prevRow.case_number === row.case_number;
+              const hasVoletNext = nextRow && nextRow.case_number === row.case_number;
+              const groupColor = isVoletOfPrev ? (NATURE_META[prevRow!.nature_du_travail ?? ""]?.color ?? "#666") : (natureMeta?.color ?? "#666");
+
               const rowBg=getRowBg(isC,isH,isA),rowBorder=getRowBorder(isC,isH,isA),rowShadow=getRowShadow(isC,isH,isA);
               const accentColor=isC?"#4ade80":natureMeta?.color??"#666";
-              const tdCard:React.CSSProperties={...tdBase,background:isF?"transparent":rowBg,borderTop:`1px solid ${isF?"transparent":rowBorder}`,borderBottom:`1px solid ${isF?"transparent":rowBorder}`,borderLeft:"none",borderRight:"none",transition:"background 160ms,border-color 160ms"};
-              const tdCardFirst:React.CSSProperties={...tdSticky,background:isF?"transparent":rowBg,borderTop:`1px solid ${isF?"transparent":rowBorder}`,borderBottom:`1px solid ${isF?"transparent":rowBorder}`,borderLeft:`1px solid ${isF?"transparent":rowBorder}`,borderTopLeftRadius:14,borderBottomLeftRadius:14,boxShadow:isF?"none":`inset 4px 0 0 ${accentColor}cc,${rowShadow}`,transition:"background 160ms,border-color 160ms,box-shadow 160ms"};
-              const tdCardLast:React.CSSProperties={...tdBase,background:isF?"transparent":rowBg,borderTop:`1px solid ${isF?"transparent":rowBorder}`,borderBottom:`1px solid ${isF?"transparent":rowBorder}`,borderRight:`1px solid ${isF?"transparent":rowBorder}`,borderTopRightRadius:14,borderBottomRightRadius:14,boxShadow:isF?"none":rowShadow,transition:"background 160ms,border-color 160ms"};
+              const tdCard:React.CSSProperties={...tdBase,background:isF?"transparent":rowBg,borderTop: isVoletOfPrev ? "none" : `1px solid ${isF?"transparent":rowBorder}`,borderBottom:`1px solid ${isF?"transparent":rowBorder}`,borderLeft:"none",borderRight:"none",transition:"background 160ms,border-color 160ms"};
+              const tdCardFirst:React.CSSProperties={...tdSticky,background:isF?"transparent":rowBg,borderTop: isVoletOfPrev ? "none" : `1px solid ${isF?"transparent":rowBorder}`,borderBottom:`1px solid ${isF?"transparent":rowBorder}`,borderLeft:`1px solid ${isF?"transparent":rowBorder}`,borderTopLeftRadius: isVoletOfPrev ? 0 : 14,borderBottomLeftRadius: hasVoletNext ? 0 : 14,boxShadow:isF?"none":`inset 4px 0 0 ${accentColor}cc,${rowShadow}`,transition:"background 160ms,border-color 160ms,box-shadow 160ms"};
+              const tdCardLast:React.CSSProperties={...tdBase,background:isF?"transparent":rowBg,borderTop: isVoletOfPrev ? "none" : `1px solid ${isF?"transparent":rowBorder}`,borderBottom:`1px solid ${isF?"transparent":rowBorder}`,borderRight:`1px solid ${isF?"transparent":rowBorder}`,borderTopRightRadius: isVoletOfPrev ? 0 : 14,borderBottomRightRadius: hasVoletNext ? 0 : 14,boxShadow:isF?"none":rowShadow,transition:"background 160ms,border-color 160ms"};
               const disabledCellStyle:React.CSSProperties={...tdCard,background:`repeating-linear-gradient(135deg,rgba(239,68,68,0.06) 0px,rgba(239,68,68,0.06) 4px,${rowBg} 4px,${rowBg} 8px)`,color:"rgba(239,68,68,0.4)"};
 
-              return (
-                <tr key={row.id} id={`row-dr-${row.id}`} onClick={()=>setActiveRowId(String(row.id))} onMouseEnter={()=>setHoveredId(String(row.id))} onMouseLeave={()=>setHoveredId(null)}
+              return (<React.Fragment key={row.id}>
+                {isVoletOfPrev && (
+                  <tr style={{height:0}}><td colSpan={17} style={{padding:0,border:"none"}}><div style={{margin:"0 14px",borderTop:"1px dashed #333"}} /></td></tr>
+                )}
+                <tr id={`row-dr-${row.id}`} onClick={()=>setActiveRowId(String(row.id))} onMouseEnter={()=>setHoveredId(String(row.id))} onMouseLeave={()=>setHoveredId(null)}
                   style={{cursor:"pointer",animation:isF?"row-found 2.2s ease-in-out forwards":"none",background:isF?undefined:"transparent",opacity:isOnHold?0.45:1,transition:"opacity 300ms"}}>
 
                   <td style={tdCardFirst} onDoubleClick={e=>{e.stopPropagation();handleTogglePhysical(String(row.id),Boolean(row.is_physical));}} title="Double-clic pour basculer physique / numérique"><div style={{display:"flex",flexDirection:"column",gap:2,cursor:"default"}}><div style={{display:"inline-flex",alignItems:"center",gap:6}}>
                     <button onClick={e=>{e.stopPropagation();handlePauseClick(String(row.id));}} disabled={holdBusy===String(row.id)} title={isOnHold?"Réactiver le cas":"Mettre en attente"} style={{background:"none",border:"none",padding:0,cursor:"pointer",fontSize:13,lineHeight:1,color:isOnHold?"#f59e0b":"#555",transition:"color 150ms",opacity:holdBusy===String(row.id)?0.4:1}} onMouseEnter={e=>{if(!isOnHold)e.currentTarget.style.color="#f59e0b";}} onMouseLeave={e=>{if(!isOnHold)e.currentTarget.style.color="#555";}}>{isOnHold?"▶":"⏸"}</button>
-                    <div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:24,padding:"2px 8px",borderRadius:8,color:"#ffffff",background:isA?"rgba(255,255,255,0.04)":"transparent",border:isA?"1px solid rgba(255,255,255,0.06)":"1px solid transparent",transition:"all 160ms"}}>{row.case_number}</div>{row.is_physical&&<PhysicalBadge/>}{isOnHold&&<button onClick={e=>{e.stopPropagation();const r=(e.currentTarget as HTMLElement).getBoundingClientRect();setReasonTooltip(prev=>prev?.id===String(row.id)?null:{id:String(row.id),rect:{top:r.top,left:r.left,width:r.width,bottom:r.bottom}});}} style={{fontSize:9,fontWeight:700,color:"#f59e0b",background:"rgba(245,158,11,0.10)",border:"1px solid rgba(245,158,11,0.25)",borderRadius:4,padding:"1px 6px",cursor:"pointer"}}>En attente {(row as any)._on_hold_reason?"💬":""}</button>}</div>{(row as any).sent_by_name&&<span style={{fontSize:9,color:"#818cf8",fontWeight:600,whiteSpace:"nowrap",paddingLeft:8}}>via {(row as any).sent_by_name}</span>}</div></td>
+                    <div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:24,padding:"2px 8px",borderRadius:8,color:isVoletOfPrev?"#888":"#ffffff",background:isA?"rgba(255,255,255,0.04)":"transparent",border:isA?"1px solid rgba(255,255,255,0.06)":"1px solid transparent",transition:"all 160ms"}}>{isVoletOfPrev ? `↳ ${row.case_number}` : row.case_number}</div>{row.is_physical&&<PhysicalBadge/>}{isOnHold&&<button onClick={e=>{e.stopPropagation();const r=(e.currentTarget as HTMLElement).getBoundingClientRect();setReasonTooltip(prev=>prev?.id===String(row.id)?null:{id:String(row.id),rect:{top:r.top,left:r.left,width:r.width,bottom:r.bottom}});}} style={{fontSize:9,fontWeight:700,color:"#f59e0b",background:"rgba(245,158,11,0.10)",border:"1px solid rgba(245,158,11,0.25)",borderRadius:4,padding:"1px 6px",cursor:"pointer"}}>En attente {(row as any)._on_hold_reason?"💬":""}</button>}</div>{(row as any).sent_by_name&&<span style={{fontSize:9,color:"#818cf8",fontWeight:600,whiteSpace:"nowrap",paddingLeft:8}}>via {(row as any).sent_by_name}</span>}</div></td>
                   <td style={tdCard}>{fmtDate(row.created_at)}</td>
 
                   {(() => { const rawExp = row.date_expedition?.slice(0,10) ?? ""; const today = new Date().toISOString().split("T")[0]; const expColor = rawExp && rawExp < today ? "#f87171" : rawExp && rawExp === today ? "#f59e0b" : undefined; return (
@@ -493,7 +533,20 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
 
                   <td style={{...tdCard,textAlign:"center"}} onClick={e=>e.stopPropagation()}>
                     {comesFromDm ? (
-                      <span style={{display:"inline-flex",alignItems:"center",padding:"2px 8px",borderRadius:6,background:(natureMeta?.color??"#fff")+"18",border:`1px solid ${(natureMeta?.color??"#fff")}44`,color:natureMeta?.color??"#fff",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{nat||"—"}</span>
+                      <div style={{position:"relative",display:"inline-block"}}>
+                        <span style={{display:"inline-flex",alignItems:"center",padding:"2px 8px",borderRadius:6,background:(natureMeta?.color??"#fff")+"18",border:`1px solid ${(natureMeta?.color??"#fff")}44`,color:natureMeta?.color??"#fff",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{nat||"—"}</span>
+                        {!caseNumbersWithVolet.has(row.case_number??"") && (
+                          <button onClick={()=>setVoletModalCaseNumber(row.case_number)} title="Ajouter un volet résine" style={{
+                            position:"absolute",top:"50%",left:"100%",transform:"translateY(-50%)",marginLeft:4,
+                            padding:"2px 6px",borderRadius:4,border:"1px solid #333",background:"transparent",
+                            color:"#777",fontSize:9,fontWeight:600,cursor:"pointer",
+                            transition:"all 150ms",whiteSpace:"nowrap",
+                          }}
+                            onMouseEnter={e=>{e.currentTarget.style.color="#ccc";e.currentTarget.style.borderColor="#555";}}
+                            onMouseLeave={e=>{e.currentTarget.style.color="#777";e.currentTarget.style.borderColor="#333";}}
+                          >+ volet</button>
+                        )}
+                      </div>
                     ) : (
                       <select value={nat} onChange={e=>{const v=e.target.value;patchRow(String(row.id),null,"nature_du_travail",v);updateCaseNatureAction(String(row.id),v);}} style={{
                         padding:"2px 6px",border:`1px solid ${(natureMeta?.color??"#fff")}44`,background:(natureMeta?.color??"#fff")+"18",color:natureMeta?.color??"#fff",
@@ -599,7 +652,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
                     )}
                   </td>
                 </tr>
-              );
+              </React.Fragment>);
             })}
             {sortedRows.length===0&&<tr><td colSpan={17} style={{padding:16,color:"#555",fontSize:13,textAlign:"center"}}>Aucun dossier en cours.</td></tr>}
           </tbody>
@@ -622,6 +675,33 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
         const r = rows.find(r => String(r.id) === holdModalCaseId);
         return <OnHoldReasonModal caseNumber={r?.case_number ?? ""} onConfirm={(reason) => doToggleHold(holdModalCaseId, reason || null)} onCancel={() => setHoldModalCaseId(null)} />;
       })()}
+      {voletModalCaseNumber && (
+        <div onClick={() => setVoletModalCaseNumber(null)} style={{ position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.55)",display:"flex",alignItems:"center",justifyContent:"center" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#1a1a1a",border:"1px solid #333",borderRadius:12,padding:"24px 28px",width:320,boxShadow:"0 12px 40px rgba(0,0,0,0.6)" }}>
+            <div style={{ fontSize:14,fontWeight:700,color:"white",marginBottom:4 }}>Ajouter un volet résine</div>
+            <div style={{ fontSize:18,fontWeight:800,color:"#4ade80",marginBottom:16 }}>{voletModalCaseNumber}</div>
+            <div style={{ fontSize:12,color:"#aaa",marginBottom:8 }}>Choisir la nature :</div>
+            <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
+              {DR_NATURE_OPTIONS.map(o => (
+                <button key={o.value} disabled={voletCreating} onClick={async () => {
+                  setVoletCreating(true);
+                  const res = await createResineVoletAction(voletModalCaseNumber, o.value);
+                  setVoletCreating(false);
+                  if (res.ok) { setVoletModalCaseNumber(null); load(); }
+                  else alert(res.error ?? "Erreur");
+                }} style={{
+                  padding:"10px 16px",borderRadius:8,border:`1px solid ${o.color}50`,background:`${o.color}12`,
+                  color:o.color,fontSize:13,fontWeight:600,cursor:voletCreating?"not-allowed":"pointer",
+                  textAlign:"left",transition:"all 150ms",opacity:voletCreating?0.5:1,
+                }}>{o.value}</button>
+              ))}
+            </div>
+            <div style={{ display:"flex",justifyContent:"flex-end",marginTop:16 }}>
+              <button onClick={() => setVoletModalCaseNumber(null)} style={{ padding:"8px 18px",borderRadius:8,border:"1px solid #444",background:"transparent",color:"white",fontSize:13,fontWeight:600,cursor:"pointer" }}>Annuler</button>
+            </div>
+          </div>
+        </div>
+      )}
       {reasonTooltip && (() => {
         const r = rows.find(r => String(r.id) === reasonTooltip.id);
         return <OnHoldReasonTooltip reason={(r as any)?._on_hold_reason} onHoldAt={(r as any)?._on_hold_at} anchorRect={reasonTooltip.rect} onClose={() => setReasonTooltip(null)} />;

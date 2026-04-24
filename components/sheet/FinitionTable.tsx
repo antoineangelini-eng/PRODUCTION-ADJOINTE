@@ -44,6 +44,8 @@ const NATURE_META: Record<string, { color:string }> = {
   "Chassis Dent All":  { color:"#4ade80" },
   "Définitif Résine":  { color:"#c4a882" },
   "Provisoire Résine": { color:"#9487a8" },
+  "Deflex":            { color:"#a78bfa" },
+  "Complet":           { color:"#38bdf8" },
 };
 
 function NatureBadge({ nature }: { nature: string | null }) {
@@ -239,12 +241,29 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
       return true;
     });
     // Tri : on_hold en bas, puis par date de réception (urgents d'abord)
-    return [...base].sort((a, b) => {
+    const sorted = [...base].sort((a, b) => {
       const aHold = (a as any)._on_hold ? 1 : 0;
       const bHold = (b as any)._on_hold ? 1 : 0;
       if (aHold !== bHold) return aHold - bHold;
       return (((a as any)._dateRef ?? a.date_expedition) ?? "9999").localeCompare(((b as any)._dateRef ?? b.date_expedition) ?? "9999");
     });
+    // Regrouper les mêmes case_number côte à côte
+    const result: typeof sorted = [];
+    const usedIds = new Set<string>();
+    for (const row of sorted) {
+      if (usedIds.has(String(row.id))) continue;
+      result.push(row);
+      usedIds.add(String(row.id));
+      // Trouver les autres cas avec le même numéro
+      for (const other of sorted) {
+        if (usedIds.has(String(other.id))) continue;
+        if (other.case_number === row.case_number) {
+          result.push(other);
+          usedIds.add(String(other.id));
+        }
+      }
+    }
+    return result;
   }, [rows, filter, today, tomorrow, day2]);
 
 
@@ -311,9 +330,9 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
         </div>
       </div>
 
-      <div style={{ overflowX:"auto", overflowY:"auto", flex:1, minHeight:0, paddingBottom:80 }}>
+      <div style={{ overflowX:"auto", overflowY:"auto", flex:1, minHeight:0, paddingBottom:80, position:"relative", zIndex:0 }}>
         <table style={{ borderCollapse:"collapse", width:"100%", tableLayout:"auto" }}>
-          <thead style={{ position:"sticky", top:0, zIndex:2, background:"#111" }}>
+          <thead style={{ position:"sticky", top:0, zIndex:20, background:"#111" }}>
             <tr>
               <th style={thSticky}>N° cas</th>
               <th style={thRead}>Création</th>
@@ -334,7 +353,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                 {emptyMessage()}
               </td></tr>
             )}
-            {filtered.map(row => {
+            {filtered.map((row, rowIdx) => {
               const fin = (row as any).sector_finition       ?? {};
               const dm  = (row as any).sector_design_metal   ?? {};
               const dr  = (row as any).sector_design_resine  ?? {};
@@ -346,6 +365,12 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
               const isChecked     = checkedIds.has(String(row.id));
               const isProvisoire  = row.nature_du_travail === "Provisoire Résine";
               const isOnHold      = Boolean((row as any)._other_on_hold);
+
+              // Regroupement visuel
+              const prevRow = rowIdx > 0 ? filtered[rowIdx - 1] : null;
+              const nextRow = rowIdx < filtered.length - 1 ? filtered[rowIdx + 1] : null;
+              const isVoletOfPrev = prevRow && prevRow.case_number === row.case_number;
+              const hasVoletNext = nextRow && nextRow.case_number === row.case_number;
 
               const teintes   = ur.teintes_override ?? dr.teintes_associees ?? dm.teintes_associees ?? null;
               // DM est la source de vérité pour type_de_dents (DR force toujours "Dents usinées")
@@ -426,19 +451,30 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                 ? { background: "rgba(234,179,8,0.04)", boxShadow: "inset 3px 0 0 #eab308" }
                 : {};
 
-              return (
-                <tr key={row.id} id={`row-fin-${row.id}`}
+              return (<React.Fragment key={row.id}>
+                {isVoletOfPrev && (
+                  <tr style={{height:0}}><td colSpan={11} style={{padding:0,border:"none"}}><div style={{margin:"0 10px",borderTop:"1px dashed #444"}} /></td></tr>
+                )}
+                <tr id={`row-fin-${row.id}`}
                   style={{
                     ...(expUrgency && expUrgency !== "ok" ? urgencyStyle : DELAI_STYLES[status]),
-                    borderBottom:"1px solid #1a1a1a",
+                    borderBottom: hasVoletNext ? "none" : "1px solid #1a1a1a",
+                    borderTop: isVoletOfPrev ? "none" : undefined,
                     transition:"background 300ms, opacity 300ms",
                     outline: isHighlighted ? "1px solid #4ade80" : "none",
                     opacity: isOnHold ? 0.45 : 1,
+                    ...((isVoletOfPrev || hasVoletNext) && !isVoletOfPrev ? { borderTop: "2px solid rgba(255,255,255,0.15)" } : {}),
+                    ...((isVoletOfPrev || hasVoletNext) && !hasVoletNext ? { borderBottom: "2px solid rgba(255,255,255,0.15)" } : {}),
                   }}
                 >
                   <td style={{
                     ...tdSticky,
                     background: isChecked ? "rgba(74,222,128,0.05)" : isHighlighted ? "rgba(74,222,128,0.08)" : "#0b0b0b",
+                    ...((isVoletOfPrev || hasVoletNext) ? {
+                      borderLeft: "2px solid rgba(255,255,255,0.15)",
+                      borderTop: !isVoletOfPrev ? "2px solid rgba(255,255,255,0.15)" : undefined,
+                      borderBottom: !hasVoletNext ? "2px solid rgba(255,255,255,0.15)" : undefined,
+                    } : {}),
                   }}>
                     <div style={{ display:"flex", flexDirection:"column" as const, gap:2 }}>
                       <div style={{ display:"flex", alignItems:"center", gap:6 }}>
@@ -457,7 +493,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                           onMouseEnter={e => (e.currentTarget.style.color = natureMeta?.color ?? "#4ade80")}
                           onMouseLeave={e => (e.currentTarget.style.color = "white")}
                         >
-                          {row.case_number}
+                          {isVoletOfPrev ? `↳ ${row.case_number}` : row.case_number}
                         </button>
                         {row.is_physical && <PhysicalBadge />}
                         {isOnHold && (
@@ -564,7 +600,13 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                     </>);
                   })()}
 
-                  <td style={{ ...tdBase, width:48 }}>
+                  <td style={{ ...tdBase, width:48,
+                    ...((isVoletOfPrev || hasVoletNext) ? {
+                      borderRight: "2px solid rgba(255,255,255,0.15)",
+                      borderTop: !isVoletOfPrev ? "2px solid rgba(255,255,255,0.15)" : undefined,
+                      borderBottom: !hasVoletNext ? "2px solid rgba(255,255,255,0.15)" : undefined,
+                    } : {}),
+                  }}>
                     {validated ? (
                       <div style={{ display:"inline-flex", padding:"3px 10px", borderRadius:6, background:"rgba(74,222,128,0.12)", border:"1px solid rgba(74,222,128,0.35)", color:"#4ade80", fontWeight:700, fontSize:11 }}>✓ Validé</div>
                     ) : (
@@ -578,7 +620,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                     )}
                   </td>
                 </tr>
-              );
+              </React.Fragment>);
             })}
           </tbody>
         </table>

@@ -8,6 +8,8 @@ const NATURE_META: Record<string, { color: string }> = {
   "Chassis Dent All":  { color: "#4ade80" },
   "Définitif Résine":  { color: "#c4a882" },
   "Provisoire Résine": { color: "#9487a8" },
+  "Deflex":            { color: "#a78bfa" },
+  "Complet":           { color: "#38bdf8" },
 };
 const TYPE_DENTS_COLOR: Record<string, string> = {
   "Dents usinées":      "#7c8196",

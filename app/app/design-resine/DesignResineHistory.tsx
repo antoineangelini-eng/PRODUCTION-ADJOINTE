@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { loadDrHistoryAction, reopenDrCaseAction, type DrHistoryRow } from "./dr-history-actions";
 import { NATURE_META, fmtDate, fmtDT, Check, Bool, Txt, Field, FieldBlocked, ReopenModal, HistoryFilters, CardShell } from "@/components/history/history-shared";
+import { groupByCaseNumber } from "@/lib/group-cases";
 
 function DrCard({ row, onReopen }: { row: DrHistoryRow; onReopen: () => void }) {
   const [open, setOpen] = useState(false);
@@ -70,7 +71,19 @@ export function DesignResineHistory() {
         {loading ? <div style={{ padding: 32, color: "#555", fontSize: 13 }}>Chargement…</div>
           : filtered.length === 0 ? <div style={{ padding: 32, color: "#333", fontSize: 13, textAlign: "center" }}>Aucun dossier terminé.</div>
           : <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 10 }}>
-              {filtered.map(row => <DrCard key={row.id} row={row} onReopen={() => setReopenRow(row)} />)}
+              {groupByCaseNumber(filtered).map(group => {
+                if (group.length === 1) return <DrCard key={group[0].id} row={group[0]} onReopen={() => setReopenRow(group[0])} />;
+                return (
+                  <div key={`grp-${group[0].id}`} style={{ border:"2px solid #3a3a3a", borderRadius:14, overflow:"hidden", background:"#0f0f0f", alignSelf:"start" }}>
+                    {group.map((row, i) => (
+                      <React.Fragment key={row.id}>
+                        {i > 0 && <div style={{ margin:"0 12px", borderTop:"1px dashed #444" }} />}
+                        <DrCard row={row} onReopen={() => setReopenRow(row)} />
+                      </React.Fragment>
+                    ))}
+                  </div>
+                );
+              })}
             </div>}
       </div>
       {reopenRow && (

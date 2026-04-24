@@ -562,7 +562,39 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
       <div style={{ overflowY:"auto", flex:1, minHeight:0, padding:"12px 8px 80px" }}>
         {rows.length===0 && <div style={{ color:"#333", fontSize:13, textAlign:"center", paddingTop:40 }}>Aucun dossier en cours.</div>}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(360px, 1fr))", gap:10 }}>
-          {rows.filter(r => !searchFilter || (r.case_number ?? "").includes(searchFilter)).map(row => {
+          {(() => {
+            // Regrouper les rows par case_number
+            const filtered = rows.filter(r => !searchFilter || (r.case_number ?? "").includes(searchFilter));
+            const groups: UsinageResineRow[][] = [];
+            const seen = new Map<string, number>();
+            for (const row of filtered) {
+              const cn = row.case_number ?? String(row.id);
+              if (seen.has(cn)) {
+                groups[seen.get(cn)!].push(row);
+              } else {
+                seen.set(cn, groups.length);
+                groups.push([row]);
+              }
+            }
+            return groups.map(group => {
+              if (group.length === 1) {
+                const row = group[0];
+                return renderCard(row, false);
+              }
+              // Groupe multi — conteneur commun
+              return (
+                <div key={`grp-${group[0].case_number}`} style={{ border:"2px solid #3a3a3a", borderRadius:14, overflow:"hidden", background:"#0f0f0f", alignSelf:"start" }}>
+                  {group.map((row, i) => (
+                    <React.Fragment key={row.id}>
+                      {i > 0 && <div style={{ margin:"0 12px", borderTop:"1px dashed #444" }} />}
+                      {renderCard(row, true)}
+                    </React.Fragment>
+                  ))}
+                </div>
+              );
+            });
+
+            function renderCard(row: UsinageResineRow, inGroup: boolean) {
             const ur = (row as any).sector_usinage_resine ?? {};
             const dr = (row as any).sector_design_resine  ?? {};
             const dm = (row as any).sector_design_metal   ?? {};
@@ -578,7 +610,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
             const isDentsImprimees = effectiveTD === "Dents imprimées";
             const dt = fmtDT(dr.design_dents_resine_at);
             return (
-              <div key={row.id} id={`card-ur-${row.id}`} data-nav-row={String(row.id)} style={{ background:BG_CARD, border:`1px solid ${isChecked?"#2d4d3a":isDone?"#2d3d35":isLotFilled?"#2d2b4a":"#272727"}`, borderRadius:12, overflow:"hidden", animation:isFocused?"card-found 2s ease forwards":isNew?"card-new 2.5s ease forwards":"none", transition:"border-color 150ms, opacity 300ms", opacity:isOnHold?0.45:1 }}>
+              <div key={row.id} id={`card-ur-${row.id}`} data-nav-row={String(row.id)} style={{ background:BG_CARD, border: inGroup ? "none" : `1px solid ${isChecked?"#2d4d3a":isDone?"#2d3d35":isLotFilled?"#2d2b4a":"#272727"}`, borderRadius: inGroup ? 0 : 12, overflow:"hidden", animation:isFocused?"card-found 2s ease forwards":isNew?"card-new 2.5s ease forwards":"none", transition:"border-color 150ms, opacity 300ms", opacity:isOnHold?0.45:1, ...(!inGroup ? {alignSelf:"start"} : {}) }}>
                 <div style={{ height:3, background:natColor, opacity:0.8 }} />
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 14px", borderBottom:"2px solid #2a2a2a" }}>
                   <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
@@ -674,7 +706,8 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
                 })()}
               </div>
             );
-          })}
+          } // end renderCard
+          })()}
         </div>
       </div>
 

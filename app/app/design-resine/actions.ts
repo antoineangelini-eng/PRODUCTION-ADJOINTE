@@ -296,6 +296,60 @@ export async function updateCaseNatureAction(caseId: string, nature: string): Pr
   revalidatePath("/app/design-resine");
 }
 
+/** Créer un volet résine pour un cas existant venant de DM (même case_number, nature DR) */
+export async function createResineVoletAction(
+  caseNumber: string,
+  nature: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient();
+  const admin = createAdminClient();
+
+  // Vérifier qu'il n'y a pas déjà un volet résine actif pour ce numéro
+  const { data: existingVolets } = await admin
+    .from("cases")
+    .select("id, nature_du_travail")
+    .eq("case_number", caseNumber);
+  const drNatures = ["Provisoire Résine", "Deflex", "Complet"];
+  const hasVolet = (existingVolets ?? []).some(c => drNatures.includes(c.nature_du_travail));
+  if (hasVolet) return { ok: false, error: "Un volet résine existe déjà pour ce cas" };
+
+  // Créer un nouveau cas avec le même numéro
+  const { data, error } = await supabase.rpc("rpc_create_case_from_design_resine", {
+    p_case_number: caseNumber,
+    p_nature_du_travail: nature,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  const caseId = typeof data === "string" ? data : String(data);
+  if (!caseId || caseId === "null") return { ok: false, error: "Erreur création" };
+
+  // Défauts selon la nature
+  const drDefaults: Record<string, any> = { modele_a_realiser_ok: true };
+  if (nature === "Complet") {
+    drDefaults.type_de_dents = null;
+    drDefaults.base_type = null;
+  } else if (nature === "Deflex") {
+    drDefaults.type_de_dents = "Dents usinées";
+    drDefaults.base_type = "Usinée";
+  } else {
+    drDefaults.type_de_dents = "Dents usinées";
+  }
+  await admin.from("sector_design_resine").update(drDefaults).eq("case_id", caseId);
+
+  // Date d'expédition basée sur les jours ouvrés
+  const { data: wdConfig } = await supabase
+    .from("working_days_config")
+    .select("days")
+    .eq("nature", nature)
+    .single();
+  const nbDays = wdConfig?.days ?? 3;
+  const dateExp = toDateStr(addBusinessDays(new Date(), nbDays));
+  await supabase.rpc("rpc_update_case_expedition", { p_case_id: caseId, p_date: dateExp, p_manual: false });
+
+  revalidatePath("/app/design-resine");
+  return { ok: true };
+}
+
 export async function completeDesignResineBatchAction(
   _prev: BatchResult | null,
   formData: FormData
