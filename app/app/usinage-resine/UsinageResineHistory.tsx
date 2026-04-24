@@ -19,16 +19,20 @@ function UrCard({ row, onReopen }: { row: UrHistoryRow; onReopen: () => void }) 
     >
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
         <div style={{ flex: 1 }}>
-          <Field label={row.identite_machine_2 ? "Machines" : "Machine"}>
-            <Txt val={row.identite_machine} color="#9487a8" />
-            {row.identite_machine_2 && (<><span style={{ color: "#333", margin: "0 4px" }}>/</span><Txt val={row.identite_machine_2} color="#9487a8" /></>)}
-          </Field>
+          {row.type_de_dents === "Dents imprimées" ? <FieldBlocked label="Machine" /> : (
+            <Field label={row.identite_machine_2 ? "Machines" : "Machine"}>
+              <Txt val={row.identite_machine} color="#9487a8" />
+              {row.identite_machine_2 && (<><span style={{ color: "#333", margin: "0 4px" }}>/</span><Txt val={row.identite_machine_2} color="#9487a8" /></>)}
+            </Field>
+          )}
         </div>
         <div style={{ flex: 1 }}>
-          <Field label={row.numero_disque_2 ? "N° disques" : "N° disque"}>
-            <Txt val={row.numero_disque} />
-            {row.numero_disque_2 && (<><span style={{ color: "#333", margin: "0 4px" }}>/</span><Txt val={row.numero_disque_2} /></>)}
-          </Field>
+          {row.type_de_dents === "Dents imprimées" ? <FieldBlocked label="N° disque" /> : (
+            <Field label={row.numero_disque_2 ? "N° disques" : "N° disque"}>
+              <Txt val={row.numero_disque} />
+              {row.numero_disque_2 && (<><span style={{ color: "#333", margin: "0 4px" }}>/</span><Txt val={row.numero_disque_2} /></>)}
+            </Field>
+          )}
         </div>
       </div>
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>

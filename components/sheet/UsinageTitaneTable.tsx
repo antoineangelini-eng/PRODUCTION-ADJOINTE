@@ -12,6 +12,7 @@ import {
   type UsinageTitaneRow,
   type BatchResult,
 } from "@/app/app/usinage-titane/actions";
+import { buildUtPrintJobAction } from "@/app/app/usinage-titane/print-actions";
 import { DeleteConfirmModal } from "@/components/sheet/DeleteConfirmModal";
 import { toggleOnHoldAction } from "@/lib/on-hold";
 import { OnHoldReasonModal, OnHoldReasonTooltip } from "@/components/sheet/OnHoldModal";
@@ -610,6 +611,29 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
     setBatchResult(result); setBatchPending(false);
     if (result.okIds.length > 0 && result.errors.length === 0) setTimeout(() => setBatchResult(null), 4000);
     if (result.okIds.length > 0) {
+      // Impression Zebra via relais local
+      const relayUrl = process.env.NEXT_PUBLIC_PRINT_RELAY_URL || "http://192.168.1.30:3001";
+      for (const okId of result.okIds) {
+        const row = rows.find(r => String(r.id) === okId);
+        if (!row) continue;
+        const ut = (row as any).sector_usinage_titane ?? {};
+        const hasH = Boolean(ut.numero_calcul_h);
+        const hasB = Boolean(ut.numero_calcul_b);
+        const qte = (hasH && hasB) ? 2 : 1;
+        buildUtPrintJobAction({
+          caseNumber: row.case_number ?? okId,
+          dateExpedition: row.date_expedition ?? null,
+          receptionMetal: ut.reception_metal_at ?? null,
+          quantite: qte,
+        }).then(job => {
+          if (!job) return;
+          fetch(`${relayUrl}/print`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ zpl: job.zpl, printerIp: job.printerIp }),
+          }).catch(() => {});
+        }).catch(() => {});
+      }
       setCheckedIds(prev => { const n = new Set(prev); result.okIds.forEach(id => n.delete(id)); return n; });
       // Refresh complet : enlève les cas validés ET fait entrer les nouveaux cas du bandeau
       load();

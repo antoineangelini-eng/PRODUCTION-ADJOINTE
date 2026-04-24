@@ -18,9 +18,10 @@ export async function buildUrPrintJobAction(data: {
   disque2?: string | null;
   nbBlocs: string | null;
   modele: boolean;
+  base: string | null;
 }): Promise<PrintJobData> {
   const printerIp = await getCurrentUserPrinterIpAction();
-  if (!printerIp) return null; // Pas d'imprimante configurée → skip
+  if (!printerIp) return null;
 
   const mergedMachine = [data.machine, data.machine2].filter(Boolean).join(" / ") || null;
   const mergedDisque  = [data.disque, data.disque2].filter(Boolean).join(" / ") || null;
@@ -32,6 +33,7 @@ export async function buildUrPrintJobAction(data: {
     disque: mergedDisque,
     nbBlocs: data.nbBlocs,
     modele: data.modele,
+    base: data.base,
   });
   return { zpl, printerIp };
 }

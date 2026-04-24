@@ -8,6 +8,7 @@ export type LabelData = {
   disque: string | null;
   nbBlocs: string | null;
   modele: boolean;
+  base: string | null;
 };
 
 const ZEBRA_PORT = 9100;
@@ -44,7 +45,14 @@ export function buildZPL(data: LabelData): string {
 
     // Machine
     `^FO12,124^A0N,14,14^FDMachine :^FS`,
-    `^FO12,142^A0N,28,28^FD${machine}^FS`,
+    ...(data.machine
+      ? [`^FO12,142^A0N,28,28^FD${machine}^FS`]
+      : [
+          // Cercle barré (N/A)
+          `^FO20,140^GE24,24,2^FS`,
+          `^FO18,138^GD28,28,2,,R^FS`,
+        ]
+    ),
 
     // Modele — inversé (blanc sur noir) si Non
     `^FO12,178^A0N,14,14^FDModele :^FS`,
@@ -63,12 +71,72 @@ export function buildZPL(data: LabelData): string {
 
     // Disque
     `^FO220,124^A0N,14,14^FDDisque :^FS`,
-    `^FO220,142^A0N,28,28^FD${disque}^FS`,
+    ...(data.disque
+      ? [`^FO220,142^A0N,28,28^FD${disque}^FS`]
+      : [
+          // Cercle barré (N/A)
+          `^FO228,140^GE24,24,2^FS`,
+          `^FO226,138^GD28,28,2,,R^FS`,
+        ]
+    ),
+
+    // Base (si renseignée) — inversé si Imprimée
+    ...(data.base ? [
+      `^FO220,178^A0N,14,14^FDBase :^FS`,
+      ...(data.base === "Imprimée"
+        ? [
+            `^FO216,192^GB140,34,34^FS`,
+            `^FO220,196^A0N,28,28^FR^FD${data.base}^FS`,
+          ]
+        : [`^FO220,196^A0N,28,28^FD${data.base}^FS`]
+      ),
+    ] : []),
 
     "^XZ",
   ];
 
   return lines.join("\n");
+}
+
+/** Étiquette simple pour UT : numéro de cas + date d'expédition + Chassis Argoat + réception métal + quantité */
+export function buildSimpleZPL(caseNumber: string, dateExpedition: string | null, receptionMetal: string | null = null, quantite: number = 1): string {
+  const dateFr = dateExpedition
+    ? new Date(dateExpedition.slice(0, 10) + "T00:00:00").toLocaleDateString("fr-FR")
+    : "—";
+  const JOURS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+  const expDay = dateExpedition ? JOURS[new Date(dateExpedition.slice(0, 10) + "T00:00:00").getDay()] : "";
+
+  const recepFr = receptionMetal
+    ? new Date(receptionMetal.slice(0, 10) + "T00:00:00").toLocaleDateString("fr-FR")
+    : null;
+  const recepDay = receptionMetal ? JOURS[new Date(receptionMetal.slice(0, 10) + "T00:00:00").getDay()] : "";
+
+  return [
+    "^XA",
+    "^CI28",
+    "^PW406",
+    "^LL270",
+    "^LH0,0",
+    // Numéro de cas en très gros + Chassis Argoat à droite
+    `^FO16,15^A0N,50,50^FD${caseNumber}^FS`,
+    `^FO260,28^A0N,20,20^FDChassis Argoat^FS`,
+    // Séparation
+    "^FO12,75^GB382,3,3^FS",
+    // Date d'expédition en gros + jour de la semaine
+    `^FO16,90^A0N,18,18^FDExpedition :^FS`,
+    `^FO16,114^A0N,44,44^FD${expDay} ${dateFr}^FS`,
+    // Séparation fine
+    "^FO12,168^GB382,1,1^FS",
+    // Réception métal en dessous + jour de la semaine
+    ...(recepFr ? [
+      `^FO16,178^A0N,16,16^FDReception metal :^FS`,
+      `^FO16,200^A0N,28,28^FD${recepDay} ${recepFr}^FS`,
+    ] : []),
+    // Quantité en bas à droite — blanc sur noir, bien visible
+    `^FO300,200^GB100,44,44^FS`,
+    `^FO308,204^A0N,36,36^FR^FDQte ${quantite}^FS`,
+    "^XZ",
+  ].join("\n");
 }
 
 export async function printLabel(data: LabelData, printerIp: string): Promise<{ ok: boolean; error?: string }> {

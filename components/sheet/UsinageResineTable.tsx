@@ -464,16 +464,19 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
         const ur = (row as any).sector_usinage_resine ?? {};
         const dr = (row as any).sector_design_resine  ?? {};
         const dm = (row as any).sector_design_metal   ?? {};
+        const printTD = ur.type_de_dents_override ?? dm.type_de_dents ?? dr.type_de_dents ?? "";
+        const printDentsImp = printTD === "Dents imprimées";
         buildUrPrintJobAction({
           caseNumber: row.case_number ?? okId,
           nature: row.nature_du_travail ?? null,
           teinte:  ur.teintes_override ?? dr.teintes_associees ?? dm.teintes_associees ?? null,
-          machine: ur.identite_machine ?? null,
-          machine2: ur.identite_machine_2 ?? null,
-          disque:  ur.numero_disque    ?? null,
-          disque2: ur.numero_disque_2  ?? null,
+          machine: printDentsImp ? null : (ur.identite_machine ?? null),
+          machine2: printDentsImp ? null : (ur.identite_machine_2 ?? null),
+          disque:  printDentsImp ? null : (ur.numero_disque ?? null),
+          disque2: printDentsImp ? null : (ur.numero_disque_2 ?? null),
           nbBlocs: ur.nb_blocs_override ?? dr.nb_blocs_de_dents ?? null,
           modele:  Boolean(dr.modele_a_realiser_ok ?? dm.modele_a_faire_ok),
+          base:    dr.base_type ?? null,
         }).then(job => {
           if (!job || !relayUrl) return;
           fetch(`${relayUrl}/print`, {
@@ -572,6 +575,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
             const isDone = Boolean(ur.usinage_dents_resine);
             const isOnHold = Boolean((row as any)._on_hold);
             const effectiveTD = ur.type_de_dents_override ?? dm.type_de_dents ?? dr.type_de_dents ?? "";
+            const isDentsImprimees = effectiveTD === "Dents imprimées";
             const dt = fmtDT(dr.design_dents_resine_at);
             return (
               <div key={row.id} id={`card-ur-${row.id}`} data-nav-row={String(row.id)} style={{ background:BG_CARD, border:`1px solid ${isChecked?"#2d4d3a":isDone?"#2d3d35":isLotFilled?"#2d2b4a":"#272727"}`, borderRadius:12, overflow:"hidden", animation:isFocused?"card-found 2s ease forwards":isNew?"card-new 2.5s ease forwards":"none", transition:"border-color 150ms, opacity 300ms", opacity:isOnHold?0.45:1 }}>
@@ -622,6 +626,18 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
                 {/* ── Machine / N° disque — double-clic active le mode double ── */}
                 {(() => {
                   const rid = String(row.id);
+                  if (isDentsImprimees) {
+                    return (<>
+                      <div style={{ ...grid2, background:BG_LABEL_SAISIE, borderBottom:BD_LIGHT }}>
+                        <Lbl color="#7c8196">Machine</Lbl>
+                        <Lbl color="#7c8196">N° disque</Lbl>
+                      </div>
+                      <div style={{ ...vals2, background:"repeating-linear-gradient(135deg, rgba(239,68,68,0.06) 0px, rgba(239,68,68,0.06) 4px, #1b1b1b 4px, #1b1b1b 8px)", borderBottom:BD_STRONG }}>
+                        <span style={{ color:"rgba(239,68,68,0.4)", fontSize:13 }}>⊘</span>
+                        <span style={{ color:"rgba(239,68,68,0.4)", fontSize:13 }}>⊘</span>
+                      </div>
+                    </>);
+                  }
                   const hasDualMachine = dualMachineIds.has(rid) || Boolean(ur.identite_machine_2);
                   const hasDualDisque  = dualDisqueIds.has(rid) || Boolean(ur.numero_disque_2);
                   const showDualRow = hasDualMachine || hasDualDisque;
