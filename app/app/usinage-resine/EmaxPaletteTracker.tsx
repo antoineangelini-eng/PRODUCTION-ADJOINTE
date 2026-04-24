@@ -185,6 +185,15 @@ export function EmaxPaletteTracker() {
   const [attempted,setAttempted] = useState(false);
   const [printerIp, setPrinterIp] = useState<string|null>(null);
 
+  // File d'attente
+  type QueueItem = { id: number; code: string; mat: Materiau; cg: string; teinte: string; combos: Set<ComboKey> };
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const queueIdRef = useRef(0);
+
+  // Emplacements déjà pris dans la file
+  const usedSlots = new Set<ComboKey>();
+  for (const item of queue) for (const k of item.combos) usedSlots.add(k);
+
   useEffect(() => { getCurrentUserPrinterIpAction().then(ip => setPrinterIp(ip)); }, []);
 
   const accent = mat ? ACC[mat] : "#888";
@@ -193,7 +202,7 @@ export function EmaxPaletteTracker() {
   function pickMat(m: Materiau) { setMat(p=>p===m?"":m); setCg(""); setTeinte(""); }
   function pickCg(g: string)    { setCg(p=>p===g?"":g); setTeinte(""); }
   function clickPal(p: number)  { setPals(prev=>{const n=new Set(prev);if(n.has(p)){n.delete(p);setCombos(sc=>{const ns=new Set(sc);for(const k of ns)if(k.startsWith(`${p}-`))ns.delete(k);return ns;});}else if(n.size<2)n.add(p);return n;}); }
-  function clickSlot(p: number, s: number) { const k=`${p}-${s}`; setCombos(prev=>{const n=new Set(prev);if(n.has(k))n.delete(k);else n.add(k);return n;}); }
+  function clickSlot(p: number, s: number) { const k=`${p}-${s}`; if(usedSlots.has(k)) return; setCombos(prev=>{const n=new Set(prev);if(n.has(k))n.delete(k);else n.add(k);return n;}); }
 
   async function handlePrint() {
     setAttempted(true);
@@ -204,6 +213,37 @@ export function EmaxPaletteTracker() {
     finally { setPrinting(false); }
     setCombos(new Set()); setPals(new Set());
     setCode(""); setMat(""); setCg(""); setTeinte(""); setAttempted(false);
+  }
+
+  function handleAddToQueue() {
+    setAttempted(true);
+    if(!canPrint) return;
+    const keepMat = mat;
+    const keepPals = new Set(pals);
+    setQueue(prev => [...prev, { id: ++queueIdRef.current, code: code.trim(), mat: mat as Materiau, cg, teinte, combos: new Set(combos) }]);
+    // Reset pour le prochain cas mais garder matériau et palettes
+    setCombos(new Set()); setCode(""); setCg(""); setTeinte(""); setAttempted(false);
+    // Pré-remplir matériau et palettes
+    setTimeout(() => { setMat(keepMat as Materiau); setPals(keepPals); }, 0);
+  }
+
+  function removeFromQueue(id: number) {
+    setQueue(prev => prev.filter(q => q.id !== id));
+  }
+
+  async function handlePrintAll() {
+    if(queue.length === 0 || printing) return;
+    setPrinting(true);
+    try {
+      for (const item of queue) {
+        await sendPrint(generateZPL(item.combos, item.code, item.mat, item.cg, item.teinte), printerIp ?? "");
+      }
+      // Tout reset
+      setQueue([]);
+      setCombos(new Set()); setPals(new Set());
+      setCode(""); setMat(""); setCg(""); setTeinte(""); setAttempted(false);
+    } catch(e:any) { alert("Erreur : "+e.message); }
+    finally { setPrinting(false); }
   }
 
   useEffect(() => {
@@ -339,8 +379,10 @@ export function EmaxPaletteTracker() {
                 {[0,3].map(rs=>(
                   <div key={rs} style={{ display:"flex",gap:5,marginBottom:5 }}>
                     {[0,1,2].map(off=>{
-                      const s=rs+off,k=`${p}-${s}`,isSel=combos.has(k);
-                      return <button key={s} onClick={()=>clickSlot(p,s)} style={{ flex:1,...gridBtn(isSel,accent) }}>{s+1}</button>;
+                      const s=rs+off,k=`${p}-${s}`,isSel=combos.has(k),isUsed=usedSlots.has(k);
+                      return <button key={s} onClick={()=>clickSlot(p,s)} disabled={isUsed} style={{ flex:1,...gridBtn(isSel,accent),
+                        ...(isUsed ? { opacity:0.3, cursor:"not-allowed", background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.3)", color:"#f87171" } : {})
+                      }}>{isUsed ? "✕" : s+1}</button>;
                     })}
                   </div>
                 ))}
@@ -361,17 +403,69 @@ export function EmaxPaletteTracker() {
             </div>
           )}
 
-          {/* Bouton imprimer */}
-          <button disabled={!canPrint||printing} onClick={handlePrint}
-            style={{ width:"100%",padding:"14px 0",borderRadius:10,fontSize:14,fontWeight:900,letterSpacing:"0.04em",cursor:!canPrint||printing?"not-allowed":"pointer",transition:"all 200ms",
-              border: canPrint ? `2px solid ${accent}` : "1px solid #2e2e2e",
-              background: canPrint ? `${accent}20` : "#141414",
-              color: canPrint ? accent : "#555",
-              boxShadow: canPrint ? `0 0 20px ${accent}20` : "none" }}>
-            {printing ? "Impression..." : "🖨 Imprimer"}
-          </button>
+          {/* Boutons : Ajouter à la file + Imprimer seul */}
+          <div style={{ display:"flex", gap:6 }}>
+            <button disabled={!canPrint||printing} onClick={handleAddToQueue}
+              style={{ flex:1,padding:"12px 0",borderRadius:10,fontSize:12,fontWeight:800,letterSpacing:"0.04em",cursor:!canPrint||printing?"not-allowed":"pointer",transition:"all 200ms",
+                border: canPrint ? "2px solid #4ade80" : "1px solid #2e2e2e",
+                background: canPrint ? "rgba(74,222,128,0.12)" : "#141414",
+                color: canPrint ? "#4ade80" : "#555" }}>
+              + File
+            </button>
+            <button disabled={!canPrint||printing} onClick={handlePrint}
+              style={{ flex:1,padding:"12px 0",borderRadius:10,fontSize:12,fontWeight:800,letterSpacing:"0.04em",cursor:!canPrint||printing?"not-allowed":"pointer",transition:"all 200ms",
+                border: canPrint ? `2px solid ${accent}` : "1px solid #2e2e2e",
+                background: canPrint ? `${accent}20` : "#141414",
+                color: canPrint ? accent : "#555" }}>
+              {printing ? "..." : "🖨 Imprimer"}
+            </button>
+          </div>
 
         </div>
+
+        {/* ── File d'attente ─────────────────────────────────────── */}
+        {queue.length > 0 && (<>
+          <div style={{ display:"flex",alignItems:"center",justifyContent:"center",flex:"0 0 24px",paddingTop:60 }}>
+            <svg viewBox="0 0 14 24" width="14" height="24" fill="none" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 2l10 10L2 22"/>
+            </svg>
+          </div>
+          <div style={{ flex:"1 1 220px",display:"flex",flexDirection:"column",gap:8,maxWidth:300 }}>
+            <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4 }}>
+              <span style={{ fontSize:10,fontWeight:800,letterSpacing:"0.1em",textTransform:"uppercase",color:"#4ade80" }}>File d'attente — {queue.length}</span>
+            </div>
+            <div style={{ display:"flex",flexDirection:"column",gap:6,overflowY:"auto",maxHeight:400 }}>
+              {queue.map(item => (
+                <div key={item.id} style={{ padding:"8px 12px",borderRadius:8,background:"#141414",border:"1px solid #2a2a2a",display:"flex",alignItems:"center",gap:10 }}>
+                  <div style={{ flex:1 }}>
+                    <div style={{ display:"flex",alignItems:"center",gap:6,marginBottom:4 }}>
+                      <span style={{ fontSize:13,fontWeight:800,color:"white" }}>#{item.code}</span>
+                      <span style={{ fontSize:9,fontWeight:700,color:ACC[item.mat],background:`${ACC[item.mat]}15`,border:`1px solid ${ACC[item.mat]}30`,borderRadius:4,padding:"1px 6px" }}>{item.mat}</span>
+                    </div>
+                    <div style={{ display:"flex",alignItems:"center",gap:6,flexWrap:"wrap" }}>
+                      <span style={{ fontSize:10,color:"#888" }}>{item.cg} · {item.teinte}</span>
+                      {[...item.combos].sort().map(k => {
+                        const [pp,ss] = k.split("-").map(Number);
+                        return <span key={k} style={{ fontSize:9,fontWeight:700,color:ACC[item.mat],background:`${ACC[item.mat]}10`,border:`1px solid ${ACC[item.mat]}25`,borderRadius:4,padding:"1px 6px" }}>P{pp+1}·E{ss+1}</span>;
+                      })}
+                    </div>
+                  </div>
+                  <button onClick={() => removeFromQueue(item.id)} style={{ background:"none",border:"none",color:"#555",cursor:"pointer",fontSize:16,padding:"0 2px",lineHeight:1 }}
+                    onMouseEnter={e => e.currentTarget.style.color = "#f87171"}
+                    onMouseLeave={e => e.currentTarget.style.color = "#555"}>×</button>
+                </div>
+              ))}
+            </div>
+            <button disabled={printing} onClick={handlePrintAll}
+              style={{ width:"100%",padding:"14px 0",borderRadius:10,fontSize:14,fontWeight:900,letterSpacing:"0.04em",cursor:printing?"not-allowed":"pointer",transition:"all 200ms",
+                border:"2px solid #4ade80",
+                background:"rgba(74,222,128,0.12)",
+                color:"#4ade80",
+                boxShadow:"0 0 20px rgba(74,222,128,0.15)" }}>
+              {printing ? "Impression..." : `🖨 Imprimer tout (${queue.length})`}
+            </button>
+          </div>
+        </>)}
       </div>
 
       {/* ── Récap ────────────────────────────────────────────────── */}
