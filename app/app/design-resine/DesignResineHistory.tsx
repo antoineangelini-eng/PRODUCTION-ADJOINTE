@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState, useCallback } from "react";
 import { loadDrHistoryAction, reopenDrCaseAction, type DrHistoryRow } from "./dr-history-actions";
-import { NATURE_META, fmtDate, fmtDT, Check, Bool, Txt, Field, ReopenModal, HistoryFilters, CardShell } from "@/components/history/history-shared";
+import { NATURE_META, fmtDate, fmtDT, Check, Bool, Txt, Field, FieldBlocked, ReopenModal, HistoryFilters, CardShell } from "@/components/history/history-shared";
 
 function DrCard({ row, onReopen }: { row: DrHistoryRow; onReopen: () => void }) {
   const [open, setOpen] = useState(false);
@@ -25,7 +25,7 @@ function DrCard({ row, onReopen }: { row: DrHistoryRow; onReopen: () => void }) 
       <div style={{ display: "flex", gap: 8 }}>
         <div style={{ flex: 1 }}><Field label="Design"><Check val={row.design_dents_resine} /></Field></div>
         <div style={{ flex: 1 }}><Field label="Modèle à réaliser"><Bool val={row.modele_effectif} /></Field></div>
-        <div style={{ flex: 1 }} />
+        <div style={{ flex: 1 }}>{row.nature_du_travail === "Deflex" || row.nature_du_travail === "Complet" ? <Field label="Base"><Txt val={row.base_type} /></Field> : <FieldBlocked label="Base" />}</div>
       </div>
     </CardShell>
   );

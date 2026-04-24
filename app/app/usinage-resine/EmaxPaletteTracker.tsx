@@ -58,7 +58,8 @@ function generateZPL(combos: Set<ComboKey>, code: string, mat: Materiau, cg: str
 }
 
 async function sendPrint(zpl: string) {
-  const r=await fetch("/api/print-emax",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({zpl})});
+  const relayUrl = process.env.NEXT_PUBLIC_PRINT_RELAY_URL || "http://192.168.1.30:3001";
+  const r=await fetch(`${relayUrl}/print`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({zpl, printerIp:"192.168.1.12"})});
   const j=await r.json(); if(!j.ok) throw new Error(j.error??"Erreur");
 }
 

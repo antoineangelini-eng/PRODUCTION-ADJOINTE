@@ -300,13 +300,12 @@ export async function resolveCaseForFinition(caseNumber: string): Promise<{
   return caseData;
 }
 
-/** Cocher réception métal ou résine pour un cas en Finition */
+/** Cocher réception métal ou résine pour un cas en Finition (toggle pour clic dans le tableau) */
 export async function toggleFinitionReceptionAction(
   caseId: string,
   field: "reception_metal_ok" | "reception_resine_ok",
 ): Promise<{ ok: boolean; error?: string }> {
   const supabase = createAdminClient();
-  // Lire l'état actuel
   const { data: current } = await supabase
     .from("sector_finition")
     .select(`${field}, reception_metal_ok, reception_resine_ok`)
@@ -321,6 +320,67 @@ export async function toggleFinitionReceptionAction(
     .update({ [field]: newVal, [atField]: newVal ? new Date().toISOString() : null })
     .eq("case_id", caseId);
   if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+/** Scanner réception : coche la réception (toujours on, remplace la date). Vérifie que le cas nécessite cette réception. */
+export async function scanFinitionReceptionAction(
+  caseId: string,
+  field: "reception_metal_ok" | "reception_resine_ok",
+): Promise<{ ok: boolean; error?: string; autoValidated?: boolean }> {
+  const supabase = createAdminClient();
+
+  // Vérifier que le cas existe en finition
+  const { data: finRow } = await supabase
+    .from("sector_finition")
+    .select("reception_metal_ok, reception_resine_ok")
+    .eq("case_id", caseId)
+    .single();
+  if (!finRow) return { ok: false, error: "Cas non trouvé en finition" };
+
+  // Vérifier que le cas a besoin de cette réception
+  const { data: caseData } = await supabase
+    .from("cases")
+    .select("nature_du_travail, sector_design_metal(type_de_dents), sector_usinage_resine(type_de_dents_override)")
+    .eq("id", caseId)
+    .single();
+  if (!caseData) return { ok: false, error: "Cas introuvable" };
+
+  const dm = (caseData as any).sector_design_metal ?? {};
+  const ur = (caseData as any).sector_usinage_resine ?? {};
+  const typeDents = ur.type_de_dents_override ?? dm.type_de_dents ?? null;
+  const isDentsCommerce = typeDents === "Dents du commerce" || typeDents === "Pas de dents";
+  const needsMetal = (caseData as any).nature_du_travail === "Chassis Argoat";
+  const needsResine = !isDentsCommerce;
+
+  if (field === "reception_metal_ok" && !needsMetal) {
+    return { ok: false, error: "Ce cas ne nécessite pas de réception métal" };
+  }
+  if (field === "reception_resine_ok" && !needsResine) {
+    return { ok: false, error: "Ce cas ne nécessite pas de réception résine" };
+  }
+
+  // Cocher la réception (toujours true, remplace la date)
+  const atField = field + "_at";
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("sector_finition")
+    .update({ [field]: true, [atField]: now })
+    .eq("case_id", caseId);
+  if (error) return { ok: false, error: error.message };
+
+  // Vérifier si réception complète → valider automatiquement
+  const otherOk = field === "reception_metal_ok"
+    ? (needsResine ? finRow.reception_resine_ok : true)
+    : (needsMetal ? finRow.reception_metal_ok : true);
+
+  if (otherOk) {
+    // Réception complète → valider le cas automatiquement
+    await supabase.rpc("rpc_update_finition", { p_case_id: caseId, p_patch: { validation: true } });
+    revalidatePath("/app/finition");
+    return { ok: true, autoValidated: true };
+  }
+
   return { ok: true };
 }
 

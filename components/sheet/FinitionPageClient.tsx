@@ -11,6 +11,7 @@ export function FinitionPageClient(_props: { hideHeader?: boolean } = {}) {
   const [tab, setTab] = useState<Tab>("all");
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const [receptionMode, setReceptionMode] = useState<"metal" | "resine">("metal");
   const [stats, setStats] = useState({
     validatedToday: 0, totalToday: 0, late: 0, countToday: 0, countTomorrow: 0, prioToday: 0, prioJ1: 0, prioJ2: 0,
   });
@@ -143,6 +144,8 @@ export function FinitionPageClient(_props: { hideHeader?: boolean } = {}) {
             onReload={fn => { reloadRef.current = fn; }}
             highlightId={highlightId}
             onSelectionChange={setIsBusy}
+            receptionMode={receptionMode}
+            onReceptionModeChange={setReceptionMode}
           />
         </div>
         <div style={{
@@ -154,6 +157,8 @@ export function FinitionPageClient(_props: { hideHeader?: boolean } = {}) {
             validatedToday={stats.validatedToday}
             totalToday={stats.totalToday}
             late={stats.late}
+            receptionMode={receptionMode}
+            onReceptionModeChange={setReceptionMode}
           />
         </div>
       </div>

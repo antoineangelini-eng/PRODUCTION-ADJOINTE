@@ -1,6 +1,6 @@
 "use client";
 import React, { useRef, useState, useEffect } from "react";
-import { resolveCaseForFinition, validateFinitionBatchAction } from "@/app/app/finition/actions";
+import { resolveCaseForFinition, scanFinitionReceptionAction } from "@/app/app/finition/actions";
 
 // Mapping AZERTY non-shifté → chiffre (même table que CaseNumberInput)
 const AZERTY_MAP: Record<string, string> = {
@@ -20,6 +20,7 @@ type ScannedCase = {
 type ScanError = {
   caseNumber: string;
   reason: "notfound" | "duplicate";
+  message?: string;
 };
 
 export function FinitionScanner({
@@ -27,17 +28,20 @@ export function FinitionScanner({
   validatedToday = 0,
   totalToday = 0,
   late = 0,
+  receptionMode = "metal",
+  onReceptionModeChange,
 }: {
   onValidated?: () => void;
   validatedToday?: number;
   totalToday?: number;
   late?: number;
+  receptionMode?: "metal" | "resine";
+  onReceptionModeChange?: (mode: "metal" | "resine") => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [value, setValue] = useState("");
   const [pending, setPending] = useState(false);
-  const [validating, setValidating] = useState(false);
   const [focused, setFocused] = useState(false);
   const [lastScan, setLastScan] = useState<{ caseNumber: string; status: "ok" | "notfound" | "duplicate" } | null>(null);
   const [scanned, setScanned] = useState<ScannedCase[]>([]);
@@ -67,44 +71,37 @@ export function FinitionScanner({
     setPending(true);
     setValue("");
 
-    if (scanned.some(s => s.caseNumber === caseNumber)) {
-      setLastScan({ caseNumber, status: "duplicate" });
-      setErrors(prev => [{ caseNumber, reason: "duplicate" }, ...prev.slice(0, 4)]);
-      setPending(false);
-      return;
-    }
-
     try {
       const cas = await resolveCaseForFinition(caseNumber);
       if (!cas) {
         setLastScan({ caseNumber, status: "notfound" });
         setErrors(prev => [{ caseNumber, reason: "notfound" }, ...prev.slice(0, 4)]);
+        setPending(false);
+        return;
+      }
+
+      const field = receptionMode === "metal" ? "reception_metal_ok" : "reception_resine_ok";
+      const result = await scanFinitionReceptionAction(cas.id, field);
+      if (!result.ok) {
+        setLastScan({ caseNumber, status: "notfound" });
+        setErrors(prev => [{ caseNumber, reason: "notfound" as const, message: result.error }, ...prev.slice(0, 4)]);
+        setPending(false);
+        return;
+      }
+
+      if (result.autoValidated) {
+        setLastScan({ caseNumber, status: "ok" });
+        setScanned(prev => [...prev, { caseNumber, caseId: cas.id }]);
       } else {
         setLastScan({ caseNumber, status: "ok" });
         setScanned(prev => [...prev, { caseNumber, caseId: cas.id }]);
       }
+      onValidated?.();
     } catch {
       setLastScan({ caseNumber, status: "notfound" });
       setErrors(prev => [{ caseNumber, reason: "notfound" }, ...prev.slice(0, 4)]);
     }
     setPending(false);
-  }
-
-  async function handleValidateBatch() {
-    if (scanned.length === 0 || validating) return;
-    setValidating(true);
-    await validateFinitionBatchAction(scanned.map(s => ({ case_id: s.caseId, case_number: s.caseNumber })));
-    setScanned([]);
-    setErrors([]);
-    setLastScan(null);
-    setValidating(false);
-    onValidated?.();
-    inputRef.current?.focus();
-  }
-
-  function removeScanned(caseNumber: string) {
-    setScanned(prev => prev.filter(s => s.caseNumber !== caseNumber));
-    inputRef.current?.focus();
   }
 
   const pct = totalToday > 0 ? Math.round((validatedToday / totalToday) * 100) : 0;
@@ -139,10 +136,28 @@ export function FinitionScanner({
         )}
       </div>
 
-      {/* Scanner */}
+      {/* Mode réception + Scanner */}
       <div style={{ padding:"16px 20px", borderBottom:"1px solid #1a1a1a" }}>
-        <div style={{ fontSize:10, fontWeight:700, color:"#aaa", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:8 }}>
-          Scanner de validation
+        {/* Sélecteur mode réception */}
+        <div style={{ display:"flex", gap:2, background:"#111", borderRadius:8, border:"1px solid #333", padding:2, marginBottom:12 }}>
+          {(["metal","resine"] as const).map(mode => {
+            const active = receptionMode === mode;
+            return (
+              <button key={mode} onClick={() => onReceptionModeChange?.(mode)} style={{
+                flex:1, padding:"8px 14px", fontSize:12, fontWeight:700, cursor:"pointer",
+                borderRadius:6, border:"none",
+                background: active ? (mode === "metal" ? "rgba(96,165,250,0.15)" : "rgba(168,85,247,0.15)") : "transparent",
+                color: active ? (mode === "metal" ? "#60a5fa" : "#a855f7") : "#666",
+                transition:"all 150ms",
+              }}>
+                {mode === "metal" ? "Réception métal" : "Réception résine"}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ fontSize:10, fontWeight:700, color: receptionMode === "metal" ? "#60a5fa" : "#a855f7", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:8 }}>
+          Scanner réception {receptionMode === "metal" ? "métal" : "résine"}
         </div>
 
         {/* Feedback hauteur fixe — ne bouge pas */}
@@ -164,7 +179,7 @@ export function FinitionScanner({
             onKeyDown={e => { if (e.key === "Enter") handleScan(value); }}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
-            disabled={validating}
+            disabled={pending}
             placeholder={focused ? "Scanner..." : "Cliquer pour activer"}
             autoComplete="off" autoCorrect="off" spellCheck={false}
             style={{
@@ -191,46 +206,28 @@ export function FinitionScanner({
 
         {scanned.length === 0 && errors.length === 0 && (
           <div style={{ fontSize:12, color:"white", textAlign:"center", paddingTop:8 }}>
-            Scannez des cas pour les valider en lot
+            Scannez des cas pour enregistrer la réception
           </div>
         )}
 
         {scanned.length > 0 && (
           <div>
             <div style={{ fontSize:10, fontWeight:700, color:"#aaa", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:8 }}>
-              À valider — {scanned.length}
+              Scannés — {scanned.length}
             </div>
-            <div style={{ display:"flex", flexDirection:"column", gap:4, marginBottom:10 }}>
-              {scanned.map(s => (
+            <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+              {scanned.slice().reverse().map(s => (
                 <div key={s.caseId} style={{
-                  display:"flex", alignItems:"center", justifyContent:"space-between",
+                  display:"flex", alignItems:"center", gap:8,
                   padding:"6px 10px", borderRadius:6, fontSize:12,
                   background:"rgba(74,222,128,0.06)", border:"1px solid rgba(74,222,128,0.2)",
                 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                    <span style={{ fontSize:8, color:"#4ade80" }}>●</span>
-                    <span style={{ color:"white", fontWeight:600 }}>{s.caseNumber}</span>
-                  </div>
-                  <button onClick={() => removeScanned(s.caseNumber)} style={{
-                    background:"none", border:"none", color:"#555", cursor:"pointer",
-                    fontSize:14, padding:"0 2px", lineHeight:1,
-                  }}
-                    onMouseEnter={e => e.currentTarget.style.color = "#f87171"}
-                    onMouseLeave={e => e.currentTarget.style.color = "#555"}
-                  >×</button>
+                  <span style={{ fontSize:8, color:"#4ade80" }}>●</span>
+                  <span style={{ color:"white", fontWeight:600 }}>{s.caseNumber}</span>
+                  <span style={{ fontSize:10, color:"#4ade80", marginLeft:"auto" }}>✓</span>
                 </div>
               ))}
             </div>
-            <button onClick={handleValidateBatch} disabled={validating} style={{
-              width:"100%", padding:"10px 0",
-              background: validating ? "rgba(74,222,128,0.04)" : "rgba(74,222,128,0.1)",
-              border:"1px solid rgba(74,222,128,0.4)",
-              borderRadius:8, color:"#4ade80",
-              fontSize:13, fontWeight:700, cursor: validating ? "not-allowed" : "pointer",
-              transition:"all 150ms",
-            }}>
-              {validating ? "Validation..." : `Valider ${scanned.length} cas`}
-            </button>
           </div>
         )}
 
@@ -249,7 +246,7 @@ export function FinitionScanner({
                 }}>
                   <span style={{ fontSize:10, color: e.reason === "duplicate" ? "#f59e0b" : "#f87171" }}>✕</span>
                   <span style={{ color:"white" }}>{e.caseNumber}</span>
-                  <span style={{ fontSize:10, color:"#aaa" }}>{e.reason === "duplicate" ? "déjà scanné" : "introuvable"}</span>
+                  <span style={{ fontSize:10, color:"#aaa" }}>{e.message ?? (e.reason === "duplicate" ? "déjà scanné" : "introuvable")}</span>
                 </div>
               ))}
             </div>

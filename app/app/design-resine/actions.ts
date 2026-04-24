@@ -162,9 +162,11 @@ export async function createCaseAction(formData: FormData) {
     }
   }
 
+  const nature = String(formData.get("nature") ?? "Provisoire Résine").trim() || "Provisoire Résine";
+
   const { data, error } = await supabase.rpc("rpc_create_case_from_design_resine", {
     p_case_number: caseNumber,
-    p_nature_du_travail: "Provisoire Résine",
+    p_nature_du_travail: nature,
   });
   if (error) throw new Error(error.message);
 
@@ -173,16 +175,27 @@ export async function createCaseAction(formData: FormData) {
 
   // Défauts pour tout cas créé depuis DR (admin bypass RLS)
   const admin = createAdminClient();
+  const drDefaults: Record<string, any> = { modele_a_realiser_ok: true };
+  if (nature === "Complet") {
+    // Complet : forcer null pour type_de_dents et base
+    drDefaults.type_de_dents = null;
+    drDefaults.base_type = null;
+  } else if (nature === "Deflex") {
+    drDefaults.type_de_dents = "Dents usinées";
+    drDefaults.base_type = "Usinée";
+  } else {
+    drDefaults.type_de_dents = "Dents usinées";
+  }
   await admin
     .from("sector_design_resine")
-    .update({ type_de_dents: "Dents usinées", modele_a_realiser_ok: true })
+    .update(drDefaults)
     .eq("case_id", caseId);
 
   // Calculer la date d'expédition en jours ouvrés (hors weekends)
   const { data: wdConfig } = await supabase
     .from("working_days_config")
     .select("days")
-    .eq("nature", "Provisoire Résine")
+    .eq("nature", nature)
     .single();
   const nbDays = wdConfig?.days ?? 3;
   const dateExp = toDateStr(addBusinessDays(new Date(), nbDays));
@@ -199,7 +212,7 @@ export async function createCaseAction(formData: FormData) {
     await supabase.rpc("rpc_mark_case_physical", { p_case_id: caseId });
   }
 
-  redirect("/app/design-resine");
+  revalidatePath("/app/design-resine");
 }
 
 export async function scanCaseAction(formData: FormData) {
@@ -222,11 +235,8 @@ export async function scanCaseAction(formData: FormData) {
     redirect(`/app/design-resine?focus=${caseNumber}`);
   }
 
-  // Cas introuvable dans DR → le créer automatiquement
-  const fd = new FormData();
-  fd.set("case_number", caseNumber);
-  await createCaseAction(fd);
-  // createCaseAction fait déjà redirect
+  // Cas introuvable dans DR → pré-remplir le numéro de cas pour que l'utilisateur choisisse la nature
+  redirect(`/app/design-resine?prefill=${caseNumber}`);
 }
 
 export async function saveDesignResineCellAction(formData: FormData) {
@@ -278,6 +288,12 @@ export async function saveDesignResineMultiAction(
     p_case_id: caseId,
     p_patch: patch,
   });
+}
+
+export async function updateCaseNatureAction(caseId: string, nature: string): Promise<void> {
+  const admin = createAdminClient();
+  await admin.from("cases").update({ nature_du_travail: nature }).eq("id", caseId);
+  revalidatePath("/app/design-resine");
 }
 
 export async function completeDesignResineBatchAction(

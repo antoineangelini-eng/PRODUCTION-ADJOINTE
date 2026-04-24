@@ -36,6 +36,7 @@ const TYPE_DENTS_OPTIONS = [
   { value:"Dents usinées",      color:"#7c8196" },
   { value:"Dents du commerce", color:"#f59e0b" },
   { value:"Pas de dents",      color:"#ef4444" },
+  { value:"Dents imprimées",  color:"#a78bfa" },
 ];
 
 const NATURE_META: Record<string, { color:string }> = {
@@ -64,12 +65,14 @@ function DateCell({ value, color = "white" }: { value: string | null; color?: st
   return <span style={{ color }}>{new Date(value.slice(0,10)+"T00:00:00").toLocaleDateString("fr-FR")}</span>;
 }
 
-export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelectionChange }: {
+export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelectionChange, receptionMode, onReceptionModeChange }: {
   filter?: "today"|"tomorrow"|"all"|"late"|"prio_today"|"prio_j1"|"prio_j2";
   onReload?: (fn:()=>void)=>void;
   highlightId?: string|null;
   lotPanel?: React.ReactNode;
   onSelectionChange?: (isBusy: boolean) => void;
+  receptionMode?: "metal"|"resine";
+  onReceptionModeChange?: (mode: "metal"|"resine") => void;
 }) {
   const [rows, setRows]             = useState<FinitionRow[]>([]);
   const [loading, setLoading]       = useState(true);
@@ -79,7 +82,6 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
   const [batchResult, setBatchResult]   = useState<{ok:string[];errors:{id:string;msg:string}[]}|null>(null);
   const [detailCaseId, setDetailCaseId] = useState<string | null>(null);
   const [reasonTooltip, setReasonTooltip] = useState<{ id: string; rect: { top: number; left: number; width: number; bottom: number } } | null>(null);
-  const [receptionMode, setReceptionMode] = useState<"metal"|"resine"|null>(null);
   const [receptionBusy, setReceptionBusy] = useState<string | null>(null);
 
   const load = useCallback(async (silent = false) => {
@@ -295,23 +297,6 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
           )}
         </div>
         <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-          {/* Sélecteur mode réception */}
-          <div style={{ display:"flex", gap:2, background:"#111", borderRadius:8, border:"1px solid #333", padding:2 }}>
-            {(["metal","resine"] as const).map(mode => {
-              const active = receptionMode === mode;
-              return (
-                <button key={mode} onClick={() => setReceptionMode(prev => prev === mode ? null : mode)} style={{
-                  padding:"6px 14px", fontSize:11, fontWeight:700, cursor:"pointer",
-                  borderRadius:6, border:"none",
-                  background: active ? (mode === "metal" ? "rgba(96,165,250,0.15)" : "rgba(168,85,247,0.15)") : "transparent",
-                  color: active ? (mode === "metal" ? "#60a5fa" : "#a855f7") : "#666",
-                  transition:"all 150ms",
-                }}>
-                  {mode === "metal" ? "Réception métal" : "Réception résine"}
-                </button>
-              );
-            })}
-          </div>
           {lotPanel}
           <button onClick={handleBatch} disabled={batchPending || checkedIds.size === 0} style={{
             padding:"9px 18px",

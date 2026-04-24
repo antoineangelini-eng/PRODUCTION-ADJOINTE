@@ -23,6 +23,8 @@ const NATURE_META: Record<string, { color: string }> = {
   "Chassis Dent All":  { color: "#4ade80" },
   "Définitif Résine":  { color: "#c4a882" },
   "Provisoire Résine": { color: "#9487a8" },
+  "Deflex":            { color: "#a78bfa" },
+  "Complet":           { color: "#38bdf8" },
 };
 const MACHINE_OPTIONS = [
   { value: "PM1", color: "#7c8196" },
@@ -34,6 +36,7 @@ const TYPE_DENTS_OPTIONS = [
   { value: "Dents usinées",      color: "#7c8196" },
   { value: "Dents du commerce", color: "#f59e0b" },
   { value: "Pas de dents", color: "#ef4444" },
+  { value: "Dents imprimées", color: "#a78bfa" },
 ];
 const BG_CARD = "#1e1e1e", BG_LABEL_ROW = "#181818", BG_VAL_ROW = "#1e1e1e";
 const BG_LABEL_SAISIE = "#151515", BG_VAL_SAISIE = "#161616";
@@ -293,6 +296,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
   const [batchPending, setBatchPending] = useState(false);
   const [batchResult, setBatchResult]   = useState<BatchResult|null>(null);
   const [searchNotFound, setSearchNotFound] = useState(false);
+  const [searchFilter, setSearchFilter] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string|null>(null);
   const [editingDate, setEditingDate] = useState<{caseId:string;column:string;value:string;rect:DOMRect}|null>(null);
   const [holdBusy, setHoldBusy] = useState<string|null>(null);
@@ -518,7 +522,13 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
       )}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, zIndex:10, background:"#111", padding:"0 8px 10px 8px", borderBottom:"1px solid #1e1e1e", flexShrink:0 }}>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-          {!searchNotFound && <span style={{ fontSize:12, color:"#ccc", padding:"4px 14px", background:"#1e1e1e", border:"1px solid #2e2e2e", borderRadius:20, fontWeight:600 }}>{rows.length} dossier{rows.length>1?"s":""}</span>}
+          {!searchNotFound && <span style={{ fontSize:12, color:"#ccc", padding:"4px 14px", background:"#1e1e1e", border:"1px solid #2e2e2e", borderRadius:20, fontWeight:600 }}>{searchFilter ? `${rows.filter(r=>(r.case_number??"").includes(searchFilter)).length} / ` : ""}{rows.length} dossier{rows.length>1?"s":""}</span>}
+          <input
+            value={searchFilter}
+            onChange={e => setSearchFilter(e.target.value.replace(/\D/g,""))}
+            placeholder="Rechercher..."
+            style={{ padding:"4px 10px", border:"1px solid #333", background:"#1a1a1a", color:"white", fontSize:12, borderRadius:6, width:120, outline:"none", fontFamily:"monospace" }}
+          />
           {urgentCount > 0 && (
             <span style={{ fontSize: 12, color: "#f59e0b", padding: "4px 12px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.4)", borderRadius: 20, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#f59e0b", boxShadow: "0 0 8px #f59e0b" }} />
@@ -549,7 +559,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
       <div style={{ overflowY:"auto", flex:1, minHeight:0, padding:"12px 8px 80px" }}>
         {rows.length===0 && <div style={{ color:"#333", fontSize:13, textAlign:"center", paddingTop:40 }}>Aucun dossier en cours.</div>}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(360px, 1fr))", gap:10 }}>
-          {rows.map(row => {
+          {rows.filter(r => !searchFilter || (r.case_number ?? "").includes(searchFilter)).map(row => {
             const ur = (row as any).sector_usinage_resine ?? {};
             const dr = (row as any).sector_design_resine  ?? {};
             const dm = (row as any).sector_design_metal   ?? {};
@@ -591,6 +601,10 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
                 </div>
                 <div style={{ ...grid2, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl>Date de création</Lbl><Lbl>Type de dents</Lbl></div>
                 <div style={{ ...vals2, background:BG_VAL_ROW, borderBottom:BD_MED }}><Val>{fmtDate(row.created_at)}</Val><span style={{ display:"inline-flex", padding:"3px 10px", borderRadius:6, background:(TYPE_DENTS_OPTIONS.find(o=>o.value===effectiveTD)?.color??"#555")+"18", border:`1px solid ${(TYPE_DENTS_OPTIONS.find(o=>o.value===effectiveTD)?.color??"#555")}44`, color:TYPE_DENTS_OPTIONS.find(o=>o.value===effectiveTD)?.color??"#555", fontSize:12, fontWeight:700 }}>{effectiveTD||"—"}</span></div>
+                {(nat === "Deflex" || nat === "Complet") && (<>
+                  <div style={{ ...grid2, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl>Base</Lbl><div/></div>
+                  <div style={{ ...vals2, background:BG_VAL_ROW, borderBottom:BD_MED }}><span style={{ display:"inline-flex", padding:"3px 10px", borderRadius:6, background:(dr.base_type === "Imprimée" ? "#a78bfa" : "#f59e0b")+"18", border:`1px solid ${(dr.base_type === "Imprimée" ? "#a78bfa" : "#f59e0b")}44`, color: dr.base_type === "Imprimée" ? "#a78bfa" : "#f59e0b", fontSize:12, fontWeight:700 }}>{dr.base_type || "—"}</span><div/></div>
+                </>)}
                 <div style={{ ...grid3, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl>Design résine</Lbl><Lbl>Date &amp; heure</Lbl><Lbl>Modèle</Lbl></div>
                 <div style={{ ...vals3, background:BG_VAL_ROW, borderBottom:BD_MED }}>{dr.design_dents_resine?<OuiBadge/>:<Val muted>—</Val>}<TimeBadge dt={dt}/><BoolBadge val={dr.modele_a_realiser_ok??dm.modele_a_faire_ok??null} /></div>
                 <div style={{ ...grid2, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl color="#4ade80">Blocs</Lbl><Lbl color="#4ade80">Teinte</Lbl></div>

@@ -10,6 +10,7 @@ import {
   deleteCaseAction,
   removeCaseFromSectorAction,
   toggleCasePhysicalAction,
+  updateCaseNatureAction,
   type DesignResineRow,
   type BatchResult,
 } from "@/app/app/design-resine/actions";
@@ -26,23 +27,31 @@ const NATURE_META: Record<string, { color: string }> = {
   "Définitif Bimax":   { color: "#f97316" },
   "Définitif FD":      { color: "#f59e0b" },
   "Deflex":            { color: "#a78bfa" },
+  "Complet":           { color: "#38bdf8" },
 };
+
+const DR_NATURE_OPTIONS = [
+  { value: "Provisoire Résine", color: "#9487a8" },
+  { value: "Deflex",            color: "#a78bfa" },
+  { value: "Complet",           color: "#38bdf8" },
+];
 
 const TYPE_DENTS_OPTIONS = [
   { value: "Dents usinées", color: "#7c8196" },
+  { value: "Dents imprimées", color: "#a78bfa" },
 ];
 
-const BASE_DENTS_OPTIONS = [
-  { value: "Imprimé", color: "#7c8196" },
-  { value: "Usiné",   color: "#f59e0b" },
+const BASE_OPTIONS = [
+  { value: "Imprimée", color: "#a78bfa" },
+  { value: "Usinée",   color: "#f59e0b" },
 ];
 
 function autoBaseDents(complet: boolean, nature: string): { base_type: string; dents_type: string } {
-  if (!complet) return { base_type: "Usiné", dents_type: "Usiné" };
-  if (nature === "Provisoire Résine") return { base_type: "Imprimé", dents_type: "Imprimé" };
-  if (nature === "Définitif Bimax")   return { base_type: "Imprimé", dents_type: "Usiné" };
-  if (nature === "Définitif FD")      return { base_type: "Usiné",   dents_type: "Usiné" };
-  return { base_type: "Usiné", dents_type: "Usiné" };
+  if (!complet) return { base_type: "Usinée", dents_type: "Usinée" };
+  if (nature === "Provisoire Résine") return { base_type: "Imprimée", dents_type: "Imprimée" };
+  if (nature === "Définitif Bimax")   return { base_type: "Imprimée", dents_type: "Usinée" };
+  if (nature === "Définitif FD")      return { base_type: "Usinée",   dents_type: "Usinée" };
+  return { base_type: "Usinée", dents_type: "Usinée" };
 }
 
 const MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
@@ -433,6 +442,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
               <th style={thEdit}>Nb Blocs</th>
               <th style={thEdit}>Modèle à faire</th>
               <th style={thEdit}>Teintes</th>
+              <th style={thEdit}>Base</th>
               <th style={thEdit}>Sél.</th>
               <th style={{...thBase,color:"#3a3a3a",minWidth:48}}></th>
             </tr>
@@ -443,13 +453,18 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
               const dr=(row as any).sector_design_resine??{};
               const nat=row.nature_du_travail??"";
               const isProvisoire=nat==="Provisoire Résine";
+              const isDeflex=nat==="Deflex";
+              const isComplet=nat==="Complet";
+              const needsBase=isDeflex||isComplet;
+              const isDrOnly=isProvisoire||isDeflex||isComplet;
               const natureMeta=NATURE_META[nat];
               const isC=checkedIds.has(String(row.id)),isA=activeRowId===String(row.id),isH=hoveredId===String(row.id),isF=foundRowId===String(row.id);
               const isOnHold=Boolean((row as any)._on_hold);
+              const comesFromDm=Boolean((row as any).sector_design_metal);
               const typeDents=dr.type_de_dents??dm.type_de_dents??"";
-              const effectiveTypeDents=typeDents||(isProvisoire?"Dents usinées":"");
+              const effectiveTypeDents=typeDents||(isProvisoire||isDeflex?"Dents usinées":"");
               const typeMeta=TYPE_DENTS_OPTIONS.find(o=>o.value===effectiveTypeDents)??{color:"#555"};
-              const modeleOk=dr.modele_a_realiser_ok!==null&&dr.modele_a_realiser_ok!==undefined?dr.modele_a_realiser_ok:(isProvisoire?true:dm.modele_a_faire_ok??null);
+              const modeleOk=dr.modele_a_realiser_ok!==null&&dr.modele_a_realiser_ok!==undefined?dr.modele_a_realiser_ok:(isDrOnly?true:dm.modele_a_faire_ok??null);
               const teintes=dr.teintes_associees??dm.teintes_associees??null;
               const rowBg=getRowBg(isC,isH,isA),rowBorder=getRowBorder(isC,isH,isA),rowShadow=getRowShadow(isC,isH,isA);
               const accentColor=isC?"#4ade80":natureMeta?.color??"#666";
@@ -476,13 +491,50 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
                   </td>
                   ); })()}
 
-                  <td style={tdCard}><span style={{display:"inline-flex",alignItems:"center",padding:"2px 10px",borderRadius:6,background:(natureMeta?.color??"#fff")+"18",border:`1px solid ${(natureMeta?.color??"#fff")}44`,color:natureMeta?.color??"#fff",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{nat||"—"}</span></td>
+                  <td style={{...tdCard,textAlign:"center"}} onClick={e=>e.stopPropagation()}>
+                    {comesFromDm ? (
+                      <span style={{display:"inline-flex",alignItems:"center",padding:"2px 8px",borderRadius:6,background:(natureMeta?.color??"#fff")+"18",border:`1px solid ${(natureMeta?.color??"#fff")}44`,color:natureMeta?.color??"#fff",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{nat||"—"}</span>
+                    ) : (
+                      <select value={nat} onChange={e=>{const v=e.target.value;patchRow(String(row.id),null,"nature_du_travail",v);updateCaseNatureAction(String(row.id),v);}} style={{
+                        padding:"2px 6px",border:`1px solid ${(natureMeta?.color??"#fff")}44`,background:(natureMeta?.color??"#fff")+"18",color:natureMeta?.color??"#fff",
+                        fontSize:11,cursor:"pointer",borderRadius:6,fontWeight:700,outline:"none",
+                        WebkitAppearance:"none",MozAppearance:"none",appearance:"none",
+                        backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23888'/%3E%3C/svg%3E")`,
+                        backgroundRepeat:"no-repeat",backgroundPosition:"right 4px center",paddingRight:"14px",
+                        textAlign:"center",textAlignLast:"center",
+                      }}>
+                        {DR_NATURE_OPTIONS.map(o=>(
+                          <option key={o.value} value={o.value} style={{background:"#111",color:o.color,fontWeight:600}}>{o.value}</option>
+                        ))}
+                      </select>
+                    )}
+                  </td>
 
-                  <td style={isProvisoire?disabledCellStyle:tdCard}>{isProvisoire?"⊘":<BoolReadOnly value={dm.design_chassis??null}/>}</td>
-                  <td style={isProvisoire?disabledCellStyle:tdCard}>{isProvisoire?"⊘":<DateTimeCell value={dm.design_chassis_at??null}/>}</td>
+                  <td style={isDrOnly?disabledCellStyle:tdCard}>{isDrOnly?"⊘":<BoolReadOnly value={dm.design_chassis??null}/>}</td>
+                  <td style={isDrOnly?disabledCellStyle:tdCard}>{isDrOnly?"⊘":<DateTimeCell value={dm.design_chassis_at??null}/>}</td>
 
-                  <td style={tdCard}>
-                    <span style={{display:"inline-flex",padding:"3px 10px",borderRadius:6,background:"rgba(124,129,150,0.12)",border:"1px solid rgba(124,129,150,0.3)",color:"#7c8196",fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>Dents usinées</span>
+                  <td style={tdCard} onClick={e=>e.stopPropagation()}>
+                    {(() => {
+                      const val = effectiveTypeDents || "";
+                      const meta = TYPE_DENTS_OPTIONS.find(o=>o.value===val) ?? {color:"#555"};
+                      if (comesFromDm || isProvisoire || isDeflex) {
+                        // Lecture seule si le cas vient de DM, Provisoire Résine ou Deflex
+                        const displayVal = val || "Dents usinées";
+                        const displayMeta = TYPE_DENTS_OPTIONS.find(o=>o.value===displayVal) ?? TYPE_DENTS_OPTIONS[0];
+                        return <span style={{display:"inline-flex",padding:"3px 10px",borderRadius:6,background:displayMeta.color+"12",border:`1px solid ${displayMeta.color}30`,color:displayMeta.color,fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>{displayVal}</span>;
+                      }
+                      return (
+                        <select value={val} onChange={e=>{const v=e.target.value;patchRow(String(row.id),"sector_design_resine","type_de_dents",v);saveText(String(row.id),"type_de_dents",v);}} style={{
+                          padding:"4px 8px",border:`1px solid ${val?meta.color+"44":"#f5971844"}`,background:val?meta.color+"15":"transparent",color:val?meta.color:"#888",
+                          fontSize:12,cursor:"pointer",borderRadius:4,minWidth:110,fontWeight:600,outline:"none",
+                        }}>
+                          {!val && <option value="" style={{background:"#111",color:"#888"}}>— Choisir —</option>}
+                          {TYPE_DENTS_OPTIONS.map(o=>(
+                            <option key={o.value} value={o.value} style={{background:"#111",color:o.color,fontWeight:600}}>{o.value}</option>
+                          ))}
+                        </select>
+                      );
+                    })()}
                   </td>
 
                   <td style={tdCard}>
@@ -496,10 +548,33 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
                   <td style={tdCard} onClick={e=>e.stopPropagation()}><TextInput value={dr.nb_blocs_de_dents??null} onSave={v=>{patchRow(String(row.id),"sector_design_resine","nb_blocs_de_dents",v||null);saveText(String(row.id),"nb_blocs_de_dents",v);}} width={60}/></td>
                   <td style={tdCard}><ModeleIndicator
                     ok={modeleOk}
-                    locked={!isProvisoire}
+                    locked={!isDrOnly}
                     onToggle={()=>{const newVal=!modeleOk;patchRow(String(row.id),"sector_design_resine","modele_a_realiser_ok",newVal);const fd=new FormData();fd.set("case_id",String(row.id));fd.set("column","modele_a_realiser_ok");fd.set("kind","boolean");fd.set("current",String(modeleOk));saveDesignResineCellAction(fd);}}
                   /></td>
                   <td style={tdCard} onClick={e=>e.stopPropagation()}><TextInput value={teintes} onSave={v=>{const val=v||dm.teintes_associees||null;patchRow(String(row.id),"sector_design_resine","teintes_associees",val);saveText(String(row.id),"teintes_associees",val??"");}} width={120}/></td>
+
+                  {/* Base — uniquement pour Deflex / Complet */}
+                  <td style={needsBase ? tdCard : disabledCellStyle} onClick={e=>{if(needsBase)e.stopPropagation();}}>
+                    {needsBase ? (() => {
+                      const val = dr.base_type ?? (isDeflex ? "Usinée" : "");
+                      const meta = BASE_OPTIONS.find(o=>o.value===val) ?? {color:"#555"};
+                      if (isDeflex) {
+                        const displayMeta = BASE_OPTIONS.find(o=>o.value===val) ?? BASE_OPTIONS[1];
+                        return <span style={{display:"inline-flex",padding:"3px 10px",borderRadius:6,background:displayMeta.color+"12",border:`1px solid ${displayMeta.color}30`,color:displayMeta.color,fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>{val}</span>;
+                      }
+                      return (
+                        <select value={val} onChange={e=>{const v=e.target.value;patchRow(String(row.id),"sector_design_resine","base_type",v);saveText(String(row.id),"base_type",v);}} style={{
+                          padding:"4px 8px",border:`1px solid ${val?meta.color+"44":"#f5971844"}`,background:val?meta.color+"15":"transparent",color:val?meta.color:"#888",
+                          fontSize:12,cursor:"pointer",borderRadius:4,minWidth:90,fontWeight:600,outline:"none",
+                        }}>
+                          {!val && <option value="" style={{background:"#111",color:"#888"}}>— Choisir —</option>}
+                          {BASE_OPTIONS.map(o=>(
+                            <option key={o.value} value={o.value} style={{background:"#111",color:o.color,fontWeight:600}}>{o.value}</option>
+                          ))}
+                        </select>
+                      );
+                    })() : "⊘"}
+                  </td>
 
                   <td style={tdCard} onClick={e=>e.stopPropagation()}>
                     {isOnHold ? (

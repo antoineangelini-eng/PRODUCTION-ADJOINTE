@@ -9,6 +9,8 @@ export const NATURE_META: Record<string, { color: string }> = {
   "Chassis Dent All":  { color: "#4ade80" },
   "Définitif Résine":  { color: "#c4a882" },
   "Provisoire Résine": { color: "#9487a8" },
+  "Deflex":            { color: "#a78bfa" },
+  "Complet":           { color: "#38bdf8" },
 };
 
 export function fmtDate(s: string | null): string {

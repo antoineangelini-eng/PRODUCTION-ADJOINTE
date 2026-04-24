@@ -6,19 +6,11 @@ import { useIncomingBanner, type ToastCase } from "@/components/sheet/CaseToast"
 import { IncomingCasesBanner } from "@/components/sheet/IncomingCasesBanner";
 import { RealtimeBanner } from "@/components/sheet/RealtimeBanner";
 import { usePollingRefresh } from "@/hooks/usePollingRefresh";
-import { useRouter } from "next/navigation";
 
 // ─── Constantes visuelles cohérentes avec UsinageResineTable ─────────────────
 const PAGE_PX = "8px"; // même padding horizontal que le tableau
 
 export function UsinageResinePageClient({ focusId }: { focusId: string | null; hideHeader?: boolean }) {
-  const router = useRouter();
-
-  // Recherche
-  const [searchInput, setSearchInput]     = useState("");
-  const [activeFocus, setActiveFocus]     = useState<string | null>(focusId);
-  const [searchFocused, setSearchFocused] = useState(false);
-
   // Lot panel
   const [lotOpen, setLotOpen]           = useState(false);
   const [lotFilledIds, setLotFilledIds] = useState<Set<string>>(new Set());
@@ -33,13 +25,6 @@ export function UsinageResinePageClient({ focusId }: { focusId: string | null; h
   const handleReload = useCallback((fn: () => void) => { reloadRef.current = fn; }, []);
   const handleReloadFull = useCallback((fn: () => void) => { reloadFullRef.current = fn; }, []);
   usePollingRefresh(() => reloadRef.current?.(), isBusy);
-
-  function handleSearch() {
-    const v = searchInput.trim();
-    if (!v) return;
-    setActiveFocus(v);
-    router.replace(`?focus=${encodeURIComponent(v)}`, { scroll: false });
-  }
 
   function handleNewCases(cases: ToastCase[]) {
     addToasts(cases);
@@ -75,57 +60,6 @@ export function UsinageResinePageClient({ focusId }: { focusId: string | null; h
 
         {/* Barre recherche + bouton saisie en lot */}
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, marginBottom: 10 }}>
-          {/* Zone recherche */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-            <label style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: "white",           // ← blanc, lisible
-              letterSpacing: "0.01em",
-            }}>
-              Rechercher un cas
-            </label>
-            <div style={{ display: "flex", gap: 6 }}>
-              <input
-                value={searchInput}
-                onChange={e => setSearchInput(e.target.value)}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setSearchFocused(false)}
-                onKeyDown={e => { if (e.key === "Enter") handleSearch(); }}
-                placeholder="N° du cas..."
-                style={{
-                  padding: "6px 10px",
-                  background: searchFocused ? "rgba(74,222,128,0.04)" : "#1e1e1e",
-                  border: searchFocused ? "1px solid rgba(74,222,128,0.4)" : "1px solid #2e2e2e",
-                  borderRadius: 7,
-                  color: "white",
-                  fontSize: 12,
-                  outline: "none",
-                  width: 140,
-                  transition: "all 150ms",
-                }}
-              />
-              <button
-                onClick={handleSearch}
-                style={{
-                  padding: "6px 14px",
-                  background: "#1e1e1e",
-                  border: "1px solid #2e2e2e",
-                  borderRadius: 7,
-                  color: "#ccc",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  transition: "all 150ms",
-                }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = "#3a3a3a"; e.currentTarget.style.color = "white"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "#2e2e2e"; e.currentTarget.style.color = "#ccc"; }}
-              >
-                Rechercher
-              </button>
-            </div>
-          </div>
-
           {/* Saisie en lot — violet, ouvre directement le panel */}
           <button
             onClick={() => setLotOpen(v => !v)}
@@ -170,7 +104,7 @@ export function UsinageResinePageClient({ focusId }: { focusId: string | null; h
       {/* ── Tableau ──────────────────────────────────────────────────────────── */}
       <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
         <UsinageResineTable
-          focusId={activeFocus}
+          focusId={focusId}
           lotFilledIds={lotFilledIds}
           onReload={handleReload}
           onReloadFull={handleReloadFull}

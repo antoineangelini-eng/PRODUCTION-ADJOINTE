@@ -2,13 +2,15 @@
 import { useRef, useState, useCallback } from "react";
 import { DesignResineTable } from "@/components/sheet/DesignResineTable";
 import { DesignResineLotPanel } from "@/components/sheet/DesignResineLotPanel";
+import { DesignResineCreateBar } from "@/components/sheet/DesignResineCreateBar";
 import { useIncomingBanner } from "@/components/sheet/CaseToast";
 import { IncomingCasesBanner } from "@/components/sheet/IncomingCasesBanner";
 import { RealtimeBanner } from "@/components/sheet/RealtimeBanner";
 import { usePollingRefresh } from "@/hooks/usePollingRefresh";
 
-export function DesignResinePageClient({ focusId }: { focusId: string | null }) {
+export function DesignResinePageClient({ focusId, prefill = "" }: { focusId: string | null; prefill?: string }) {
   const [isBusy, setIsBusy] = useState(false);
+  const [activeFocus, setActiveFocus] = useState<string | null>(focusId);
   const { toasts, addToasts, dismiss, dismissAll } = useIncomingBanner();
   const reloadRef = useRef<() => void>(() => {});
   const reloadFullRef = useRef<() => void>(() => {});
@@ -22,6 +24,23 @@ export function DesignResinePageClient({ focusId }: { focusId: string | null }) 
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+      {/* Barre création + scanner */}
+      <div style={{ flexShrink: 0, background: "#0b0b0b", padding: "10px 20px 8px", borderBottom: "1px solid #1a1a1a" }}>
+        <DesignResineCreateBar
+          prefill={prefill}
+          onCreated={async () => {
+            setActiveFocus(null);
+            dismissAll();
+            await new Promise(r => setTimeout(r, 300));
+            reloadFullRef.current?.();
+          }}
+          onSearch={(cn) => {
+            setActiveFocus(null);
+            setTimeout(() => setActiveFocus(cn), 100);
+          }}
+        />
+      </div>
+
       {/* Bouton saisie en lot */}
       <div style={{ flexShrink: 0, padding: "8px 20px 0", display: "flex", justifyContent: "flex-end" }}>
         <button
@@ -59,7 +78,7 @@ export function DesignResinePageClient({ focusId }: { focusId: string | null }) 
 
       <div style={{ flex: 1, minHeight: 0 }}>
         <DesignResineTable
-          focusId={focusId}
+          focusId={activeFocus}
           onReload={handleReload}
           onReloadFull={handleReloadFull}
           onSelectionChange={setIsBusy}

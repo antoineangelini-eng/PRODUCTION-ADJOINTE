@@ -24,12 +24,13 @@ function normalize(value: string): string {
     .toUpperCase();
 }
 
-export function CaseNumberInput({ style, placeholder = "N° du cas", name = "case_number" }: {
+export function CaseNumberInput({ style, placeholder = "N° du cas", name = "case_number", defaultValue = "" }: {
   style?: React.CSSProperties;
   placeholder?: string;
   name?: string;
+  defaultValue?: string;
 }) {
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(defaultValue);
   return (
     <input
       name={name}
