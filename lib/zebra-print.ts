@@ -9,6 +9,8 @@ export type LabelData = {
   nbBlocs: string | null;
   modele: boolean;
   base: string | null;
+  baseQty: number;
+  numeroBase: string | null;
 };
 
 const ZEBRA_PORT = 9100;
@@ -23,73 +25,76 @@ export function buildZPL(data: LabelData): string {
 
   const nature = data.nature ?? "";
 
-  // 406 x 203 dots — 6 champs sur 2 colonnes
-  // Header: 0→45, Contenu: 50→200
+  const hasBase = Boolean(data.base);
+  const baseQty = data.baseQty ?? 1;
+  const baseLabel = data.base ? `${data.base} x${baseQty}` : "";
+
+  // 406 dots wide — layout adaptatif selon présence de base
+  // Sans base : 230 dots de haut (3 lignes de 2 colonnes)
+  // Avec base : 270 dots (3 lignes + ligne base en bas)
+  const labelHeight = hasBase ? 230 : 200;
 
   const lines: string[] = [
     "^XA",
     "^CI28",
     "^PW406",
-    "^LL230",
+    `^LL${labelHeight}`,
     "^LH0,0",
 
     // ── En-tête : numéro de cas + nature à droite ──
-    `^FO6,20^A0N,30,30^FD${data.caseNumber}^FS`,
-    `^FO220,24^A0N,20,20^FD${nature}^FS`,
-    "^FO4,58^GB398,2,2^FS",
+    `^FO6,8^A0N,28,28^FD${data.caseNumber}^FS`,
+    `^FO220,12^A0N,18,18^FD${nature}^FS`,
+    "^FO4,40^GB398,2,2^FS",
 
-    // ── Colonne gauche ──
-    // Teinte
-    `^FO12,70^A0N,14,14^FDTeinte :^FS`,
-    `^FO12,88^A0N,28,28^FD${teinte}^FS`,
+    // ── Ligne 1 : Teinte | Blocs ──
+    `^FO12,48^A0N,11,11^FDTeinte :^FS`,
+    `^FO12,62^A0N,24,24^FD${teinte}^FS`,
+    `^FO220,48^A0N,11,11^FDBlocs :^FS`,
+    `^FO220,62^A0N,24,24^FD${nbBlocs}^FS`,
 
-    // Machine
-    `^FO12,124^A0N,14,14^FDMachine :^FS`,
+    // ── Ligne 2 : Machine | Disque ──
+    `^FO12,92^A0N,11,11^FDMachine :^FS`,
     ...(data.machine
-      ? [`^FO12,142^A0N,28,28^FD${machine}^FS`]
+      ? [`^FO12,106^A0N,24,24^FD${machine}^FS`]
       : [
-          // Cercle barré (N/A)
-          `^FO20,140^GE24,24,2^FS`,
-          `^FO18,138^GD28,28,2,,R^FS`,
+          `^FO20,104^GE20,20,2^FS`,
+          `^FO18,102^GD24,24,2,,R^FS`,
         ]
     ),
-
-    // Modele — inversé (blanc sur noir) si Non
-    `^FO12,178^A0N,14,14^FDModele :^FS`,
-    ...(data.modele
-      ? [`^FO12,196^A0N,28,28^FD${modele}^FS`]
-      : [
-          `^FO8,192^GB80,34,34^FS`,
-          `^FO12,196^A0N,28,28^FR^FD${modele}^FS`,
-        ]
-    ),
-
-    // ── Colonne droite ──
-    // Blocs
-    `^FO220,70^A0N,14,14^FDBlocs :^FS`,
-    `^FO220,88^A0N,28,28^FD${nbBlocs}^FS`,
-
-    // Disque
-    `^FO220,124^A0N,14,14^FDDisque :^FS`,
+    `^FO220,92^A0N,11,11^FDDisque :^FS`,
     ...(data.disque
-      ? [`^FO220,142^A0N,28,28^FD${disque}^FS`]
+      ? [`^FO220,106^A0N,24,24^FD${disque}^FS`]
       : [
-          // Cercle barré (N/A)
-          `^FO228,140^GE24,24,2^FS`,
-          `^FO226,138^GD28,28,2,,R^FS`,
+          `^FO228,104^GE20,20,2^FS`,
+          `^FO226,102^GD24,24,2,,R^FS`,
         ]
     ),
 
-    // Base (si renseignée) — inversé si Imprimée
-    ...(data.base ? [
-      `^FO220,178^A0N,14,14^FDBase :^FS`,
+    // ── Ligne 3 : Modèle ──
+    `^FO12,136^A0N,11,11^FDModele :^FS`,
+    ...(data.modele
+      ? [`^FO12,150^A0N,24,24^FD${modele}^FS`]
+      : [
+          `^FO8,146^GB64,28,28^FS`,
+          `^FO12,150^A0N,24,24^FR^FD${modele}^FS`,
+        ]
+    ),
+
+    // ── Ligne base (séparateur + Base type x qty | N° Base) ──
+    ...(hasBase ? [
+      "^FO4,178^GB398,1,1^FS",
+      `^FO12,186^A0N,11,11^FDBase :^FS`,
       ...(data.base === "Imprimée"
         ? [
-            `^FO216,192^GB140,34,34^FS`,
-            `^FO220,196^A0N,28,28^FR^FD${data.base}^FS`,
+            `^FO8,200^GB120,24,24^FS`,
+            `^FO12,202^A0N,20,20^FR^FD${baseLabel}^FS`,
           ]
-        : [`^FO220,196^A0N,28,28^FD${data.base}^FS`]
+        : [`^FO12,200^A0N,22,22^FD${baseLabel}^FS`]
       ),
+      ...(data.numeroBase && data.base !== "Imprimée" ? [
+        `^FO220,186^A0N,11,11^FDN. Base :^FS`,
+        `^FO220,200^A0N,22,22^FD${data.numeroBase}^FS`,
+      ] : []),
     ] : []),
 
     "^XZ",

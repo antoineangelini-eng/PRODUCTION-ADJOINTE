@@ -43,9 +43,14 @@ function UrCard({ row, onReopen }: { row: UrHistoryRow; onReopen: () => void }) 
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         <div style={{ flex: 1 }}><Field label="Modèle"><Bool val={row.modele_effectif} /></Field></div>
-        <div style={{ flex: 1 }}>{row.nature_du_travail === "Deflex" || row.nature_du_travail === "Complet" ? <Field label="Base"><Txt val={row.base_type} /></Field> : <FieldBlocked label="Base" />}</div>
-        <div style={{ flex: 1 }} />
+        <div style={{ flex: 1 }}>{row.nature_du_travail === "Deflex" || row.nature_du_travail === "Complet" ? <Field label="Base"><Txt val={row.base_type ? `${row.base_type} ×${row.base_qty ?? 1}` : null} /></Field> : <FieldBlocked label="Base" />}</div>
+        <div style={{ flex: 1 }}>{row.nature_du_travail === "Deflex" || row.nature_du_travail === "Complet" ? <Field label="N° Base"><Txt val={[row.numero_base_1, row.numero_base_2].filter(Boolean).join(" / ") || null} /></Field> : <div/>}</div>
       </div>
+      {row.commentaire_complet && (
+        <div style={{ marginTop: 8, padding: "6px 10px", borderRadius: 6, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", fontSize: 11, color: "#f59e0b" }}>
+          <span style={{ fontWeight: 700, marginRight: 6 }}>Note :</span>{row.commentaire_complet}
+        </div>
+      )}
     </CardShell>
   );
 }

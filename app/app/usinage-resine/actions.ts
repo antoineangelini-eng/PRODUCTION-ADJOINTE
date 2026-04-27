@@ -27,6 +27,8 @@ export type UsinageResineRow = {
     modele_a_realiser_ok: boolean | null;
     teintes_associees: string | null;
     base_type: string | null;
+    base_qty: number | null;
+    commentaire_complet: string | null;
   } | null;
   sector_design_metal: {
     type_de_dents: string | null;
@@ -44,6 +46,8 @@ export type UsinageResineRow = {
     nb_blocs_override: string | null;
     teintes_override: string | null;
     type_de_dents_override: string | null;
+    numero_base_1: string | null;
+    numero_base_2: string | null;
   } | null;
   // Lot métal récupéré depuis UT pour l'étiquette — non affiché dans le tableau
   sector_usinage_titane: {
@@ -60,9 +64,9 @@ export async function loadUsinageResineRowsAction(): Promise<UsinageResineRow[]>
       created_by, status, on_hold_at, on_hold_reason,
       cases:case_id (
         id, created_at, case_number, date_expedition, nature_du_travail, is_physical,
-        sector_design_resine ( type_de_dents, design_dents_resine, design_dents_resine_at, nb_blocs_de_dents, modele_a_realiser_ok, teintes_associees, base_type ),
+        sector_design_resine ( type_de_dents, design_dents_resine, design_dents_resine_at, nb_blocs_de_dents, modele_a_realiser_ok, teintes_associees, base_type, base_qty, commentaire_complet ),
         sector_design_metal ( type_de_dents, modele_a_faire_ok, teintes_associees ),
-        sector_usinage_resine ( usinage_dents_resine, identite_machine, identite_machine_2, numero_disque, numero_disque_2, numero_lot_pmma, reception_resine_at, nb_blocs_override, teintes_override, type_de_dents_override ),
+        sector_usinage_resine ( usinage_dents_resine, identite_machine, identite_machine_2, numero_disque, numero_disque_2, numero_lot_pmma, reception_resine_at, nb_blocs_override, teintes_override, type_de_dents_override, numero_base_1, numero_base_2 ),
         sector_usinage_titane ( numero_lot_metal_h, numero_lot_metal_b )
       )
     `)
@@ -109,7 +113,7 @@ export async function saveUsinageResineCellAction(formData: FormData) {
   const kind   = String(formData.get("kind")    ?? "").trim();
   if (!caseId || !column) return;
 
-  const allowed = ["usinage_dents_resine", "identite_machine", "identite_machine_2", "numero_disque", "numero_disque_2", "numero_lot_pmma", "reception_resine_at", "nb_blocs_override", "teintes_override", "type_de_dents_override"];
+  const allowed = ["usinage_dents_resine", "identite_machine", "identite_machine_2", "numero_disque", "numero_disque_2", "numero_lot_pmma", "reception_resine_at", "nb_blocs_override", "teintes_override", "type_de_dents_override", "numero_base_1", "numero_base_2"];
 
   let patch: Record<string, any>;
 

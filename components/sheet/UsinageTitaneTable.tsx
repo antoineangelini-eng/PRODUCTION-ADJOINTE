@@ -420,18 +420,21 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
           const prevIds = new Set(prev.map(r => String(r.id)));
           const incoming = fresh.filter(r => !prevIds.has(String(r.id)));
           if (incoming.length > 0) {
-            onNewCasesRef.current?.(incoming.map(r => ({
-              id: String(r.id),
-              case_number: r.case_number,
-              date_expedition: r.date_expedition,
-              nature_du_travail: r.nature_du_travail,
-            })));
+            // Différer hors du cycle de rendu pour éviter le warning React
+            queueMicrotask(() => {
+              onNewCasesRef.current?.(incoming.map(r => ({
+                id: String(r.id),
+                case_number: r.case_number,
+                date_expedition: r.date_expedition,
+                nature_du_travail: r.nature_du_travail,
+              })));
+            });
           }
           return prev;
         });
       } else {
         setRows(fresh);
-        onBannerClearRef.current?.();
+        queueMicrotask(() => onBannerClearRef.current?.());
       }
     }
     catch (e: any) { if (!silent) setError(e.message); }

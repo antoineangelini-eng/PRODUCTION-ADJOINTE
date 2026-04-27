@@ -31,7 +31,9 @@ export type DesignResineRow = {
     teintes_associees: string | null;
     complet: boolean | null;
     base_type: string | null;
+    base_qty: number | null;
     dents_type: string | null;
+    commentaire_complet: string | null;
   } | null;
 };
 
@@ -52,7 +54,7 @@ export async function loadDesignResineRowsAction(): Promise<DesignResineRow[]> {
         sector_design_resine (
           type_de_dents, design_dents_resine, design_dents_resine_at,
           nb_blocs_de_dents, modele_a_realiser_ok, teintes_associees,
-          complet, base_type, dents_type
+          complet, base_type, base_qty, dents_type, commentaire_complet
         )
       )
     `)
@@ -264,7 +266,7 @@ export async function saveDesignResineCellAction(formData: FormData) {
 
   const allowed = [
     "type_de_dents", "design_dents_resine", "nb_blocs_de_dents",
-    "teintes_associees", "complet", "base_type", "dents_type",
+    "teintes_associees", "complet", "base_type", "base_qty", "dents_type", "commentaire_complet",
     "modele_a_realiser_ok",
   ];
   if (!caseId || !column || !allowed.includes(column)) return;
@@ -272,6 +274,9 @@ export async function saveDesignResineCellAction(formData: FormData) {
   let value: any;
   if (kind === "boolean") {
     value = formData.get("current") !== "true";
+  } else if (kind === "number") {
+    const raw = String(formData.get("value") ?? "").trim();
+    value = raw === "" ? null : Number(raw);
   } else {
     const raw = String(formData.get("value") ?? "").trim();
     value = raw === "" ? null : raw;

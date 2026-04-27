@@ -477,6 +477,9 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
           nbBlocs: ur.nb_blocs_override ?? dr.nb_blocs_de_dents ?? null,
           modele:  Boolean(dr.modele_a_realiser_ok ?? dm.modele_a_faire_ok),
           base:    dr.base_type ?? null,
+          baseQty: dr.base_qty ?? 1,
+          numeroBase1: ur.numero_base_1 ?? null,
+          numeroBase2: ur.numero_base_2 ?? null,
         }).then(job => {
           if (!job || !relayUrl) return;
           fetch(`${relayUrl}/print`, {
@@ -637,10 +640,31 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
                 </div>
                 <div style={{ ...grid2, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl>Date de création</Lbl><Lbl>Type de dents</Lbl></div>
                 <div style={{ ...vals2, background:BG_VAL_ROW, borderBottom:BD_MED }}><Val>{fmtDate(row.created_at)}</Val><span style={{ display:"inline-flex", padding:"3px 10px", borderRadius:6, background:(TYPE_DENTS_OPTIONS.find(o=>o.value===effectiveTD)?.color??"#555")+"18", border:`1px solid ${(TYPE_DENTS_OPTIONS.find(o=>o.value===effectiveTD)?.color??"#555")}44`, color:TYPE_DENTS_OPTIONS.find(o=>o.value===effectiveTD)?.color??"#555", fontSize:12, fontWeight:700 }}>{effectiveTD||"—"}</span></div>
-                {(nat === "Deflex" || nat === "Complet") && (<>
-                  <div style={{ ...grid2, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl>Base</Lbl><div/></div>
-                  <div style={{ ...vals2, background:BG_VAL_ROW, borderBottom:BD_MED }}><span style={{ display:"inline-flex", padding:"3px 10px", borderRadius:6, background:(dr.base_type === "Imprimée" ? "#a78bfa" : "#f59e0b")+"18", border:`1px solid ${(dr.base_type === "Imprimée" ? "#a78bfa" : "#f59e0b")}44`, color: dr.base_type === "Imprimée" ? "#a78bfa" : "#f59e0b", fontSize:12, fontWeight:700 }}>{dr.base_type || "—"}</span><div/></div>
-                </>)}
+                {(nat === "Deflex" || nat === "Complet") && (() => {
+                  const bqty = dr.base_qty ?? 1;
+                  const isImprimee = dr.base_type === "Imprimée";
+                  const baseColor = isImprimee ? "#a78bfa" : "#f59e0b";
+                  return (<>
+                    <div style={{ ...grid2, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl>Base</Lbl>{!isImprimee && <Lbl color="#4ade80">{bqty >= 2 ? "N° Base 1 / N° Base 2" : "N° Base"}</Lbl>}{isImprimee && <div/>}</div>
+                    <div style={{ ...vals2, background:BG_VAL_ROW, borderBottom:BD_MED }}>
+                      <span style={{ display:"inline-flex", alignItems:"center", gap:4, padding:"3px 10px", borderRadius:6, background:baseColor+"18", border:`1px solid ${baseColor}44`, color:baseColor, fontSize:12, fontWeight:700 }}>{dr.base_type || "—"}{dr.base_type && <span style={{opacity:0.7}}>×{bqty}</span>}</span>
+                      {!isImprimee ? (
+                        <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                          <InlineText value={ur.numero_base_1 ?? null} onFocusChange={setIsEditing} navAttr={`${row.id}_base1`} onSave={v => { patchRow(String(row.id),"ur","numero_base_1",v||null); saveCell(String(row.id),"numero_base_1",v||null); }} />
+                          {bqty >= 2 && <>
+                            <span style={{color:"#555",fontSize:10}}>/</span>
+                            <InlineText value={ur.numero_base_2 ?? null} onFocusChange={setIsEditing} navAttr={`${row.id}_base2`} onSave={v => { patchRow(String(row.id),"ur","numero_base_2",v||null); saveCell(String(row.id),"numero_base_2",v||null); }} />
+                          </>}
+                        </div>
+                      ) : <div/>}
+                    </div>
+                  </>);
+                })()}
+                {dr.commentaire_complet && (
+                  <div style={{ padding:"5px 10px", background:"rgba(245,158,11,0.06)", borderBottom:BD_LIGHT, fontSize:11, color:"#f59e0b" }}>
+                    <span style={{ fontWeight:700, marginRight:4 }}>Note :</span>{dr.commentaire_complet}
+                  </div>
+                )}
                 <div style={{ ...grid3, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl>Design résine</Lbl><Lbl>Date &amp; heure</Lbl><Lbl>Modèle</Lbl></div>
                 <div style={{ ...vals3, background:BG_VAL_ROW, borderBottom:BD_MED }}>{dr.design_dents_resine?<OuiBadge/>:<Val muted>—</Val>}<TimeBadge dt={dt}/><BoolBadge val={dr.modele_a_realiser_ok??dm.modele_a_faire_ok??null} /></div>
                 <div style={{ ...grid2, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl color="#4ade80">Blocs</Lbl><Lbl color="#4ade80">Teinte</Lbl></div>

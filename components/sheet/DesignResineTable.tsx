@@ -203,6 +203,8 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
   const [voletModalCaseNumber, setVoletModalCaseNumber] = useState<string|null>(null);
   const [voletCreating, setVoletCreating] = useState(false);
   const [reasonTooltip,setReasonTooltip]=useState<{id:string;rect:{top:number;left:number;width:number;bottom:number}}|null>(null);
+  const [commentModalId, setCommentModalId] = useState<string|null>(null);
+  const [commentDraft, setCommentDraft] = useState("");
 
   const load=useCallback(async(silent=false)=>{
     if(!silent){setLoading(true);setError(null);}
@@ -280,22 +282,25 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
     const fromDm = rows.filter(r => !isDrOrigin(r)).sort((a, b) =>
       (a.date_expedition ?? "9999").localeCompare(b.date_expedition ?? "9999")
     );
-    // Regrouper : après chaque cas DM, insérer les volets résine DR du même numéro
+    // 1) Cas créés par DR en premier (standalone = pas liés à un cas DM)
     const result: DesignResineRow[] = [];
     const usedDrIds = new Set<string>();
+    const dmNumbers = new Set(fromDm.map(r => r.case_number ?? ""));
+    for (const drRow of drCreated) {
+      if (!dmNumbers.has(drRow.case_number ?? "")) {
+        result.push(drRow);
+        usedDrIds.add(String(drRow.id));
+      }
+    }
+    // 2) Cas DM + leurs volets résine DR juste après
     for (const dmRow of fromDm) {
       result.push(dmRow);
-      // Chercher les volets résine avec le même case_number
       for (const drRow of drCreated) {
         if (drRow.case_number === dmRow.case_number && !usedDrIds.has(String(drRow.id))) {
           result.push(drRow);
           usedDrIds.add(String(drRow.id));
         }
       }
-    }
-    // Ajouter les cas DR standalone (pas liés à un cas DM)
-    for (const drRow of drCreated) {
-      if (!usedDrIds.has(String(drRow.id))) result.push(drRow);
     }
     // on_hold en bas
     return result.sort((a, b) => {
@@ -372,6 +377,11 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
   async function saveText(caseId:string,column:string,value:string){
     patchRow(caseId,"sector_design_resine",column,value||null);
     const fd=new FormData();fd.set("case_id",caseId);fd.set("column",column);fd.set("kind","text");fd.set("value",value);
+    await saveDesignResineCellAction(fd);
+  }
+  async function saveNumber(caseId:string,column:string,value:number){
+    patchRow(caseId,"sector_design_resine",column,value);
+    const fd=new FormData();fd.set("case_id",caseId);fd.set("column",column);fd.set("kind","number");fd.set("value",String(value));
     await saveDesignResineCellAction(fd);
   }
   async function saveCaseDateExpedition(caseId:string,date:string){
@@ -533,8 +543,9 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
 
                   <td style={{...tdCard,textAlign:"center"}} onClick={e=>e.stopPropagation()}>
                     {comesFromDm ? (
-                      <div style={{position:"relative",display:"inline-block"}}>
+                      <div style={{position:"relative",display:"inline-flex",alignItems:"center",gap:4,justifyContent:"center"}}>
                         <span style={{display:"inline-flex",alignItems:"center",padding:"2px 8px",borderRadius:6,background:(natureMeta?.color??"#fff")+"18",border:`1px solid ${(natureMeta?.color??"#fff")}44`,color:natureMeta?.color??"#fff",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{nat||"—"}</span>
+                        {isComplet && <button onClick={()=>{setCommentModalId(String(row.id));setCommentDraft(dr.commentaire_complet??"");}} title={dr.commentaire_complet||"Ajouter un commentaire"} style={{background:"none",border:"none",cursor:"pointer",padding:2,fontSize:12,color:dr.commentaire_complet?"#f59e0b":"#555",transition:"color 150ms"}} onMouseEnter={e=>e.currentTarget.style.color="#f59e0b"} onMouseLeave={e=>{if(!dr.commentaire_complet)e.currentTarget.style.color="#555";}}>✎</button>}
                         {!caseNumbersWithVolet.has(row.case_number??"") && (
                           <button onClick={()=>setVoletModalCaseNumber(row.case_number)} title="Ajouter un volet résine" style={{
                             position:"absolute",top:"50%",left:"100%",transform:"translateY(-50%)",marginLeft:4,
@@ -548,18 +559,21 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
                         )}
                       </div>
                     ) : (
-                      <select value={nat} onChange={e=>{const v=e.target.value;patchRow(String(row.id),null,"nature_du_travail",v);updateCaseNatureAction(String(row.id),v);}} style={{
-                        padding:"2px 6px",border:`1px solid ${(natureMeta?.color??"#fff")}44`,background:(natureMeta?.color??"#fff")+"18",color:natureMeta?.color??"#fff",
-                        fontSize:11,cursor:"pointer",borderRadius:6,fontWeight:700,outline:"none",
-                        WebkitAppearance:"none",MozAppearance:"none",appearance:"none",
-                        backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23888'/%3E%3C/svg%3E")`,
-                        backgroundRepeat:"no-repeat",backgroundPosition:"right 4px center",paddingRight:"14px",
-                        textAlign:"center",textAlignLast:"center",
-                      }}>
-                        {DR_NATURE_OPTIONS.map(o=>(
-                          <option key={o.value} value={o.value} style={{background:"#111",color:o.color,fontWeight:600}}>{o.value}</option>
-                        ))}
-                      </select>
+                      <div style={{display:"inline-flex",alignItems:"center",gap:4,justifyContent:"center"}}>
+                        <select value={nat} onChange={e=>{const v=e.target.value;patchRow(String(row.id),null,"nature_du_travail",v);updateCaseNatureAction(String(row.id),v);}} style={{
+                          padding:"2px 6px",border:`1px solid ${(natureMeta?.color??"#fff")}44`,background:(natureMeta?.color??"#fff")+"18",color:natureMeta?.color??"#fff",
+                          fontSize:11,cursor:"pointer",borderRadius:6,fontWeight:700,outline:"none",
+                          WebkitAppearance:"none",MozAppearance:"none",appearance:"none",
+                          backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23888'/%3E%3C/svg%3E")`,
+                          backgroundRepeat:"no-repeat",backgroundPosition:"right 4px center",paddingRight:"14px",
+                          textAlign:"center",textAlignLast:"center",
+                        }}>
+                          {DR_NATURE_OPTIONS.map(o=>(
+                            <option key={o.value} value={o.value} style={{background:"#111",color:o.color,fontWeight:600}}>{o.value}</option>
+                          ))}
+                        </select>
+                        {isComplet && <button onClick={()=>{setCommentModalId(String(row.id));setCommentDraft(dr.commentaire_complet??"");}} title={dr.commentaire_complet||"Ajouter un commentaire"} style={{background:"none",border:"none",cursor:"pointer",padding:2,fontSize:12,color:dr.commentaire_complet?"#f59e0b":"#555",transition:"color 150ms"}} onMouseEnter={e=>e.currentTarget.style.color="#f59e0b"} onMouseLeave={e=>{if(!dr.commentaire_complet)e.currentTarget.style.color="#555";}}>✎</button>}
+                      </div>
                     )}
                   </td>
 
@@ -606,25 +620,33 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
                   /></td>
                   <td style={tdCard} onClick={e=>e.stopPropagation()}><TextInput value={teintes} onSave={v=>{const val=v||dm.teintes_associees||null;patchRow(String(row.id),"sector_design_resine","teintes_associees",val);saveText(String(row.id),"teintes_associees",val??"");}} width={120}/></td>
 
-                  {/* Base — uniquement pour Deflex / Complet */}
+                  {/* Base + quantité — uniquement pour Deflex / Complet */}
                   <td style={needsBase ? tdCard : disabledCellStyle} onClick={e=>{if(needsBase)e.stopPropagation();}}>
                     {needsBase ? (() => {
                       const val = dr.base_type ?? (isDeflex ? "Usinée" : "");
-                      const meta = BASE_OPTIONS.find(o=>o.value===val) ?? {color:"#555"};
-                      if (isDeflex) {
-                        const displayMeta = BASE_OPTIONS.find(o=>o.value===val) ?? BASE_OPTIONS[1];
-                        return <span style={{display:"inline-flex",padding:"3px 10px",borderRadius:6,background:displayMeta.color+"12",border:`1px solid ${displayMeta.color}30`,color:displayMeta.color,fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>{val}</span>;
-                      }
+                      const qty = dr.base_qty ?? 1;
+                      const displayMeta = BASE_OPTIONS.find(o=>o.value===val) ?? BASE_OPTIONS[1];
+                      const cid = String(row.id);
+
+                      const cycleBase = () => {
+                        if (isDeflex) return; // Deflex = toujours Usinée
+                        const idx = BASE_OPTIONS.findIndex(o=>o.value===val);
+                        const next = BASE_OPTIONS[(idx+1) % BASE_OPTIONS.length];
+                        patchRow(cid,"sector_design_resine","base_type",next.value);
+                        saveText(cid,"base_type",next.value);
+                      };
+
                       return (
-                        <select value={val} onChange={e=>{const v=e.target.value;patchRow(String(row.id),"sector_design_resine","base_type",v);saveText(String(row.id),"base_type",v);}} style={{
-                          padding:"4px 8px",border:`1px solid ${val?meta.color+"44":"#f5971844"}`,background:val?meta.color+"15":"transparent",color:val?meta.color:"#888",
-                          fontSize:12,cursor:"pointer",borderRadius:4,minWidth:90,fontWeight:600,outline:"none",
-                        }}>
-                          {!val && <option value="" style={{background:"#111",color:"#888"}}>— Choisir —</option>}
-                          {BASE_OPTIONS.map(o=>(
-                            <option key={o.value} value={o.value} style={{background:"#111",color:o.color,fontWeight:600}}>{o.value}</option>
-                          ))}
-                        </select>
+                        <span style={{display:"inline-flex",alignItems:"center",padding:"3px 10px",borderRadius:6,background:displayMeta.color+"12",border:`1px solid ${displayMeta.color}30`,color:displayMeta.color,fontSize:12,fontWeight:700,whiteSpace:"nowrap",cursor:isDeflex?"default":"pointer",userSelect:"none"}} onClick={cycleBase} title={isDeflex?undefined:"Cliquer pour changer"}>
+                          {val || "— Choisir —"}
+                          {val && (
+                            <span style={{display:"inline-flex",alignItems:"center",gap:2,marginLeft:6}}>
+                              <button onClick={e=>{e.stopPropagation();if(qty>1)saveNumber(cid,"base_qty",qty-1);}} style={{width:16,height:16,borderRadius:4,border:"none",background:qty>1?"rgba(255,255,255,0.1)":"transparent",color:qty>1?"#aaa":"#333",cursor:qty>1?"pointer":"default",fontSize:11,lineHeight:1,padding:0,display:"inline-flex",alignItems:"center",justifyContent:"center"}}>−</button>
+                              <span style={{fontSize:12,fontWeight:700,color:displayMeta.color,minWidth:14,textAlign:"center"}}>×{qty}</span>
+                              <button onClick={e=>{e.stopPropagation();saveNumber(cid,"base_qty",qty+1);}} style={{width:16,height:16,borderRadius:4,border:"none",background:"rgba(255,255,255,0.1)",color:"#aaa",cursor:"pointer",fontSize:11,lineHeight:1,padding:0,display:"inline-flex",alignItems:"center",justifyContent:"center"}}>+</button>
+                            </span>
+                          )}
+                        </span>
                       );
                     })() : "⊘"}
                   </td>
@@ -706,6 +728,27 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
         const r = rows.find(r => String(r.id) === reasonTooltip.id);
         return <OnHoldReasonTooltip reason={(r as any)?._on_hold_reason} onHoldAt={(r as any)?._on_hold_at} anchorRect={reasonTooltip.rect} onClose={() => setReasonTooltip(null)} />;
       })()}
+      {commentModalId && (
+        <div onClick={() => setCommentModalId(null)} style={{ position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.55)",display:"flex",alignItems:"center",justifyContent:"center" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background:"#1a1a1a",border:"1px solid #333",borderRadius:12,padding:"24px 28px",width:340,boxShadow:"0 12px 40px rgba(0,0,0,0.6)" }}>
+            <div style={{ fontSize:14,fontWeight:700,color:"white",marginBottom:4 }}>Commentaire Complet</div>
+            <div style={{ fontSize:12,color:"#aaa",marginBottom:12 }}>Ce commentaire sera visible dans UR</div>
+            <textarea value={commentDraft} onChange={e=>setCommentDraft(e.target.value)} rows={3} autoFocus style={{
+              width:"100%",boxSizing:"border-box",padding:"10px 12px",background:"#111",border:"1px solid #444",borderRadius:8,
+              color:"white",fontSize:13,resize:"vertical",outline:"none",fontFamily:"inherit",
+            }} placeholder="Ex: instructions particulières..." />
+            <div style={{ display:"flex",justifyContent:"flex-end",gap:8,marginTop:14 }}>
+              <button onClick={() => setCommentModalId(null)} style={{ padding:"8px 16px",borderRadius:8,border:"1px solid #444",background:"transparent",color:"white",fontSize:12,fontWeight:600,cursor:"pointer" }}>Annuler</button>
+              <button onClick={() => {
+                const val = commentDraft.trim() || null;
+                patchRow(commentModalId,"sector_design_resine","commentaire_complet",val);
+                saveText(commentModalId,"commentaire_complet",val ?? "");
+                setCommentModalId(null);
+              }} style={{ padding:"8px 16px",borderRadius:8,border:"1px solid rgba(245,158,11,0.5)",background:"rgba(245,158,11,0.15)",color:"#f59e0b",fontSize:12,fontWeight:700,cursor:"pointer" }}>Enregistrer</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
