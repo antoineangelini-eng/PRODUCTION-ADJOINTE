@@ -117,9 +117,10 @@ export function buildSimpleZPL(caseNumber: string, dateExpedition: string | null
     "^PW406",
     "^LL270",
     "^LH0,0",
-    // Numéro de cas en très gros + Chassis Argoat à droite
+    // Numéro de cas en très gros + code-barres à droite
     `^FO16,15^A0N,50,50^FD${caseNumber}^FS`,
-    `^FO260,28^A0N,20,20^FDChassis Argoat^FS`,
+    // Code-barres Code 128 — module fin (^BY1) pour tenir dans la largeur dispo
+    `^BY1^FO200,10^BCN,55,N,N,N^FD${caseNumber}^FS`,
     // Séparation
     "^FO12,75^GB382,3,3^FS",
     // Date d'expédition en gros + jour de la semaine
