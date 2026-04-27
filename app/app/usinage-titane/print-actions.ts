@@ -12,9 +12,10 @@ export async function buildUtPrintJobAction(data: {
   dateExpedition: string | null;
   receptionMetal: string | null;
   quantite: number;
+  nature?: string | null;
 }): Promise<PrintJobData> {
   const printerIp = await getCurrentUserPrinterIpAction();
   if (!printerIp) return null;
-  const zpl = buildSimpleZPL(data.caseNumber, data.dateExpedition, data.receptionMetal, data.quantite);
+  const zpl = buildSimpleZPL(data.caseNumber, data.dateExpedition, data.receptionMetal, data.quantite, data.nature ?? null);
   return { zpl, printerIp };
 }

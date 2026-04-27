@@ -625,6 +625,7 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
           dateExpedition: row.date_expedition ?? null,
           receptionMetal: ut.reception_metal_at ?? null,
           quantite: qte,
+          nature: row.nature_du_travail ?? null,
         }).then(job => {
           if (!job) return;
           fetch(`${relayUrl}/print`, {

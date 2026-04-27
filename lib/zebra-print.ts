@@ -98,8 +98,8 @@ export function buildZPL(data: LabelData): string {
   return lines.join("\n");
 }
 
-/** Étiquette simple pour UT : numéro de cas + date d'expédition + Chassis Argoat + réception métal + quantité */
-export function buildSimpleZPL(caseNumber: string, dateExpedition: string | null, receptionMetal: string | null = null, quantite: number = 1): string {
+/** Étiquette simple pour UT : numéro de cas + code-barres + nature + date d'expédition + réception métal + quantité */
+export function buildSimpleZPL(caseNumber: string, dateExpedition: string | null, receptionMetal: string | null = null, quantite: number = 1, nature: string | null = null): string {
   const dateFr = dateExpedition
     ? new Date(dateExpedition.slice(0, 10) + "T00:00:00").toLocaleDateString("fr-FR")
     : "—";
@@ -117,10 +117,11 @@ export function buildSimpleZPL(caseNumber: string, dateExpedition: string | null
     "^PW406",
     "^LL270",
     "^LH0,0",
-    // Numéro de cas en très gros + code-barres à droite
-    `^FO16,15^A0N,50,50^FD${caseNumber}^FS`,
-    // Code-barres Code 128 — module fin (^BY1) pour tenir dans la largeur dispo
-    `^BY1^FO200,10^BCN,55,N,N,N^FD${caseNumber}^FS`,
+    // Gauche : numéro de cas + nature en dessous
+    `^FO16,12^A0N,38,38^FD${caseNumber}^FS`,
+    ...(nature ? [`^FO16,50^A0N,16,16^FD${nature}^FS`] : []),
+    // Droite : code-barres Code 128 (^BY2 = scannable à distance)
+    `^BY2^FO200,8^BCN,58,N,N,N^FD${caseNumber}^FS`,
     // Séparation
     "^FO12,75^GB382,3,3^FS",
     // Date d'expédition en gros + jour de la semaine
