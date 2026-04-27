@@ -107,6 +107,33 @@ export async function loadFinitionRowsAction(): Promise<FinitionRow[]> {
 
   const caseIds = rows.map((r: any) => r.id).filter(Boolean);
 
+  // Auto-reset : si un cas réinséré en finition a encore validation=true, on le nettoie
+  const stuckIds = rows
+    .filter((r: any) => r.sector_finition?.validation === true)
+    .map((r: any) => r.id);
+  if (stuckIds.length > 0) {
+    const admin = createAdminClient();
+    await admin
+      .from("sector_finition")
+      .update({
+        validation: false, validation_at: null,
+        reception_metal_ok: false, reception_metal_ok_at: null,
+        reception_resine_ok: false, reception_resine_ok_at: null,
+      })
+      .in("case_id", stuckIds);
+    // Mettre à jour les rows en mémoire
+    for (const r of rows as any[]) {
+      if (stuckIds.includes(r.id) && r.sector_finition) {
+        r.sector_finition = {
+          ...r.sector_finition,
+          validation: false, validation_at: null,
+          reception_metal_ok: false, reception_metal_ok_at: null,
+          reception_resine_ok: false, reception_resine_ok_at: null,
+        };
+      }
+    }
+  }
+
   // Déterminer quels secteurs (UT / UR) sont assignés à chaque cas + on_hold des autres secteurs
   let assignedSectors: Record<string, Set<string>> = {};
   const SECTOR_LABELS: Record<string, string> = {
