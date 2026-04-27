@@ -505,13 +505,7 @@ export function DesignMetalTable({
         behavior: "smooth",
         block: "center",
       });
-      // Ouvrir le calendrier d'expédition automatiquement pour que l'utilisateur vérifie la date
-      setTimeout(() => {
-        const expCell = document.querySelector(`#row-dm-${found.id} [data-col="date_expedition"]`) as HTMLElement | null;
-        if (expCell) {
-          setEditingDate({ caseId: String(found.id), column: "date_expedition", rect: expCell.getBoundingClientRect() });
-        }
-      }, 400);
+      // Date déjà saisie à la création, pas besoin d'ouvrir le calendrier
     }, 100);
     const t = setTimeout(() => setFoundRowId(null), 2200);
     return () => clearTimeout(t);

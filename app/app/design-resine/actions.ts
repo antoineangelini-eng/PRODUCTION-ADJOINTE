@@ -191,21 +191,28 @@ export async function createCaseAction(formData: FormData) {
     .update(drDefaults)
     .eq("case_id", caseId);
 
-  // Calculer la date d'expédition en jours ouvrés (hors weekends)
-  const { data: wdConfig } = await supabase
-    .from("working_days_config")
-    .select("days")
-    .eq("nature", nature)
-    .single();
-  const nbDays = wdConfig?.days ?? 3;
-  const dateExp = toDateStr(addBusinessDays(new Date(), nbDays));
-
-  // Utiliser la RPC dédiée (compatible RLS) au lieu d'un update direct
-  await supabase.rpc("rpc_update_case_expedition", {
-    p_case_id: caseId,
-    p_date: dateExp,
-    p_manual: false,
-  });
+  // Date d'expédition : manuelle si fournie, sinon calcul auto
+  const manualDate = String(formData.get("date_expedition") ?? "").trim();
+  if (manualDate) {
+    await supabase.rpc("rpc_update_case_expedition", {
+      p_case_id: caseId,
+      p_date: manualDate,
+      p_manual: true,
+    });
+  } else {
+    const { data: wdConfig } = await supabase
+      .from("working_days_config")
+      .select("days")
+      .eq("nature", nature)
+      .single();
+    const nbDays = wdConfig?.days ?? 3;
+    const dateExp = toDateStr(addBusinessDays(new Date(), nbDays));
+    await supabase.rpc("rpc_update_case_expedition", {
+      p_case_id: caseId,
+      p_date: dateExp,
+      p_manual: false,
+    });
+  }
 
   // Si scan doublé détecté (ex "130172130172") → on marque le cas tout juste créé physique
   if (forcePhysical) {
