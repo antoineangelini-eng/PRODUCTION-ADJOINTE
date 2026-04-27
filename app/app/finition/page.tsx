@@ -31,7 +31,11 @@ export default async function FinitionPage({ searchParams }: { searchParams?: Pr
         </div>
       </div>
 
-      {tab !== "historique" && <FinitionPageClient hideHeader />}
+      {tab !== "historique" && (
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <FinitionPageClient hideHeader />
+        </div>
+      )}
 
       {tab === "historique" && (
         <div style={{ flex: 1, minHeight: 0, padding: "0 16px 16px", overflow: "hidden", display: "flex", flexDirection: "column" }}>

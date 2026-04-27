@@ -6,6 +6,7 @@ import { DesignMetalTable } from "@/components/sheet/DesignMetalTable";
 import { CaseToastContainer, type ToastCase } from "@/components/sheet/CaseToast";
 import { usePollingRefresh } from "@/hooks/usePollingRefresh";
 import { createCaseAction } from "@/app/app/design-metal/actions";
+import { InlineCalendarPicker } from "@/components/sheet/ScrollCalendar";
 import { DesignMetalHistory } from "@/app/app/design-metal/DesignMetalHistory";
 
 const NATURE_OPTIONS = [
@@ -47,6 +48,7 @@ export function DesignMetalPageClient({ focusId }: { focusId: string | null }) {
   const [searchFocused, setSearchFocused] = useState(false);
   const [caseNumber,    setCaseNumber]    = useState("");
   const [nature,        setNature]        = useState("");
+  const [dateExp,       setDateExp]       = useState("");
   const [creating,      setCreating]      = useState(false);
   const [createError,   setCreateError]   = useState<string | null>(null);
   const [isBusy,        setIsBusy]        = useState(false);
@@ -64,16 +66,16 @@ export function DesignMetalPageClient({ focusId }: { focusId: string | null }) {
   }
 
   async function handleCreate() {
-    if (!caseNumber.trim() || !nature) return;
+    if (!caseNumber.trim() || !nature || !dateExp) return;
     const cn = caseNumber.trim();
     setCreating(true); setCreateError(null);
     try {
       const fd = new FormData();
       fd.set("case_number", cn);
       fd.set("nature_du_travail", nature);
+      fd.set("date_expedition", dateExp);
       await createCaseAction(fd);
-      setCaseNumber(""); setNature("");
-      // Recharger les données puis focus sur le cas créé pour ouvrir le calendrier
+      setCaseNumber(""); setNature(""); setDateExp("");
       setActiveFocus(null);
       reloadRef.current?.();
       setTimeout(() => setActiveFocus(cn), 500);
@@ -136,10 +138,12 @@ export function DesignMetalPageClient({ focusId }: { focusId: string | null }) {
                     </select>
                     <svg viewBox="0 0 10 6" width="10" height="10" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", opacity: 0.7 }} fill="none" stroke="#8a8a8a" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1l4 4 4-4" /></svg>
                   </div>
-                  <button onClick={handleCreate} disabled={creating || !caseNumber.trim() || !nature}
-                    style={{ height: 34, padding: "0 16px", background: creating || !caseNumber.trim() || !nature ? "#121212" : "rgba(74,222,128,0.10)", border: creating || !caseNumber.trim() || !nature ? "1px solid #2a2a2a" : "1px solid rgba(74,222,128,0.55)", borderRadius: 7, color: creating || !caseNumber.trim() || !nature ? "#5f5f5f" : "#4ade80", fontSize: 12, fontWeight: 700, cursor: creating || !caseNumber.trim() || !nature ? "not-allowed" : "pointer" }}>
+                  <InlineCalendarPicker value={dateExp} onChange={setDateExp} placeholder="Expédition" />
+                  {(() => { const ready = !creating && !!caseNumber.trim() && !!nature && !!dateExp; return (
+                  <button onClick={handleCreate} disabled={!ready}
+                    style={{ height: 34, padding: "0 16px", background: ready ? "rgba(74,222,128,0.10)" : "#121212", border: ready ? "1px solid rgba(74,222,128,0.55)" : "1px solid #2a2a2a", borderRadius: 7, color: ready ? "#4ade80" : "#5f5f5f", fontSize: 12, fontWeight: 700, cursor: ready ? "pointer" : "not-allowed" }}>
                     {creating ? "…" : "Créer"}
-                  </button>
+                  </button>); })()}
                   {createError && <span style={{ fontSize: 11, color: "#f87171" }}>{createError}</span>}
                 </div>
               </div>

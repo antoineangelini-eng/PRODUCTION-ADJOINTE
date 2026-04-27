@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { loadFinitionRowsAction, validateFinitionBatchAction, toggleFinitionReceptionAction, type FinitionRow } from "@/app/app/finition/actions";
+import { loadFinitionRowsAction, validateFinitionBatchAction, toggleFinitionReceptionAction, type FinitionRow, type ScanValidateItem } from "@/app/app/finition/actions";
 import { OnHoldReasonTooltip } from "@/components/sheet/OnHoldModal";
 import { CaseDetailModal } from "@/components/sheet/CaseDetailModal";
 import { PhysicalBadge } from "@/components/sheet/PhysicalBadge";
@@ -67,7 +67,7 @@ function DateCell({ value, color = "white" }: { value: string | null; color?: st
   return <span style={{ color }}>{new Date(value.slice(0,10)+"T00:00:00").toLocaleDateString("fr-FR")}</span>;
 }
 
-export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelectionChange, receptionMode, onReceptionModeChange }: {
+export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelectionChange, receptionMode, onReceptionModeChange, scanValidateResults, onDismissScanResults }: {
   filter?: "today"|"tomorrow"|"all"|"late"|"prio_today"|"prio_j1"|"prio_j2";
   onReload?: (fn:()=>void)=>void;
   highlightId?: string|null;
@@ -75,6 +75,8 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
   onSelectionChange?: (isBusy: boolean) => void;
   receptionMode?: "metal"|"resine";
   onReceptionModeChange?: (mode: "metal"|"resine") => void;
+  scanValidateResults?: ScanValidateItem[] | null;
+  onDismissScanResults?: () => void;
 }) {
   const [rows, setRows]             = useState<FinitionRow[]>([]);
   const [loading, setLoading]       = useState(true);
@@ -137,6 +139,18 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
     }, 30_000);
     return () => clearInterval(itv);
   }, [load]);
+
+  // Quand des résultats de validation scanner arrivent, retirer les cas validés et recharger
+  useEffect(() => {
+    if (!scanValidateResults || scanValidateResults.length === 0) return;
+    const validatedIds = new Set(scanValidateResults.filter(r => r.validated).map(r => r.case_id));
+    if (validatedIds.size > 0) {
+      setRows(prev => prev.filter(r => !validatedIds.has(String(r.id))));
+    }
+    // Auto-dismiss après 10s
+    const timer = setTimeout(() => onDismissScanResults?.(), 10000);
+    return () => clearTimeout(timer);
+  }, [scanValidateResults, onDismissScanResults]);
 
   // Bloque le refresh si sélection active OU modal ouvert
   useEffect(() => {
@@ -291,6 +305,32 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
         return <OnHoldReasonTooltip reason={(r as any)?._other_on_hold_reason} onHoldAt={(r as any)?._other_on_hold_at} anchorRect={reasonTooltip.rect} onClose={() => setReasonTooltip(null)} />;
       })()}
 
+      {/* Résultats validation scanner — au-dessus de la barre d'actions */}
+      {scanValidateResults && scanValidateResults.length > 0 && (
+        <div style={{ padding:"8px 20px", background:"#0b0b0b", borderBottom:"1px solid #1a1a1a" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+            <span style={{ fontSize:10, fontWeight:700, color:"#4ade80", textTransform:"uppercase", letterSpacing:"0.06em" }}>
+              Résultat validation scanner
+            </span>
+            <button onClick={() => onDismissScanResults?.()} style={{ background:"none", border:"none", color:"#555", cursor:"pointer", fontSize:14, padding:0, lineHeight:1 }}>×</button>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column" as const, gap:4 }}>
+            {scanValidateResults.map(r => (
+              <div key={r.case_id} style={{
+                display:"flex", alignItems:"center", gap:8,
+                padding:"6px 10px", borderRadius:6, fontSize:12,
+                background: r.validated ? "rgba(74,222,128,0.06)" : "rgba(245,158,11,0.06)",
+                border: `1px solid ${r.validated ? "rgba(74,222,128,0.2)" : "rgba(245,158,11,0.2)"}`,
+              }}>
+                <span style={{ fontSize:11, color: r.validated ? "#4ade80" : "#f59e0b", flexShrink:0 }}>{r.validated ? "✓" : "⏳"}</span>
+                <span style={{ color:"white", fontWeight:700, flexShrink:0 }}>{r.case_number}</span>
+                <span style={{ fontSize:11, color: r.validated ? "#4ade80" : "#f59e0b" }}>{r.message}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"0 20px 8px", position:"sticky", top:0, zIndex:3, background:"#0b0b0b", paddingTop:8 }}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
           <div style={{ fontSize:12, color:"white", padding:"4px 10px", border:"1px solid rgba(255,255,255,0.2)", borderRadius:6 }}>
@@ -409,15 +449,15 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
                 }
               }
               // Date prévisionnelle de réception complète (pour affichage quand pas encore cochée)
+              // Ne s'affiche que quand TOUTES les dates nécessaires sont connues → on prend la plus tardive
               let receptionCompletePrevue: string | null = null;
               if (!receptionComplete) {
                 if (needsMetal && needsResine) {
-                  // La plus tardive des deux dates prévues
+                  // Les deux sont nécessaires : n'afficher que si on a les DEUX dates
                   if (receptionMetalDate && receptionResineDate) {
                     receptionCompletePrevue = receptionMetalDate.slice(0,10) > receptionResineDate.slice(0,10) ? receptionMetalDate : receptionResineDate;
-                  } else {
-                    receptionCompletePrevue = receptionMetalDate ?? receptionResineDate;
                   }
+                  // Si une seule date → on n'affiche rien
                 } else if (needsMetal) {
                   receptionCompletePrevue = receptionMetalDate;
                 } else if (needsResine) {

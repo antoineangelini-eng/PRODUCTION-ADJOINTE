@@ -300,46 +300,82 @@ export async function resolveCaseForFinition(caseNumber: string): Promise<{
   return caseData;
 }
 
-/** Cocher réception métal ou résine pour un cas en Finition (toggle pour clic dans le tableau) */
+/** Cocher réception métal ou résine pour un cas en Finition (toggle pour clic dans le tableau).
+ *  Si après le toggle les deux réceptions nécessaires sont cochées → valide automatiquement le cas. */
 export async function toggleFinitionReceptionAction(
   caseId: string,
   field: "reception_metal_ok" | "reception_resine_ok",
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; autoValidated?: boolean }> {
   const supabase = createAdminClient();
   const { data: current } = await supabase
     .from("sector_finition")
-    .select(`${field}, reception_metal_ok, reception_resine_ok`)
+    .select("reception_metal_ok, reception_resine_ok")
     .eq("case_id", caseId)
     .single();
   if (!current) return { ok: false, error: "Cas non trouvé en finition" };
 
   const newVal = !current[field];
   const atField = field + "_at";
+  const now = new Date().toISOString();
   const { error } = await supabase
     .from("sector_finition")
-    .update({ [field]: newVal, [atField]: newVal ? new Date().toISOString() : null })
+    .update({ [field]: newVal, [atField]: newVal ? now : null })
     .eq("case_id", caseId);
   if (error) return { ok: false, error: error.message };
+
+  // Si on vient de décocher → pas d'auto-validation
+  if (!newVal) return { ok: true };
+
+  // Vérifier si réception complète → auto-valider
+  const { data: caseData } = await supabase
+    .from("cases")
+    .select("nature_du_travail, sector_design_metal(type_de_dents), sector_usinage_resine(type_de_dents_override)")
+    .eq("id", caseId)
+    .single();
+  if (!caseData) return { ok: true };
+
+  const dm = (caseData as any).sector_design_metal ?? {};
+  const ur = (caseData as any).sector_usinage_resine ?? {};
+  const typeDents = ur.type_de_dents_override ?? dm.type_de_dents ?? null;
+  const isDentsCommerce = typeDents === "Dents du commerce" || typeDents === "Pas de dents";
+  const needsMetal = (caseData as any).nature_du_travail === "Chassis Argoat";
+  const needsResine = !isDentsCommerce;
+
+  // L'autre réception est-elle déjà OK ?
+  const otherOk = field === "reception_metal_ok"
+    ? (needsResine ? current.reception_resine_ok : true)
+    : (needsMetal ? current.reception_metal_ok : true);
+
+  if (otherOk) {
+    await supabase.rpc("rpc_update_finition", { p_case_id: caseId, p_patch: { validation: true } });
+    revalidatePath("/app/finition");
+    return { ok: true, autoValidated: true };
+  }
+
   return { ok: true };
 }
 
-/** Scanner réception : coche la réception (toujours on, remplace la date). Vérifie que le cas nécessite cette réception. */
-export async function scanFinitionReceptionAction(
+export type ScanCheckResult = {
+  ok: boolean;
+  error?: string;
+};
+
+/** Vérification read-only au bip : le cas existe-t-il en finition, a-t-il besoin de cette réception,
+ *  et la réception n'est-elle pas déjà cochée ? NE TOUCHE PAS à la base. */
+export async function checkFinitionReceptionAction(
   caseId: string,
   field: "reception_metal_ok" | "reception_resine_ok",
-): Promise<{ ok: boolean; error?: string; autoValidated?: boolean }> {
-  const supabase = createAdminClient();
+): Promise<ScanCheckResult> {
+  const admin = createAdminClient();
 
-  // Vérifier que le cas existe en finition
-  const { data: finRow } = await supabase
+  const { data: finRow } = await admin
     .from("sector_finition")
     .select("reception_metal_ok, reception_resine_ok")
     .eq("case_id", caseId)
     .single();
   if (!finRow) return { ok: false, error: "Cas non trouvé en finition" };
 
-  // Vérifier que le cas a besoin de cette réception
-  const { data: caseData } = await supabase
+  const { data: caseData } = await admin
     .from("cases")
     .select("nature_du_travail, sector_design_metal(type_de_dents), sector_usinage_resine(type_de_dents_override)")
     .eq("id", caseId)
@@ -360,28 +396,96 @@ export async function scanFinitionReceptionAction(
     return { ok: false, error: "Ce cas ne nécessite pas de réception résine" };
   }
 
-  // Cocher la réception (toujours true, remplace la date)
-  const atField = field + "_at";
-  const now = new Date().toISOString();
-  const { error } = await supabase
-    .from("sector_finition")
-    .update({ [field]: true, [atField]: now })
-    .eq("case_id", caseId);
-  if (error) return { ok: false, error: error.message };
-
-  // Vérifier si réception complète → valider automatiquement
-  const otherOk = field === "reception_metal_ok"
-    ? (needsResine ? finRow.reception_resine_ok : true)
-    : (needsMetal ? finRow.reception_metal_ok : true);
-
-  if (otherOk) {
-    // Réception complète → valider le cas automatiquement
-    await supabase.rpc("rpc_update_finition", { p_case_id: caseId, p_patch: { validation: true } });
-    revalidatePath("/app/finition");
-    return { ok: true, autoValidated: true };
+  if (finRow[field]) {
+    return { ok: false, error: `Réception ${field === "reception_metal_ok" ? "métal" : "résine"} déjà enregistrée` };
   }
 
   return { ok: true };
+}
+
+export type ScanValidateItem = {
+  case_id: string;
+  case_number: string;
+  validated: boolean;
+  message: string;
+};
+
+/** Bouton Valider : enregistre les réceptions en base, puis valide les cas complets.
+ *  Utilise createClient() (authentifié) pour le RPC. */
+export async function batchValidateScannedAction(
+  cases: { case_id: string; case_number: string }[],
+  receptionField: "reception_metal_ok" | "reception_resine_ok",
+): Promise<ScanValidateItem[]> {
+  const admin = createAdminClient();
+  const supabase = await createClient();
+  const results: ScanValidateItem[] = [];
+  const now = new Date().toISOString();
+  const atField = receptionField + "_at";
+
+  for (const { case_id, case_number } of cases) {
+    // 1. Écrire la réception en base maintenant
+    await admin
+      .from("sector_finition")
+      .update({ [receptionField]: true, [atField]: now })
+      .eq("case_id", case_id);
+
+    // 2. Relire le statut complet après écriture
+    const { data: finRow } = await admin
+      .from("sector_finition")
+      .select("reception_metal_ok, reception_metal_ok_at, reception_resine_ok, reception_resine_ok_at, validation")
+      .eq("case_id", case_id)
+      .single();
+
+    if (!finRow) { results.push({ case_id, case_number, validated: false, message: "Non trouvé" }); continue; }
+    if (finRow.validation) { results.push({ case_id, case_number, validated: true, message: "Déjà validé" }); continue; }
+
+    // 3. Déterminer les besoins
+    const { data: caseData } = await admin
+      .from("cases")
+      .select("nature_du_travail, sector_design_metal(type_de_dents), sector_usinage_resine(type_de_dents_override)")
+      .eq("id", case_id)
+      .single();
+    if (!caseData) { results.push({ case_id, case_number, validated: false, message: "Cas introuvable" }); continue; }
+
+    const dm = (caseData as any).sector_design_metal ?? {};
+    const ur = (caseData as any).sector_usinage_resine ?? {};
+    const typeDents = ur.type_de_dents_override ?? dm.type_de_dents ?? null;
+    const isDentsCommerce = typeDents === "Dents du commerce" || typeDents === "Pas de dents";
+    const needsMetal = (caseData as any).nature_du_travail === "Chassis Argoat";
+    const needsResine = !isDentsCommerce;
+
+    const metalDone = needsMetal ? !!finRow.reception_metal_ok : true;
+    const resineDone = needsResine ? !!finRow.reception_resine_ok : true;
+
+    if (!metalDone || !resineDone) {
+      const missing = !metalDone && !resineDone ? "métal + résine" : !metalDone ? "métal" : "résine";
+      results.push({ case_id, case_number, validated: false, message: `Réception enregistrée — en attente réception ${missing}` });
+      continue;
+    }
+
+    // 4. Toutes les réceptions complètes → valider (avec user authentifié pour le RPC)
+    const { error } = await supabase.rpc("rpc_update_finition", { p_case_id: case_id, p_patch: { validation: true } });
+    if (error) { results.push({ case_id, case_number, validated: false, message: error.message }); continue; }
+
+    // 5. Message
+    const bothNeeded = needsMetal && needsResine;
+    if (bothNeeded) {
+      const metalAt = finRow.reception_metal_ok_at ? new Date(finRow.reception_metal_ok_at) : null;
+      const resineAt = finRow.reception_resine_ok_at ? new Date(finRow.reception_resine_ok_at) : null;
+      let firstInfo = "";
+      if (metalAt && resineAt) {
+        const [firstLabel, firstDate] = metalAt < resineAt
+          ? ["métal", metalAt] : ["résine", resineAt];
+        firstInfo = ` — 1ère réception ${firstLabel} le ${firstDate.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", timeZone: "Europe/Paris" })}`;
+      }
+      results.push({ case_id, case_number, validated: true, message: `Toutes les réceptions reçues${firstInfo} — prêt à produire` });
+    } else {
+      results.push({ case_id, case_number, validated: true, message: "Réception reçue — cas prêt à produire" });
+    }
+  }
+
+  revalidatePath("/app/finition");
+  return results;
 }
 
 export async function getFinitionStatsAction(): Promise<{

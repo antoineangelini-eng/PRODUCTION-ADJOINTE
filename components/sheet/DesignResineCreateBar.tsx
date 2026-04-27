@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createCaseAction } from "@/app/app/design-resine/actions";
+import { InlineCalendarPicker } from "@/components/sheet/ScrollCalendar";
 
 const AZERTY_MAP: Record<string, string> = {
   "&": "1", "é": "2", "\"": "3", "'": "4", "(": "5",
@@ -23,6 +24,7 @@ export function DesignResineCreateBar({ prefill = "", onCreated, onSearch }: { p
   const [caseNumber, setCaseNumber] = useState(prefill);
   const [nature, setNature] = useState("");
   const [scanValue, setScanValue] = useState("");
+  const [dateExp, setDateExp] = useState("");
   const [creating, setCreating] = useState(false);
 
   async function handleCreate() {
@@ -33,12 +35,14 @@ export function DesignResineCreateBar({ prefill = "", onCreated, onSearch }: { p
       const fd = new FormData();
       fd.set("case_number", cn);
       fd.set("nature", nature);
+      if (dateExp) fd.set("date_expedition", dateExp);
       await createCaseAction(fd);
     } catch {
       // createCaseAction fait un redirect, on le gère ici
     }
     setCaseNumber("");
     setNature("");
+    setDateExp("");
     setCreating(false);
     onCreated?.(cn);
   }
@@ -73,10 +77,11 @@ export function DesignResineCreateBar({ prefill = "", onCreated, onSearch }: { p
             </select>
             <svg viewBox="0 0 10 6" width="10" height="10" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", opacity: 0.7 }} fill="none" stroke="#8a8a8a" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1l4 4 4-4" /></svg>
           </div>
-          <button onClick={handleCreate} disabled={creating || !caseNumber.trim() || !nature} style={{
+          <InlineCalendarPicker value={dateExp} onChange={setDateExp} placeholder="Expédition" />
+          <button onClick={handleCreate} disabled={creating || !caseNumber.trim() || !nature || !dateExp} style={{
             padding: "7px 14px", border: "1px solid #7c8196", background: "rgba(129,140,248,0.08)",
-            color: !caseNumber.trim() || !nature ? "#555" : "#7c8196",
-            cursor: creating || !caseNumber.trim() || !nature ? "not-allowed" : "pointer",
+            color: !caseNumber.trim() || !nature || !dateExp ? "#555" : "#7c8196",
+            cursor: creating || !caseNumber.trim() || !nature || !dateExp ? "not-allowed" : "pointer",
             fontSize: 12, fontWeight: 700, borderRadius: 4,
           }}>
             {creating ? "..." : "Créer"}
