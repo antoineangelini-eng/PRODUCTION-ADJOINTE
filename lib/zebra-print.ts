@@ -116,8 +116,8 @@ export function buildZPL(data: LabelData): string {
   return lines.join("\n");
 }
 
-/** Étiquette simple pour UT : numéro de cas + code-barres + nature + date d'expédition + réception métal + quantité */
-export function buildSimpleZPL(caseNumber: string, dateExpedition: string | null, receptionMetal: string | null = null, quantite: number = 1, nature: string | null = null): string {
+/** Étiquette simple pour UT : numéro de cas + code-barres + nature + date d'expédition + réception métal + quantité + modèle */
+export function buildSimpleZPL(caseNumber: string, dateExpedition: string | null, receptionMetal: string | null = null, quantite: number = 1, nature: string | null = null, modele: boolean = false): string {
   const dateFr = dateExpedition
     ? new Date(dateExpedition.slice(0, 10) + "T00:00:00").toLocaleDateString("fr-FR")
     : "—";
@@ -128,6 +128,8 @@ export function buildSimpleZPL(caseNumber: string, dateExpedition: string | null
     ? new Date(receptionMetal.slice(0, 10) + "T00:00:00").toLocaleDateString("fr-FR")
     : null;
   const recepDay = receptionMetal ? JOURS[new Date(receptionMetal.slice(0, 10) + "T00:00:00").getDay()] : "";
+
+  const modeleLabel = modele ? "Oui" : "Non";
 
   return [
     "^XA",
@@ -140,21 +142,37 @@ export function buildSimpleZPL(caseNumber: string, dateExpedition: string | null
     ...(nature ? [`^FO16,50^A0N,16,16^FD${nature}^FS`] : []),
     // Droite : code-barres Code 128 (^BY2 = scannable à distance)
     `^BY2^FO200,8^BCN,58,N,N,N^FD${caseNumber}^FS`,
-    // Séparation
+    // Séparation horizontale
     "^FO12,75^GB382,3,3^FS",
-    // Date d'expédition en gros + jour de la semaine
-    `^FO16,90^A0N,18,18^FDExpedition :^FS`,
-    `^FO16,114^A0N,44,44^FD${expDay} ${dateFr}^FS`,
-    // Séparation fine
-    "^FO12,168^GB382,1,1^FS",
+    // Trait vertical séparant dates (gauche) et modèle (droite)
+    "^FO296,78^GB2,180,2^FS",
+
+    // ── Colonne gauche : dates ──
+    // Date d'expédition + jour de la semaine
+    `^FO16,88^A0N,16,16^FDExpedition :^FS`,
+    `^FO16,110^A0N,40,40^FD${expDay}^FS`,
+    `^FO16,152^A0N,28,28^FD${dateFr}^FS`,
+    // Séparation fine (colonne gauche seulement)
+    "^FO12,186^GB280,1,1^FS",
     // Réception métal en dessous + jour de la semaine
     ...(recepFr ? [
-      `^FO16,178^A0N,16,16^FDReception metal :^FS`,
-      `^FO16,200^A0N,28,28^FD${recepDay} ${recepFr}^FS`,
+      `^FO16,194^A0N,14,14^FDReception metal :^FS`,
+      `^FO16,212^A0N,24,24^FD${recepDay} ${recepFr}^FS`,
     ] : []),
-    // Quantité en bas à droite — blanc sur noir, bien visible (masqué si 0)
+
+    // ── Colonne droite : modèle + quantité ──
+    `^FO304,84^A0N,18,18^FDModele^FS`,
+    // Valeur modèle en gros — Oui = texte normal, Non = blanc sur noir
+    ...(modele
+      ? [`^FO312,108^A0N,44,44^FD${modeleLabel}^FS`]
+      : [
+          `^FO302,104^GB96,48,48^FS`,
+          `^FO312,108^A0N,44,44^FR^FD${modeleLabel}^FS`,
+        ]
+    ),
+    // Quantité en bas de la colonne droite (masqué si 0)
     ...(quantite > 0 ? [
-      `^FO300,200^GB100,44,44^FS`,
+      `^FO302,200^GB96,44,44^FS`,
       `^FO308,204^A0N,36,36^FR^FDQte ${quantite}^FS`,
     ] : []),
     "^XZ",

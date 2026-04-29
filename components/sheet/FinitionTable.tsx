@@ -222,6 +222,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
           dateExpedition: row.date_expedition ?? null,
           receptionMetal,
           nature: row.nature_du_travail,
+          modele: Boolean(dm.modele_a_faire_ok),
         }).then(job => {
           if (!job) return;
           const relayUrl = process.env.NEXT_PUBLIC_PRINT_RELAY_URL || "http://192.168.1.30:3001";

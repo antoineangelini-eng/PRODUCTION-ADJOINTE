@@ -86,7 +86,7 @@ export async function loadFinitionRowsAction(): Promise<FinitionRow[]> {
       status, on_hold_at, on_hold_reason,
       cases:case_id (
         id, created_at, case_number, date_expedition, nature_du_travail, is_physical,
-        sector_design_metal ( reception_metal, reception_metal_date, type_de_dents, teintes_associees, modele_a_faire ),
+        sector_design_metal ( reception_metal, reception_metal_date, type_de_dents, teintes_associees, modele_a_faire, modele_a_faire_ok ),
         sector_design_resine ( design_dents_resine, nb_blocs_de_dents, teintes_associees, type_de_dents, modele_a_realiser_ok ),
         sector_usinage_resine ( usinage_dents_resine, reception_resine_at ),
         sector_usinage_titane ( reception_metal, reception_metal_at, envoye_usinage, envoye_usinage_at ),
@@ -441,6 +441,7 @@ export type ScanValidateItem = {
     dateExpedition: string | null;
     receptionMetal: string | null;
     nature: string | null;
+    modele?: boolean;
   };
 };
 
@@ -476,7 +477,7 @@ export async function batchValidateScannedAction(
     // 3. Déterminer les besoins
     const { data: caseData } = await admin
       .from("cases")
-      .select("nature_du_travail, date_expedition, sector_design_metal(type_de_dents, reception_metal_date), sector_usinage_resine(type_de_dents_override), sector_usinage_titane(reception_metal_at)")
+      .select("nature_du_travail, date_expedition, sector_design_metal(type_de_dents, reception_metal_date, modele_a_faire_ok), sector_usinage_resine(type_de_dents_override), sector_usinage_titane(reception_metal_at)")
       .eq("id", case_id)
       .single();
     if (!caseData) { results.push({ case_id, case_number, validated: false, message: "Cas introuvable" }); continue; }
@@ -492,7 +493,7 @@ export async function batchValidateScannedAction(
 
     // Données pour impression étiquette Chassis Dent All
     const printLabel = (receptionField === "reception_metal_ok" && nature === "Chassis Dent All")
-      ? { caseNumber: case_number, dateExpedition: (caseData as any).date_expedition ?? null, receptionMetal: ut.reception_metal_at ?? dm.reception_metal_date ?? null, nature }
+      ? { caseNumber: case_number, dateExpedition: (caseData as any).date_expedition ?? null, receptionMetal: ut.reception_metal_at ?? dm.reception_metal_date ?? null, nature, modele: Boolean(dm.modele_a_faire_ok) }
       : undefined;
 
     const metalDone = needsMetal ? !!finRow.reception_metal_ok : true;

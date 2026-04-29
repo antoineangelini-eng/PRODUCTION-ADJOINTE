@@ -620,12 +620,14 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
         const hasH = Boolean(ut.numero_calcul_h);
         const hasB = Boolean(ut.numero_calcul_b);
         const qte = (hasH && hasB) ? 2 : 1;
+        const dm = (row as any).sector_design_metal ?? {};
         buildUtPrintJobAction({
           caseNumber: row.case_number ?? okId,
           dateExpedition: row.date_expedition ?? null,
           receptionMetal: ut.reception_metal_at ?? null,
           quantite: qte,
           nature: row.nature_du_travail ?? null,
+          modele: Boolean(dm.modele_a_faire_ok),
         }).then(job => {
           if (!job) return;
           fetch(`${relayUrl}/print`, {

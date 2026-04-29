@@ -13,10 +13,11 @@ export async function buildFinitionMetalPrintJobAction(data: {
   dateExpedition: string | null;
   receptionMetal: string | null;
   nature: string | null;
+  modele?: boolean;
 }): Promise<PrintJobData> {
   const printerIp = await getCurrentUserPrinterIpAction();
   if (!printerIp) return null;
   // quantite = 0 → on ne l'affiche pas sur l'étiquette
-  const zpl = buildSimpleZPL(data.caseNumber, data.dateExpedition, data.receptionMetal, 0, data.nature);
+  const zpl = buildSimpleZPL(data.caseNumber, data.dateExpedition, data.receptionMetal, 0, data.nature, data.modele ?? false);
   return { zpl, printerIp };
 }
