@@ -29,6 +29,7 @@ export type UrHistoryRow = {
   base_qty: number | null;
   numero_base_1: string | null;
   numero_base_2: string | null;
+  machine_base: string | null;
   commentaire_complet: string | null;
 };
 
@@ -38,7 +39,7 @@ export async function loadUrHistoryAction(): Promise<UrHistoryRow[]> {
     .from("case_assignments")
     .select(`updated_at, updated_by, cases:case_id (
       id, case_number, created_at, date_expedition, nature_du_travail, is_physical,
-      sector_usinage_resine ( usinage_dents_resine, identite_machine, identite_machine_2, numero_disque, numero_disque_2, numero_lot_pmma, reception_resine_at, type_de_dents_override, teintes_override, nb_blocs_override, numero_base_1, numero_base_2 ),
+      sector_usinage_resine ( usinage_dents_resine, identite_machine, identite_machine_2, numero_disque, numero_disque_2, numero_lot_pmma, reception_resine_at, type_de_dents_override, teintes_override, nb_blocs_override, numero_base_1, numero_base_2, machine_base ),
       sector_design_resine ( type_de_dents, teintes_associees, nb_blocs_de_dents, modele_a_realiser_ok, base_type, base_qty, commentaire_complet ),
       sector_design_metal ( modele_a_faire_ok, teintes_associees )
     )`)
@@ -96,6 +97,7 @@ export async function loadUrHistoryAction(): Promise<UrHistoryRow[]> {
       base_qty: dr.base_qty ?? 1,
       numero_base_1: ur.numero_base_1 ?? null,
       numero_base_2: ur.numero_base_2 ?? null,
+      machine_base: ur.machine_base ?? null,
       commentaire_complet: dr.commentaire_complet ?? null,
     };
   });

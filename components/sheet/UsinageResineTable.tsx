@@ -478,6 +478,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
           modele:  Boolean(dr.modele_a_realiser_ok ?? dm.modele_a_faire_ok),
           base:    dr.base_type ?? null,
           baseQty: dr.base_qty ?? 1,
+          machineBase: ur.machine_base ?? null,
           numeroBase1: ur.numero_base_1 ?? null,
           numeroBase2: ur.numero_base_2 ?? null,
         }).then(job => {
@@ -644,19 +645,33 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
                   const bqty = dr.base_qty ?? 1;
                   const isImprimee = dr.base_type === "Imprimée";
                   const baseColor = isImprimee ? "#a78bfa" : "#f59e0b";
+                  if (isImprimee) {
+                    // Imprimée : juste le badge Base, pas de Machine ni N° Base
+                    return (<>
+                      <div style={{ ...grid2, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl>Base</Lbl><div/></div>
+                      <div style={{ ...vals2, background:BG_VAL_ROW, borderBottom:BD_MED }}>
+                        <span style={{ display:"inline-flex", alignItems:"center", gap:4, padding:"3px 10px", borderRadius:6, background:baseColor+"18", border:`1px solid ${baseColor}44`, color:baseColor, fontSize:12, fontWeight:700 }}>{dr.base_type}{dr.base_type && <span style={{opacity:0.7}}>×{bqty}</span>}</span>
+                        <div/>
+                      </div>
+                    </>);
+                  }
+                  // Usinée : Base | Machine | N° Base
                   return (<>
-                    <div style={{ ...grid2, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl>Base</Lbl>{!isImprimee && <Lbl color="#4ade80">{bqty >= 2 ? "N° Base 1 / N° Base 2" : "N° Base"}</Lbl>}{isImprimee && <div/>}</div>
-                    <div style={{ ...vals2, background:BG_VAL_ROW, borderBottom:BD_MED }}>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", padding:"4px 10px", background:BG_LABEL_SAISIE, borderBottom:BD_LIGHT }}>
+                      <Lbl>Base</Lbl>
+                      <Lbl color="#7c8196">Machine</Lbl>
+                      <Lbl color="#4ade80">{bqty >= 2 ? "N° Base 1 / N° Base 2" : "N° Base"}</Lbl>
+                    </div>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", padding:"5px 14px 7px", gap:"0 12px", alignItems:"center", justifyItems:"center", background:BG_VAL_SAISIE, borderBottom:BD_MED }}>
                       <span style={{ display:"inline-flex", alignItems:"center", gap:4, padding:"3px 10px", borderRadius:6, background:baseColor+"18", border:`1px solid ${baseColor}44`, color:baseColor, fontSize:12, fontWeight:700 }}>{dr.base_type || "—"}{dr.base_type && <span style={{opacity:0.7}}>×{bqty}</span>}</span>
-                      {!isImprimee ? (
-                        <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-                          <InlineText value={ur.numero_base_1 ?? null} onFocusChange={setIsEditing} navAttr={`${row.id}_base1`} onSave={v => { patchRow(String(row.id),"ur","numero_base_1",v||null); saveCell(String(row.id),"numero_base_1",v||null); }} />
-                          {bqty >= 2 && <>
-                            <span style={{color:"#555",fontSize:10}}>/</span>
-                            <InlineText value={ur.numero_base_2 ?? null} onFocusChange={setIsEditing} navAttr={`${row.id}_base2`} onSave={v => { patchRow(String(row.id),"ur","numero_base_2",v||null); saveCell(String(row.id),"numero_base_2",v||null); }} />
-                          </>}
-                        </div>
-                      ) : <div/>}
+                      <SelectMachine value={ur.machine_base ?? ""} onChange={v => { patchRow(String(row.id),"ur","machine_base",v||null); saveCell(String(row.id),"machine_base",v||null); }} />
+                      <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                        <InlineText value={ur.numero_base_1 ?? null} onFocusChange={setIsEditing} navAttr={`${row.id}_base1`} onSave={v => { patchRow(String(row.id),"ur","numero_base_1",v||null); saveCell(String(row.id),"numero_base_1",v||null); }} />
+                        {bqty >= 2 && <>
+                          <span style={{color:"#555",fontSize:10}}>/</span>
+                          <InlineText value={ur.numero_base_2 ?? null} onFocusChange={setIsEditing} navAttr={`${row.id}_base2`} onSave={v => { patchRow(String(row.id),"ur","numero_base_2",v||null); saveCell(String(row.id),"numero_base_2",v||null); }} />
+                        </>}
+                      </div>
                     </div>
                   </>);
                 })()}
