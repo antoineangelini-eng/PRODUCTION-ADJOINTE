@@ -365,7 +365,7 @@ export async function toggleFinitionReceptionAction(
   const ur = (caseData as any).sector_usinage_resine ?? {};
   const typeDents = ur.type_de_dents_override ?? dm.type_de_dents ?? null;
   const isDentsCommerce = typeDents === "Dents du commerce" || typeDents === "Pas de dents";
-  const needsMetal = (caseData as any).nature_du_travail === "Chassis Argoat";
+  const needsMetal = (caseData as any).nature_du_travail === "Chassis Argoat" || (caseData as any).nature_du_travail === "Chassis Dent All";
   const needsResine = !isDentsCommerce;
 
   // L'autre réception est-elle déjà OK ?
@@ -413,7 +413,7 @@ export async function checkFinitionReceptionAction(
   const ur = (caseData as any).sector_usinage_resine ?? {};
   const typeDents = ur.type_de_dents_override ?? dm.type_de_dents ?? null;
   const isDentsCommerce = typeDents === "Dents du commerce" || typeDents === "Pas de dents";
-  const needsMetal = (caseData as any).nature_du_travail === "Chassis Argoat";
+  const needsMetal = (caseData as any).nature_du_travail === "Chassis Argoat" || (caseData as any).nature_du_travail === "Chassis Dent All";
   const needsResine = !isDentsCommerce;
 
   if (field === "reception_metal_ok" && !needsMetal) {
@@ -435,6 +435,13 @@ export type ScanValidateItem = {
   case_number: string;
   validated: boolean;
   message: string;
+  /** Données pour impression étiquette (Chassis Dent All réception métal) */
+  printLabel?: {
+    caseNumber: string;
+    dateExpedition: string | null;
+    receptionMetal: string | null;
+    nature: string | null;
+  };
 };
 
 /** Bouton Valider : enregistre les réceptions en base, puis valide les cas complets.
@@ -469,24 +476,31 @@ export async function batchValidateScannedAction(
     // 3. Déterminer les besoins
     const { data: caseData } = await admin
       .from("cases")
-      .select("nature_du_travail, sector_design_metal(type_de_dents), sector_usinage_resine(type_de_dents_override)")
+      .select("nature_du_travail, date_expedition, sector_design_metal(type_de_dents, reception_metal_date), sector_usinage_resine(type_de_dents_override), sector_usinage_titane(reception_metal_at)")
       .eq("id", case_id)
       .single();
     if (!caseData) { results.push({ case_id, case_number, validated: false, message: "Cas introuvable" }); continue; }
 
     const dm = (caseData as any).sector_design_metal ?? {};
     const ur = (caseData as any).sector_usinage_resine ?? {};
+    const ut = (caseData as any).sector_usinage_titane ?? {};
+    const nature = (caseData as any).nature_du_travail ?? null;
     const typeDents = ur.type_de_dents_override ?? dm.type_de_dents ?? null;
     const isDentsCommerce = typeDents === "Dents du commerce" || typeDents === "Pas de dents";
-    const needsMetal = (caseData as any).nature_du_travail === "Chassis Argoat";
+    const needsMetal = nature === "Chassis Argoat" || nature === "Chassis Dent All";
     const needsResine = !isDentsCommerce;
+
+    // Données pour impression étiquette Chassis Dent All
+    const printLabel = (receptionField === "reception_metal_ok" && nature === "Chassis Dent All")
+      ? { caseNumber: case_number, dateExpedition: (caseData as any).date_expedition ?? null, receptionMetal: ut.reception_metal_at ?? dm.reception_metal_date ?? null, nature }
+      : undefined;
 
     const metalDone = needsMetal ? !!finRow.reception_metal_ok : true;
     const resineDone = needsResine ? !!finRow.reception_resine_ok : true;
 
     if (!metalDone || !resineDone) {
       const missing = !metalDone && !resineDone ? "métal + résine" : !metalDone ? "métal" : "résine";
-      results.push({ case_id, case_number, validated: false, message: `Réception enregistrée — en attente réception ${missing}` });
+      results.push({ case_id, case_number, validated: false, message: `Réception enregistrée — en attente réception ${missing}`, printLabel });
       continue;
     }
 
@@ -505,9 +519,9 @@ export async function batchValidateScannedAction(
           ? ["métal", metalAt] : ["résine", resineAt];
         firstInfo = ` — 1ère réception ${firstLabel} le ${firstDate.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", timeZone: "Europe/Paris" })}`;
       }
-      results.push({ case_id, case_number, validated: true, message: `Toutes les réceptions reçues${firstInfo} — prêt à produire` });
+      results.push({ case_id, case_number, validated: true, message: `Toutes les réceptions reçues${firstInfo} — prêt à produire`, printLabel });
     } else {
-      results.push({ case_id, case_number, validated: true, message: "Réception reçue — cas prêt à produire" });
+      results.push({ case_id, case_number, validated: true, message: "Réception reçue — cas prêt à produire", printLabel });
     }
   }
 

@@ -1,5 +1,6 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import { joursFeries } from "@/lib/jours-feries";
 
 const JOURS = ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"];
 const MOIS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
@@ -30,24 +31,40 @@ export function ScrollCalendar({
   const [viewYear, setViewYear] = useState(() => value ? parseInt(value.slice(0, 4)) : new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(() => value ? parseInt(value.slice(5, 7)) - 1 : new Date().getMonth());
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollAccum = useRef(0);
+  const scrollCooldown = useRef(false);
 
   function goMonth(delta: number) {
-    let m = viewMonth + delta;
-    let y = viewYear;
-    if (m < 0) { m = 11; y--; }
-    if (m > 11) { m = 0; y++; }
-    setViewMonth(m);
-    setViewYear(y);
+    setViewMonth(prev => {
+      let m = prev + delta;
+      let y = viewYear;
+      if (m < 0) { m = 11; y--; }
+      if (m > 11) { m = 0; y++; }
+      setViewYear(y);
+      return m;
+    });
   }
 
-  // Scroll pour naviguer entre les mois
+  // Scroll : un geste = un mois, avec cooldown pour éviter le double-scroll
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+    const THRESHOLD = 80;
     function onWheel(e: WheelEvent) {
       e.preventDefault();
-      if (e.deltaY > 0) goMonth(1);
-      else if (e.deltaY < 0) goMonth(-1);
+      if (scrollCooldown.current) return;
+      scrollAccum.current += e.deltaY;
+      if (scrollAccum.current > THRESHOLD) {
+        goMonth(1);
+        scrollAccum.current = 0;
+        scrollCooldown.current = true;
+        setTimeout(() => { scrollCooldown.current = false; }, 300);
+      } else if (scrollAccum.current < -THRESHOLD) {
+        goMonth(-1);
+        scrollAccum.current = 0;
+        scrollCooldown.current = true;
+        setTimeout(() => { scrollCooldown.current = false; }, 300);
+      }
     }
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
@@ -55,10 +72,28 @@ export function ScrollCalendar({
 
   const days = daysInMonth(viewYear, viewMonth);
   const startDay = firstDayOfMonth(viewYear, viewMonth);
+  const prevMonthDays = daysInMonth(viewYear, viewMonth - 1);
 
-  const cells: (number | null)[] = [];
-  for (let i = 0; i < startDay; i++) cells.push(null);
-  for (let d = 1; d <= days; d++) cells.push(d);
+  // Jours fériés pour l'année courante (et adjacentes si prev/next mois déborde)
+  const feries = useMemo(() => {
+    const s = joursFeries(viewYear);
+    joursFeries(viewYear - 1).forEach(d => s.add(d));
+    joursFeries(viewYear + 1).forEach(d => s.add(d));
+    return s;
+  }, [viewYear]);
+
+  // Cellules : { day, type: "prev" | "current" | "next" }
+  type Cell = { day: number; type: "prev" | "current" | "next" };
+  const cells: Cell[] = [];
+  // Jours du mois précédent
+  for (let i = startDay - 1; i >= 0; i--) cells.push({ day: prevMonthDays - i, type: "prev" });
+  // Jours du mois courant
+  for (let d = 1; d <= days; d++) cells.push({ day: d, type: "current" });
+  // Jours du mois suivant pour compléter 6 lignes
+  const totalRows = Math.ceil(cells.length / 7);
+  const targetCells = Math.max(totalRows, 6) * 7;
+  let nextDay = 1;
+  while (cells.length < targetCells) cells.push({ day: nextDay++, type: "next" });
 
   return (
     <div ref={containerRef} style={{ width: 220, background: "#1a1a1a", border: "1px solid #333", borderRadius: 10, padding: "10px 12px", userSelect: "none", ...style }}>
@@ -86,17 +121,66 @@ export function ScrollCalendar({
 
       {/* Grille des jours */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 1 }}>
-        {cells.map((day, i) => {
-          if (day === null) return <div key={`e-${i}`} />;
-          const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        {cells.map((cell, i) => {
+          const colIdx = i % 7;
+          const isWeekend = colIdx >= 5;
+
+          // Calculer la date réelle de la cellule
+          let cellYear = viewYear, cellMonth = viewMonth;
+          if (cell.type === "prev") {
+            cellMonth--; if (cellMonth < 0) { cellMonth = 11; cellYear--; }
+          } else if (cell.type === "next") {
+            cellMonth++; if (cellMonth > 11) { cellMonth = 0; cellYear++; }
+          }
+          const cellDateStr = `${cellYear}-${String(cellMonth + 1).padStart(2, "0")}-${String(cell.day).padStart(2, "0")}`;
+          const isFerie = feries.has(cellDateStr);
+
+          if (cell.type !== "current") {
+            // Jours du mois précédent/suivant — gris pâle, fériés en rouge pâle
+            const dimColor = isFerie ? "#5a2020" : isWeekend ? "#2a2a2a" : "#444";
+            return (
+              <button
+                key={`${cell.type}-${cell.day}`}
+                onClick={() => {
+                  const delta = cell.type === "prev" ? -1 : 1;
+                  goMonth(delta);
+                  onChange(cellDateStr);
+                }}
+                style={{
+                  width: "100%", aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 11, fontWeight: 400, color: dimColor, background: "transparent",
+                  border: "1px solid transparent", borderRadius: 6, cursor: "pointer", padding: 0,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#1f1f1f"; e.currentTarget.style.color = isFerie ? "#a44" : "#666"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = dimColor; }}
+              >
+                {cell.day}
+              </button>
+            );
+          }
+
+          const dateStr = cellDateStr;
           const isSelected = dateStr === value;
           const isToday = dateStr === today;
           const isPast = dateStr < today;
-          const isWeekend = (startDay + day - 1) % 7 >= 5;
+
+          // Couleurs style Windows : blanc normal, gris weekend, rouge férié
+          const baseColor = isSelected ? "#111"
+            : isToday ? "#4ade80"
+            : isFerie ? (isPast ? "#7a3030" : "#e85555")
+            : isPast ? "#555"
+            : isWeekend ? "#777"
+            : "#e8e8e8"; // blanc cassé pour jours normaux
+
+          const hoverResetColor = isToday ? "#4ade80"
+            : isFerie ? (isPast ? "#7a3030" : "#e85555")
+            : isPast ? "#555"
+            : isWeekend ? "#777"
+            : "#e8e8e8";
 
           return (
             <button
-              key={day}
+              key={cell.day}
               onClick={() => onChange(dateStr)}
               style={{
                 width: "100%",
@@ -105,8 +189,8 @@ export function ScrollCalendar({
                 alignItems: "center",
                 justifyContent: "center",
                 fontSize: 12,
-                fontWeight: isSelected ? 800 : isToday ? 700 : 500,
-                color: isSelected ? "#111" : isToday ? "#4ade80" : isPast ? "#444" : isWeekend ? "#666" : "#ccc",
+                fontWeight: isSelected ? 800 : isToday ? 700 : isFerie ? 600 : 500,
+                color: baseColor,
                 background: isSelected ? "#4ade80" : isToday ? "rgba(74,222,128,0.1)" : "transparent",
                 border: isToday && !isSelected ? "1px solid rgba(74,222,128,0.3)" : "1px solid transparent",
                 borderRadius: 6,
@@ -115,9 +199,9 @@ export function ScrollCalendar({
                 padding: 0,
               }}
               onMouseEnter={e => { if (!isSelected) { e.currentTarget.style.background = "#252525"; e.currentTarget.style.color = "white"; } }}
-              onMouseLeave={e => { if (!isSelected) { e.currentTarget.style.background = isToday ? "rgba(74,222,128,0.1)" : "transparent"; e.currentTarget.style.color = isToday ? "#4ade80" : isPast ? "#444" : isWeekend ? "#666" : "#ccc"; } }}
+              onMouseLeave={e => { if (!isSelected) { e.currentTarget.style.background = isToday ? "rgba(74,222,128,0.1)" : "transparent"; e.currentTarget.style.color = hoverResetColor; } }}
             >
-              {day}
+              {cell.day}
             </button>
           );
         })}

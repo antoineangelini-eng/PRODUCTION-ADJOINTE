@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { loadFinitionRowsAction, validateFinitionBatchAction, toggleFinitionReceptionAction, type FinitionRow, type ScanValidateItem } from "@/app/app/finition/actions";
+import { buildFinitionMetalPrintJobAction } from "@/app/app/finition/print-actions";
 import { OnHoldReasonTooltip } from "@/components/sheet/OnHoldModal";
 import { CaseDetailModal } from "@/components/sheet/CaseDetailModal";
 import { PhysicalBadge } from "@/components/sheet/PhysicalBadge";
@@ -198,14 +199,39 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
     setReceptionBusy(caseId);
     const res = await toggleFinitionReceptionAction(caseId, field);
     if (res.ok) {
+      const row = rows.find(r => String(r.id) === caseId);
+      const fin = row ? { ...((row as any).sector_finition ?? {}) } : {};
+      const wasOff = !fin[field]; // true = on vient de cocher (pas décocher)
+
       setRows(prev => prev.map(r => {
         if (String(r.id) !== caseId) return r;
-        const fin = { ...((r as any).sector_finition ?? {}) };
-        const newVal = !fin[field];
-        fin[field] = newVal;
-        fin[field.replace("_ok", "_ok_at")] = newVal ? new Date().toISOString() : null;
-        return { ...r, sector_finition: fin } as any;
+        const f = { ...((r as any).sector_finition ?? {}) };
+        const newVal = !f[field];
+        f[field] = newVal;
+        f[field.replace("_ok", "_ok_at")] = newVal ? new Date().toISOString() : null;
+        return { ...r, sector_finition: f } as any;
       }));
+
+      // Impression étiquette pour Chassis Dent All quand on valide réception métal
+      if (wasOff && field === "reception_metal_ok" && row && row.nature_du_travail === "Chassis Dent All") {
+        const dm = (row as any).sector_design_metal ?? {};
+        const ut = (row as any).sector_usinage_titane ?? {};
+        const receptionMetal = ut.reception_metal_at ?? dm.reception_metal_date ?? null;
+        buildFinitionMetalPrintJobAction({
+          caseNumber: row.case_number ?? caseId,
+          dateExpedition: row.date_expedition ?? null,
+          receptionMetal,
+          nature: row.nature_du_travail,
+        }).then(job => {
+          if (!job) return;
+          const relayUrl = process.env.NEXT_PUBLIC_PRINT_RELAY_URL || "http://192.168.1.30:3001";
+          fetch(`${relayUrl}/print`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ zpl: job.zpl, printerIp: job.printerIp }),
+          }).catch(() => {});
+        }).catch(() => {});
+      }
     }
     setReceptionBusy(null);
   }
@@ -222,7 +248,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
     const ut = row.sector_usinage_titane ?? {};
     const typeDents = ur.type_de_dents_override ?? dm.type_de_dents ?? null;
     const isDC = typeDents === "Dents du commerce" || typeDents === "Pas de dents";
-    const needsMetal = row.nature_du_travail === "Chassis Argoat";
+    const needsMetal = row.nature_du_travail === "Chassis Argoat" || row.nature_du_travail === "Chassis Dent All";
     const needsResine = !isDC;
     const metalDate = ut.reception_metal_at ?? dm.reception_metal_date ?? null;
     const resineDate = ur.reception_resine_at ?? null;
@@ -421,7 +447,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
               const receptionResineDate = ur.reception_resine_at ?? null;
 
               // Déterminer si le cas a besoin de métal et/ou résine selon la nature et le type de dents
-              const needsMetal  = row.nature_du_travail === "Chassis Argoat";
+              const needsMetal  = row.nature_du_travail === "Chassis Argoat" || row.nature_du_travail === "Chassis Dent All";
               const needsResine = !isDentsCommerce;
 
               // Réceptions Finition (checkboxes)

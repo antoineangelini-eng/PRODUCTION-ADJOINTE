@@ -16,6 +16,7 @@ import { buildUtPrintJobAction } from "@/app/app/usinage-titane/print-actions";
 import { DeleteConfirmModal } from "@/components/sheet/DeleteConfirmModal";
 import { toggleOnHoldAction } from "@/lib/on-hold";
 import { OnHoldReasonModal, OnHoldReasonTooltip } from "@/components/sheet/OnHoldModal";
+import { addBusinessDays } from "@/lib/jours-feries";
 
 // ── Constantes ───────────────────────────────────────────────────
 const NATURE_META: Record<string, { color: string }> = {
@@ -85,11 +86,7 @@ function getRowShadow(isChecked: boolean, isHovered: boolean, isActive: boolean)
   if (isHovered) return "0 8px 20px rgba(0,0,0,0.22)";
   return "0 4px 12px rgba(0,0,0,0.18)";
 }
-function addBusinessDays(date: Date, days: number): Date {
-  const d = new Date(date); let added = 0;
-  while (added < days) { d.setDate(d.getDate() + 1); const day = d.getDay(); if (day !== 0 && day !== 6) added++; }
-  return d;
-}
+// addBusinessDays importée depuis @/lib/jours-feries
 
 // ── Sous-composants ──────────────────────────────────────────────
 function NatureBadge({ nature }: { nature: string | null }) {

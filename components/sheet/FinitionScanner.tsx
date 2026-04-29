@@ -6,6 +6,7 @@ import {
   batchValidateScannedAction,
   type ScanValidateItem,
 } from "@/app/app/finition/actions";
+import { buildFinitionMetalPrintJobAction } from "@/app/app/finition/print-actions";
 
 const AZERTY_MAP: Record<string, string> = {
   "&": "1", "é": "2", "\"": "3", "'": "4", "(": "5",
@@ -94,6 +95,21 @@ export function FinitionScanner({
       // Passer les résultats au parent → affichage dans le tableau
       onScanValidateResults?.(results);
       onValidated?.();
+
+      // Impression étiquette pour Chassis Dent All (réception métal)
+      const relayUrl = process.env.NEXT_PUBLIC_PRINT_RELAY_URL || "http://192.168.1.30:3001";
+      for (const r of results) {
+        if (r.printLabel) {
+          buildFinitionMetalPrintJobAction(r.printLabel).then(job => {
+            if (!job) return;
+            fetch(`${relayUrl}/print`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ zpl: job.zpl, printerIp: job.printerIp }),
+            }).catch(() => {});
+          }).catch(() => {});
+        }
+      }
     } catch {}
     setValidating(false);
   }

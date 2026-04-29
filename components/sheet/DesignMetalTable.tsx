@@ -17,6 +17,7 @@ import {
 import { DeleteConfirmModal } from "@/components/sheet/DeleteConfirmModal";
 import { toggleOnHoldAction } from "@/lib/on-hold";
 import { OnHoldReasonModal, OnHoldReasonTooltip } from "@/components/sheet/OnHoldModal";
+import { addBusinessDays, joursFeries, isBusinessDay } from "@/lib/jours-feries";
 
 const TYPE_OPTIONS = [
   { value: "Dents usinées", color: "#7c8196" },
@@ -111,15 +112,7 @@ function fmtDate(s: string | null | undefined): string {
   return new Date(s.slice(0, 10) + "T00:00:00").toLocaleDateString("fr-FR");
 }
 
-function addBusinessDays(date: Date, days: number): Date {
-  const d = new Date(date);
-  let added = 0;
-  while (added < days) {
-    d.setDate(d.getDate() + 1);
-    if (d.getDay() !== 0 && d.getDay() !== 6) added++;
-  }
-  return d;
-}
+// addBusinessDays importée depuis lib/jours-feries (skip weekends + fériés)
 
 function toDateString(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
@@ -288,22 +281,30 @@ function MiniCalendar({
           const iS =
             sel && day === sel.getDate() && month === sel.getMonth() && year === sel.getFullYear();
 
+          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const colIdx = i % 7;
+          const isWeekend = colIdx >= 5;
+          const feries = joursFeries(year);
+          const isFerie = feries.has(dateStr);
+          const isOff = isWeekend || isFerie;
+
           return (
             <button
               key={i}
-              onClick={() => pick(day)}
+              onClick={() => { if (!isOff) pick(day); }}
               style={{
                 background: iS ? "#4ade80" : iT ? "rgba(74,222,128,0.12)" : "none",
                 border: iT && !iS ? "1px solid rgba(74,222,128,0.3)" : "1px solid transparent",
-                color: iS ? "#000" : "white",
+                color: iS ? "#000" : isFerie ? "#e85555" : isWeekend ? "#555" : "white",
                 borderRadius: 5,
                 fontSize: 11,
                 padding: "4px 2px",
-                cursor: "pointer",
-                fontWeight: iS ? 700 : 400,
+                cursor: isOff ? "not-allowed" : "pointer",
+                fontWeight: iS ? 700 : isFerie ? 600 : 400,
+                opacity: isOff && !iS ? 0.5 : 1,
               }}
               onMouseEnter={(e) => {
-                if (!iS) (e.target as HTMLButtonElement).style.background = "rgba(255,255,255,0.08)";
+                if (!iS && !isOff) (e.target as HTMLButtonElement).style.background = "rgba(255,255,255,0.08)";
               }}
               onMouseLeave={(e) => {
                 if (!iS)

@@ -139,9 +139,11 @@ export function buildSimpleZPL(caseNumber: string, dateExpedition: string | null
       `^FO16,178^A0N,16,16^FDReception metal :^FS`,
       `^FO16,200^A0N,28,28^FD${recepDay} ${recepFr}^FS`,
     ] : []),
-    // Quantité en bas à droite — blanc sur noir, bien visible
-    `^FO300,200^GB100,44,44^FS`,
-    `^FO308,204^A0N,36,36^FR^FDQte ${quantite}^FS`,
+    // Quantité en bas à droite — blanc sur noir, bien visible (masqué si 0)
+    ...(quantite > 0 ? [
+      `^FO300,200^GB100,44,44^FS`,
+      `^FO308,204^A0N,36,36^FR^FDQte ${quantite}^FS`,
+    ] : []),
     "^XZ",
   ].join("\n");
 }
