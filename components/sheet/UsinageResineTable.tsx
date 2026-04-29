@@ -475,7 +475,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
           disque:  printDentsImp ? null : (ur.numero_disque ?? null),
           disque2: printDentsImp ? null : (ur.numero_disque_2 ?? null),
           nbBlocs: ur.nb_blocs_override ?? dr.nb_blocs_de_dents ?? null,
-          modele:  Boolean(dr.modele_a_realiser_ok ?? dm.modele_a_faire_ok),
+          modele:  row.nature_du_travail === "Chassis Argoat" ? false : Boolean(dr.modele_a_realiser_ok ?? dm.modele_a_faire_ok),
           base:    dr.base_type ?? null,
           baseQty: dr.base_qty ?? 1,
           machineBase: ur.machine_base ?? null,
@@ -681,7 +681,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
                   </div>
                 )}
                 <div style={{ ...grid3, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl>Design résine</Lbl><Lbl>Date &amp; heure</Lbl><Lbl>Modèle</Lbl></div>
-                <div style={{ ...vals3, background:BG_VAL_ROW, borderBottom:BD_MED }}>{dr.design_dents_resine?<OuiBadge/>:<Val muted>—</Val>}<TimeBadge dt={dt}/><BoolBadge val={dr.modele_a_realiser_ok??dm.modele_a_faire_ok??null} /></div>
+                <div style={{ ...vals3, background:BG_VAL_ROW, borderBottom:BD_MED }}>{dr.design_dents_resine?<OuiBadge/>:<Val muted>—</Val>}<TimeBadge dt={dt}/><BoolBadge val={nat === "Chassis Argoat" ? false : (dr.modele_a_realiser_ok??dm.modele_a_faire_ok??null)} /></div>
                 <div style={{ ...grid2, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl color="#4ade80">Blocs</Lbl><Lbl color="#4ade80">Teinte</Lbl></div>
                 <div style={{ ...vals2, background:"#1b1b1b", borderBottom:BD_STRONG }}>
                   <InlineText value={ur.nb_blocs_override??dr.nb_blocs_de_dents??null} onFocusChange={setIsEditing} navAttr={`${row.id}_col_1`} onSave={v => { patchRow(String(row.id),"ur","nb_blocs_override",v||null); saveCell(String(row.id),"nb_blocs_override",v||null); }} />
