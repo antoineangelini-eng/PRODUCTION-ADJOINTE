@@ -1,11 +1,8 @@
-import { NatureSelect } from "@/components/sheet/NatureSelect";
-import { SearchBar } from "@/components/sheet/SearchBar";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { DesignMetalTable } from "@/components/sheet/DesignMetalTable";
 import { DesignMetalHistoryWrapper } from "@/app/app/design-metal/DesignMetalHistoryWrapper";
-import { CaseNumberInput } from "@/components/sheet/CaseNumberInput";
-import { createCaseAction } from "@/app/app/design-metal/actions";
+import { DesignMetalCreateBar } from "@/components/sheet/DesignMetalCreateBar";
 import { FlashMessage } from "@/components/sheet/FlashMessage";
 import { AnnouncementsBanner } from "@/components/sheet/AnnouncementsBanner";
 
@@ -60,23 +57,7 @@ export default async function Page({
       {tab !== "historique" && (
         <>
           <div style={{ flexShrink: 0, background: "#0b0b0b", padding: "10px 20px 8px", borderBottom: "1px solid #1a1a1a" }}>
-            <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-              {/* Créer */}
-              <form action={createCaseAction} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <span style={{ fontSize: 11, color: "#4ade80", letterSpacing: 0.5 }}>Créer un cas</span>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <CaseNumberInput
-                    style={{ padding: "7px 10px", border: "1px solid rgba(74,222,128,0.35)", background: "rgba(74,222,128,0.03)", color: "white", fontSize: 12, width: 110, outline: "none", borderRadius: 4 }} />
-                  <NatureSelect />
-                  <button type="submit"
-                    style={{ padding: "7px 14px", border: "1px solid #4ade80", background: "rgba(74,222,128,0.08)", color: "#4ade80", cursor: "pointer", fontSize: 12, fontWeight: 700, borderRadius: 4 }}>
-                    Créer
-                  </button>
-                </div>
-              </form>
-              <div style={{ width: 1, background: "#222", alignSelf: "stretch", marginTop: 20 }} />
-              <SearchBar basePath="/app/design-metal" />
-            </div>
+            <DesignMetalCreateBar />
           </div>
 
           <div style={{ flex: 1, minHeight: 0 }}>

@@ -17,7 +17,8 @@ import {
 import { DeleteConfirmModal } from "@/components/sheet/DeleteConfirmModal";
 import { toggleOnHoldAction } from "@/lib/on-hold";
 import { OnHoldReasonModal, OnHoldReasonTooltip } from "@/components/sheet/OnHoldModal";
-import { addBusinessDays, joursFeries, isBusinessDay } from "@/lib/jours-feries";
+import { addBusinessDays, isBusinessDay } from "@/lib/jours-feries";
+import { ScrollCalendar } from "@/components/sheet/ScrollCalendar";
 
 const TYPE_OPTIONS = [
   { value: "Dents usinées", color: "#7c8196" },
@@ -162,182 +163,13 @@ function getRowShadow(isChecked: boolean, isHovered: boolean, isActive: boolean)
 
 // ─── Calendrier ──────────────────────────────────────────────────────────────
 
-const MONTHS_FR = [
-  "Janvier",
-  "Février",
-  "Mars",
-  "Avril",
-  "Mai",
-  "Juin",
-  "Juillet",
-  "Août",
-  "Septembre",
-  "Octobre",
-  "Novembre",
-  "Décembre",
-];
-const DAYS_FR = ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"];
-
-function MiniCalendar({
-  value,
-  onSelect,
-  onClose,
-  rect,
-}: {
-  value: string;
-  onSelect: (d: string) => void;
-  onClose: () => void;
-  rect: DOMRect;
-}) {
-  const today = new Date();
-  const init = value ? new Date(value + "T00:00:00") : today;
-  const [view, setView] = useState({ year: init.getFullYear(), month: init.getMonth() });
-  const ref = useRef<HTMLDivElement>(null);
-  const top = rect.bottom + 260 > window.innerHeight ? rect.top - 264 : rect.bottom + 4;
-
-  useEffect(() => {
-    function h(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    }
-    setTimeout(() => document.addEventListener("mousedown", h), 0);
-    return () => document.removeEventListener("mousedown", h);
-  }, [onClose]);
-
-  const sel = value ? new Date(value + "T00:00:00") : null;
-  const { year, month } = view;
-  const total = new Date(year, month + 1, 0).getDate();
-  const first = (() => {
-    const d = new Date(year, month, 1).getDay();
-    return d === 0 ? 6 : d - 1;
-  })();
-
-  const cells: (number | null)[] = [
-    ...Array(first).fill(null),
-    ...Array.from({ length: total }, (_, i) => i + 1),
-  ];
-  while (cells.length % 7) cells.push(null);
-
-  const pick = (day: number) => {
-    const mm = String(month + 1).padStart(2, "0");
-    const dd = String(day).padStart(2, "0");
-    onSelect(`${year}-${mm}-${dd}`);
-    onClose();
-  };
-
+function PopupCalendar({ value, onSelect, onClose, rect }: { value:string; onSelect:(d:string)=>void; onClose:()=>void; rect:DOMRect }) {
+  const ref=useRef<HTMLDivElement>(null);
+  const top=rect.bottom+320>window.innerHeight?rect.top-330:rect.bottom+4;
+  useEffect(()=>{ function h(e:MouseEvent){if(ref.current&&!ref.current.contains(e.target as Node))onClose();} setTimeout(()=>document.addEventListener("mousedown",h),0); return()=>document.removeEventListener("mousedown",h); },[onClose]);
   return (
-    <div
-      ref={ref}
-      style={{
-        position: "fixed",
-        zIndex: 9999,
-        top,
-        left: rect.left,
-        background: "#1a1a1a",
-        border: "1px solid #3d3d3d",
-        borderRadius: 10,
-        padding: 12,
-        boxShadow: "0 8px 32px rgba(0,0,0,0.8)",
-        minWidth: 224,
-        userSelect: "none",
-      }}
-    >
-      <div
-        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}
-      >
-        <button
-          onClick={() =>
-            setView((v) => (v.month === 0 ? { year: v.year - 1, month: 11 } : { ...v, month: v.month - 1 }))
-          }
-          style={{ background: "none", border: "none", color: "white", cursor: "pointer", fontSize: 18, padding: "0 6px" }}
-        >
-          ‹
-        </button>
-        <span style={{ fontSize: 12, fontWeight: 700, color: "white" }}>
-          {MONTHS_FR[month]} {year}
-        </span>
-        <button
-          onClick={() =>
-            setView((v) => (v.month === 11 ? { year: v.year + 1, month: 0 } : { ...v, month: v.month + 1 }))
-          }
-          style={{ background: "none", border: "none", color: "white", cursor: "pointer", fontSize: 18, padding: "0 6px" }}
-        >
-          ›
-        </button>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2, marginBottom: 4 }}>
-        {DAYS_FR.map((d) => (
-          <div key={d} style={{ textAlign: "center", fontSize: 10, color: "#555", fontWeight: 600 }}>
-            {d}
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2 }}>
-        {cells.map((day, i) => {
-          if (!day) return <div key={i} />;
-          const iT =
-            day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-          const iS =
-            sel && day === sel.getDate() && month === sel.getMonth() && year === sel.getFullYear();
-
-          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-          const colIdx = i % 7;
-          const isWeekend = colIdx >= 5;
-          const feries = joursFeries(year);
-          const isFerie = feries.has(dateStr);
-          const isOff = isWeekend || isFerie;
-
-          return (
-            <button
-              key={i}
-              onClick={() => { if (!isOff) pick(day); }}
-              style={{
-                background: iS ? "#4ade80" : iT ? "rgba(74,222,128,0.12)" : "none",
-                border: iT && !iS ? "1px solid rgba(74,222,128,0.3)" : "1px solid transparent",
-                color: iS ? "#000" : isFerie ? "#e85555" : isWeekend ? "#555" : "white",
-                borderRadius: 5,
-                fontSize: 11,
-                padding: "4px 2px",
-                cursor: isOff ? "not-allowed" : "pointer",
-                fontWeight: iS ? 700 : isFerie ? 600 : 400,
-                opacity: isOff && !iS ? 0.5 : 1,
-              }}
-              onMouseEnter={(e) => {
-                if (!iS && !isOff) (e.target as HTMLButtonElement).style.background = "rgba(255,255,255,0.08)";
-              }}
-              onMouseLeave={(e) => {
-                if (!iS)
-                  (e.target as HTMLButtonElement).style.background = iT
-                    ? "rgba(74,222,128,0.12)"
-                    : "none";
-              }}
-            >
-              {day}
-            </button>
-          );
-        })}
-      </div>
-
-      <button
-        onClick={() => {
-          onSelect("");
-          onClose();
-        }}
-        style={{
-          marginTop: 8,
-          width: "100%",
-          background: "none",
-          border: "1px solid #3d3d3d",
-          borderRadius: 6,
-          color: "#555",
-          fontSize: 11,
-          padding: "5px 0",
-          cursor: "pointer",
-        }}
-      >
-        Effacer
-      </button>
+    <div ref={ref} style={{position:"fixed",zIndex:9999,top,left:rect.left,boxShadow:"0 8px 32px rgba(0,0,0,0.8)"}}>
+      <ScrollCalendar value={value} onChange={d=>{onSelect(d);onClose();}} />
     </div>
   );
 }
@@ -762,7 +594,7 @@ export function DesignMetalTable({
       <style dangerouslySetInnerHTML={{ __html: KEYFRAMES }} />
 
       {editingDate && (
-        <MiniCalendar
+        <PopupCalendar
           value={(() => {
             const row = rows.find((r) => String(r.id) === editingDate.caseId);
             const dm = (row as any)?.sector_design_metal ?? {};

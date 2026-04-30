@@ -18,6 +18,7 @@ import {
 import { DeleteConfirmModal } from "@/components/sheet/DeleteConfirmModal";
 import { toggleOnHoldAction } from "@/lib/on-hold";
 import { OnHoldReasonModal, OnHoldReasonTooltip } from "@/components/sheet/OnHoldModal";
+import { ScrollCalendar } from "@/components/sheet/ScrollCalendar";
 
 const NATURE_META: Record<string, { color: string }> = {
   "Chassis Argoat":    { color: "#e07070" },
@@ -55,8 +56,6 @@ function autoBaseDents(complet: boolean, nature: string): { base_type: string; d
   return { base_type: "Usinée", dents_type: "Usinée" };
 }
 
-const MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
-const DAYS_FR = ["Lu","Ma","Me","Je","Ve","Sa","Di"];
 
 const SEARCH_KEYFRAMES = `
 @keyframes row-found {
@@ -80,38 +79,13 @@ function getRowBg(c: boolean, h: boolean, a: boolean) { if(c) return "rgba(74,22
 function getRowBorder(c: boolean, h: boolean, a: boolean) { if(c) return "rgba(74,222,128,0.32)"; if(a) return "rgba(255,255,255,0.10)"; if(h) return "#383838"; return "#2b2b2b"; }
 function getRowShadow(c: boolean, h: boolean, a: boolean) { if(c) return "0 0 0 1px rgba(74,222,128,0.10),0 8px 24px rgba(0,0,0,0.30)"; if(a) return "0 0 0 1px rgba(255,255,255,0.06),0 16px 34px rgba(0,0,0,0.34)"; if(h) return "0 8px 20px rgba(0,0,0,0.22)"; return "0 4px 12px rgba(0,0,0,0.18)"; }
 
-function MiniCalendar({ value, onSelect, onClose, rect }: { value:string; onSelect:(d:string)=>void; onClose:()=>void; rect:DOMRect }) {
-  const today=new Date(), init=value?new Date(value+"T00:00:00"):today;
-  const [view,setView]=useState({year:init.getFullYear(),month:init.getMonth()});
+function PopupCalendar({ value, onSelect, onClose, rect }: { value:string; onSelect:(d:string)=>void; onClose:()=>void; rect:DOMRect }) {
   const ref=useRef<HTMLDivElement>(null);
-  const top=rect.bottom+250>window.innerHeight?rect.top-254:rect.bottom+4;
+  const top=rect.bottom+320>window.innerHeight?rect.top-330:rect.bottom+4;
   useEffect(()=>{ function h(e:MouseEvent){if(ref.current&&!ref.current.contains(e.target as Node))onClose();} setTimeout(()=>document.addEventListener("mousedown",h),0); return()=>document.removeEventListener("mousedown",h); },[onClose]);
-  const sel=value?new Date(value+"T00:00:00"):null;
-  const {year,month}=view, total=new Date(year,month+1,0).getDate(), first=(()=>{const d=new Date(year,month,1).getDay();return d===0?6:d-1;})();
-  const cells:(number|null)[]=[...Array(first).fill(null),...Array.from({length:total},(_,i)=>i+1)];
-  while(cells.length%7)cells.push(null);
-  const pick=(day:number)=>{const mm=String(month+1).padStart(2,"0"),dd=String(day).padStart(2,"0");onSelect(`${year}-${mm}-${dd}`);onClose();};
   return (
-    <div ref={ref} style={{position:"fixed",zIndex:9999,top,left:rect.left,background:"#1a1a1a",border:"1px solid #3d3d3d",borderRadius:10,padding:12,boxShadow:"0 8px 32px rgba(0,0,0,0.8)",minWidth:224,userSelect:"none"}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-        <button onClick={()=>setView(v=>v.month===0?{year:v.year-1,month:11}:{...v,month:v.month-1})} style={{background:"none",border:"none",color:"white",cursor:"pointer",fontSize:18,padding:"0 6px"}}>‹</button>
-        <span style={{fontSize:12,fontWeight:700,color:"white"}}>{MONTHS_FR[month]} {year}</span>
-        <button onClick={()=>setView(v=>v.month===11?{year:v.year+1,month:0}:{...v,month:v.month+1})} style={{background:"none",border:"none",color:"white",cursor:"pointer",fontSize:18,padding:"0 6px"}}>›</button>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
-        {DAYS_FR.map(d=><div key={d} style={{textAlign:"center",fontSize:10,color:"#555",fontWeight:600,padding:"2px 0"}}>{d}</div>)}
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
-        {cells.map((day,i)=>{
-          if(!day)return <div key={i}/>;
-          const iT=day===today.getDate()&&month===today.getMonth()&&year===today.getFullYear();
-          const iS=sel&&day===sel.getDate()&&month===sel.getMonth()&&year===sel.getFullYear();
-          return <button key={i} onClick={()=>pick(day)} style={{background:iS?"#4ade80":iT?"rgba(74,222,128,0.12)":"none",border:iT&&!iS?"1px solid rgba(74,222,128,0.3)":"1px solid transparent",color:iS?"#000":"white",borderRadius:5,fontSize:11,padding:"4px 2px",cursor:"pointer",fontWeight:iS?700:400}}
-            onMouseEnter={e=>{if(!iS)(e.target as HTMLButtonElement).style.background="rgba(255,255,255,0.08)";}}
-            onMouseLeave={e=>{if(!iS)(e.target as HTMLButtonElement).style.background=iT?"rgba(74,222,128,0.12)":"none";}}>{day}</button>;
-        })}
-      </div>
-      <button onClick={()=>{onSelect("");onClose();}} style={{marginTop:8,width:"100%",background:"none",border:"1px solid #3d3d3d",borderRadius:6,color:"#555",fontSize:11,padding:"5px 0",cursor:"pointer"}}>Effacer la date</button>
+    <div ref={ref} style={{position:"fixed",zIndex:9999,top,left:rect.left,boxShadow:"0 8px 32px rgba(0,0,0,0.8)"}}>
+      <ScrollCalendar value={value} onChange={d=>{onSelect(d);onClose();}} />
     </div>
   );
 }
@@ -536,7 +510,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
                   <td style={{...tdCard,cursor:"pointer"}} onClick={(e)=>{e.stopPropagation();const rect=(e.currentTarget as HTMLElement).getBoundingClientRect();setEditingExpId(String(row.id));setEditingExpRect(rect);}}>
                     {row.date_expedition?<span style={{color:expColor,fontWeight:expColor?700:undefined}}>{new Date(row.date_expedition).toLocaleDateString("fr-FR")}</span>:<span style={{color:"#555",fontSize:11}}>— cliquer —</span>}
                     {editingExpId===String(row.id)&&editingExpRect&&(
-                      <MiniCalendar value={row.date_expedition?String(row.date_expedition).slice(0,10):""} onSelect={date=>{patchRow(String(row.id),null,"date_expedition",date||null);saveCaseDateExpedition(String(row.id),date);setEditingExpId(null);}} onClose={()=>setEditingExpId(null)} rect={editingExpRect}/>
+                      <PopupCalendar value={row.date_expedition?String(row.date_expedition).slice(0,10):""} onSelect={date=>{patchRow(String(row.id),null,"date_expedition",date||null);saveCaseDateExpedition(String(row.id),date);setEditingExpId(null);}} onClose={()=>setEditingExpId(null)} rect={editingExpRect}/>
                     )}
                   </td>
                   ); })()}

@@ -135,6 +135,8 @@ export function ScrollCalendar({
           const cellDateStr = `${cellYear}-${String(cellMonth + 1).padStart(2, "0")}-${String(cell.day).padStart(2, "0")}`;
           const isFerie = feries.has(cellDateStr);
 
+          const isOff = isWeekend || isFerie;
+
           if (cell.type !== "current") {
             // Jours du mois précédent/suivant — gris pâle, fériés en rouge pâle
             const dimColor = isFerie ? "#5a2020" : isWeekend ? "#2a2a2a" : "#444";
@@ -142,6 +144,7 @@ export function ScrollCalendar({
               <button
                 key={`${cell.type}-${cell.day}`}
                 onClick={() => {
+                  if (isOff) return;
                   const delta = cell.type === "prev" ? -1 : 1;
                   goMonth(delta);
                   onChange(cellDateStr);
@@ -149,9 +152,9 @@ export function ScrollCalendar({
                 style={{
                   width: "100%", aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 11, fontWeight: 400, color: dimColor, background: "transparent",
-                  border: "1px solid transparent", borderRadius: 6, cursor: "pointer", padding: 0,
+                  border: "1px solid transparent", borderRadius: 6, cursor: isOff ? "not-allowed" : "pointer", padding: 0,
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#1f1f1f"; e.currentTarget.style.color = isFerie ? "#a44" : "#666"; }}
+                onMouseEnter={e => { if (!isOff) { e.currentTarget.style.background = "#1f1f1f"; e.currentTarget.style.color = isFerie ? "#a44" : "#666"; } }}
                 onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = dimColor; }}
               >
                 {cell.day}
@@ -181,7 +184,7 @@ export function ScrollCalendar({
           return (
             <button
               key={cell.day}
-              onClick={() => onChange(dateStr)}
+              onClick={() => { if (!isOff) onChange(dateStr); }}
               style={{
                 width: "100%",
                 aspectRatio: "1",
@@ -194,11 +197,12 @@ export function ScrollCalendar({
                 background: isSelected ? "#4ade80" : isToday ? "rgba(74,222,128,0.1)" : "transparent",
                 border: isToday && !isSelected ? "1px solid rgba(74,222,128,0.3)" : "1px solid transparent",
                 borderRadius: 6,
-                cursor: "pointer",
+                cursor: isOff ? "not-allowed" : "pointer",
                 transition: "all 100ms",
                 padding: 0,
+                opacity: isOff && !isSelected ? 0.5 : 1,
               }}
-              onMouseEnter={e => { if (!isSelected) { e.currentTarget.style.background = "#252525"; e.currentTarget.style.color = "white"; } }}
+              onMouseEnter={e => { if (!isSelected && !isOff) { e.currentTarget.style.background = "#252525"; e.currentTarget.style.color = "white"; } }}
               onMouseLeave={e => { if (!isSelected) { e.currentTarget.style.background = isToday ? "rgba(74,222,128,0.1)" : "transparent"; e.currentTarget.style.color = hoverResetColor; } }}
             >
               {cell.day}
@@ -207,14 +211,21 @@ export function ScrollCalendar({
         })}
       </div>
 
-      {/* Bouton aujourd'hui */}
-      <button onClick={() => { const t = new Date(); setViewYear(t.getFullYear()); setViewMonth(t.getMonth()); onChange(today); }}
-        style={{ width: "100%", marginTop: 8, padding: "5px 0", background: "transparent", border: "1px solid #333", borderRadius: 6, color: "#888", fontSize: 10, fontWeight: 600, cursor: "pointer", transition: "all 150ms" }}
-        onMouseEnter={e => { e.currentTarget.style.color = "#4ade80"; e.currentTarget.style.borderColor = "#4ade80"; }}
-        onMouseLeave={e => { e.currentTarget.style.color = "#888"; e.currentTarget.style.borderColor = "#333"; }}
-      >
-        Aujourd'hui
-      </button>
+      {/* Bouton aujourd'hui — désactivé si weekend ou férié */}
+      {(() => {
+        const todayDate = new Date();
+        const todayDay = todayDate.getDay();
+        const todayOff = todayDay === 0 || todayDay === 6 || feries.has(today);
+        return (
+          <button onClick={() => { if (!todayOff) { const t = new Date(); setViewYear(t.getFullYear()); setViewMonth(t.getMonth()); onChange(today); } }}
+            style={{ width: "100%", marginTop: 8, padding: "5px 0", background: "transparent", border: "1px solid #333", borderRadius: 6, color: todayOff ? "#444" : "#888", fontSize: 10, fontWeight: 600, cursor: todayOff ? "not-allowed" : "pointer", transition: "all 150ms", opacity: todayOff ? 0.5 : 1 }}
+            onMouseEnter={e => { if (!todayOff) { e.currentTarget.style.color = "#4ade80"; e.currentTarget.style.borderColor = "#4ade80"; } }}
+            onMouseLeave={e => { e.currentTarget.style.color = todayOff ? "#444" : "#888"; e.currentTarget.style.borderColor = "#333"; }}
+          >
+            Aujourd{"'"}hui
+          </button>
+        );
+      })()}
     </div>
   );
 }
