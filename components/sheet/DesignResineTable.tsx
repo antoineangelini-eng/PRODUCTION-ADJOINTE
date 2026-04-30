@@ -238,12 +238,16 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
   // Tri DR :
   //   1) Cases créés en DR (pas de DM associé) → en tête, plus récents d'abord.
   //   2) Cases venus de DM → ensuite, triés par date d'expédition ascendante.
-  // Set de case_numbers qui ont un volet résine (pour savoir si le bouton "+" doit être caché)
+  // Set de case_numbers qui ont déjà un volet (= même case_number apparaît plus d'une fois)
   const caseNumbersWithVolet = useMemo(() => {
-    const drNatures = new Set(["Provisoire Résine", "Deflex", "Complet"]);
-    const nums = new Set<string>();
+    const counts = new Map<string, number>();
     for (const r of rows) {
-      if (drNatures.has(r.nature_du_travail ?? "")) nums.add(r.case_number ?? "");
+      const cn = r.case_number ?? "";
+      counts.set(cn, (counts.get(cn) ?? 0) + 1);
+    }
+    const nums = new Set<string>();
+    for (const [cn, count] of counts) {
+      if (count > 1) nums.add(cn);
     }
     return nums;
   }, [rows]);
@@ -519,7 +523,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
                     {comesFromDm ? (
                       <div style={{position:"relative",display:"inline-flex",alignItems:"center",gap:4,justifyContent:"center"}}>
                         <span style={{display:"inline-flex",alignItems:"center",padding:"2px 8px",borderRadius:6,background:(natureMeta?.color??"#fff")+"18",border:`1px solid ${(natureMeta?.color??"#fff")}44`,color:natureMeta?.color??"#fff",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{nat||"—"}</span>
-                        {isComplet && <button onClick={()=>{setCommentModalId(String(row.id));setCommentDraft(dr.commentaire_complet??"");}} title={dr.commentaire_complet||"Ajouter un commentaire"} style={{background:"none",border:"none",cursor:"pointer",padding:2,fontSize:12,color:dr.commentaire_complet?"#f59e0b":"#555",transition:"color 150ms"}} onMouseEnter={e=>e.currentTarget.style.color="#f59e0b"} onMouseLeave={e=>{if(!dr.commentaire_complet)e.currentTarget.style.color="#555";}}>✎</button>}
+                        <button onClick={()=>{setCommentModalId(String(row.id));setCommentDraft(dr.commentaire_complet??"");}} title={dr.commentaire_complet||"Ajouter un commentaire"} style={{background:"none",border:"none",cursor:"pointer",padding:2,fontSize:12,color:dr.commentaire_complet?"#f59e0b":"#555",transition:"color 150ms"}} onMouseEnter={e=>e.currentTarget.style.color="#f59e0b"} onMouseLeave={e=>{if(!dr.commentaire_complet)e.currentTarget.style.color="#555";}}>✎</button>
                         {!caseNumbersWithVolet.has(row.case_number??"") && (
                           <button onClick={()=>setVoletModalCaseNumber(row.case_number)} title="Ajouter un volet résine" style={{
                             position:"absolute",top:"50%",left:"100%",transform:"translateY(-50%)",marginLeft:4,
@@ -533,7 +537,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
                         )}
                       </div>
                     ) : (
-                      <div style={{display:"inline-flex",alignItems:"center",gap:4,justifyContent:"center"}}>
+                      <div style={{position:"relative",display:"inline-flex",alignItems:"center",gap:4,justifyContent:"center"}}>
                         <select value={nat} onChange={e=>{const v=e.target.value;patchRow(String(row.id),null,"nature_du_travail",v);updateCaseNatureAction(String(row.id),v);}} style={{
                           padding:"2px 6px",border:`1px solid ${(natureMeta?.color??"#fff")}44`,background:(natureMeta?.color??"#fff")+"18",color:natureMeta?.color??"#fff",
                           fontSize:11,cursor:"pointer",borderRadius:6,fontWeight:700,outline:"none",
@@ -546,7 +550,18 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
                             <option key={o.value} value={o.value} style={{background:"#111",color:o.color,fontWeight:600}}>{o.value}</option>
                           ))}
                         </select>
-                        {isComplet && <button onClick={()=>{setCommentModalId(String(row.id));setCommentDraft(dr.commentaire_complet??"");}} title={dr.commentaire_complet||"Ajouter un commentaire"} style={{background:"none",border:"none",cursor:"pointer",padding:2,fontSize:12,color:dr.commentaire_complet?"#f59e0b":"#555",transition:"color 150ms"}} onMouseEnter={e=>e.currentTarget.style.color="#f59e0b"} onMouseLeave={e=>{if(!dr.commentaire_complet)e.currentTarget.style.color="#555";}}>✎</button>}
+                        <button onClick={()=>{setCommentModalId(String(row.id));setCommentDraft(dr.commentaire_complet??"");}} title={dr.commentaire_complet||"Ajouter un commentaire"} style={{background:"none",border:"none",cursor:"pointer",padding:2,fontSize:12,color:dr.commentaire_complet?"#f59e0b":"#555",transition:"color 150ms"}} onMouseEnter={e=>e.currentTarget.style.color="#f59e0b"} onMouseLeave={e=>{if(!dr.commentaire_complet)e.currentTarget.style.color="#555";}}>✎</button>
+                        {!caseNumbersWithVolet.has(row.case_number??"") && (
+                          <button onClick={()=>setVoletModalCaseNumber(row.case_number)} title="Ajouter un volet résine" style={{
+                            position:"absolute",top:"50%",left:"100%",transform:"translateY(-50%)",marginLeft:4,
+                            padding:"2px 6px",borderRadius:4,border:"1px solid #333",background:"transparent",
+                            color:"#777",fontSize:9,fontWeight:600,cursor:"pointer",
+                            transition:"all 150ms",whiteSpace:"nowrap",
+                          }}
+                            onMouseEnter={e=>{e.currentTarget.style.color="#ccc";e.currentTarget.style.borderColor="#555";}}
+                            onMouseLeave={e=>{e.currentTarget.style.color="#777";e.currentTarget.style.borderColor="#333";}}
+                          >+ volet</button>
+                        )}
                       </div>
                     )}
                   </td>

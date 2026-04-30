@@ -321,9 +321,8 @@ export async function createResineVoletAction(
     .from("cases")
     .select("id, nature_du_travail")
     .eq("case_number", caseNumber);
-  const drNatures = ["Provisoire Résine", "Deflex", "Complet"];
-  const hasVolet = (existingVolets ?? []).some(c => drNatures.includes(c.nature_du_travail));
-  if (hasVolet) return { ok: false, error: "Un volet résine existe déjà pour ce cas" };
+  // Un volet existe déjà si on a au moins 2 cas avec ce numéro
+  if ((existingVolets ?? []).length >= 2) return { ok: false, error: "Un volet résine existe déjà pour ce cas" };
 
   // Créer un nouveau cas avec le même numéro
   const { data, error } = await supabase.rpc("rpc_create_case_from_design_resine", {
