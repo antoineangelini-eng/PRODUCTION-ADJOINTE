@@ -306,7 +306,6 @@ export async function createCaseAction(formData: FormData) {
   }
 
   revalidatePath("/app/design-metal");
-  redirect("/app/design-metal");
 }
 
 /** Réactive un cas depuis l'historique DM (remet le status à "active"). */

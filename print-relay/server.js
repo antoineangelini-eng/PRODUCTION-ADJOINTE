@@ -15,8 +15,15 @@ const net = require("net");
 const PORT = process.env.PORT || 3001;
 const ZEBRA_PORT = 9100;
 const TIMEOUT_MS = 5000;
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1500;
+const POST_PRINT_DELAY_MS = 300;
 
-function sendToZebra(zpl, printerIp) {
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function sendToZebraOnce(zpl, printerIp) {
   return new Promise((resolve) => {
     const client = new net.Socket();
     let done = false;
@@ -30,12 +37,28 @@ function sendToZebra(zpl, printerIp) {
     client.connect(ZEBRA_PORT, printerIp, () => {
       client.write(zpl, "utf8", (err) => {
         if (err) finish({ ok: false, error: "Erreur écriture : " + err.message });
-        else finish({ ok: true });
+        else {
+          // Petite pause pour laisser l'imprimante traiter avant de fermer
+          setTimeout(() => finish({ ok: true }), POST_PRINT_DELAY_MS);
+        }
       });
     });
     client.on("timeout", () => finish({ ok: false, error: "Timeout — imprimante injoignable" }));
     client.on("error", (err) => finish({ ok: false, error: "Connexion impossible : " + err.message }));
   });
+}
+
+async function sendToZebra(zpl, printerIp) {
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const result = await sendToZebraOnce(zpl, printerIp);
+    if (result.ok) return result;
+    if (attempt < MAX_RETRIES) {
+      console.log(`[Print] ⟳ Tentative ${attempt}/${MAX_RETRIES} échouée, retry dans ${RETRY_DELAY_MS}ms...`);
+      await sleep(RETRY_DELAY_MS);
+    } else {
+      return result;
+    }
+  }
 }
 
 const server = http.createServer(async (req, res) => {

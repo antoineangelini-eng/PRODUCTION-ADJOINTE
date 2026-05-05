@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createCaseAction } from "@/app/app/design-metal/actions";
 import { InlineCalendarPicker } from "@/components/sheet/ScrollCalendar";
 
@@ -19,6 +20,7 @@ const DM_NATURES = [
 ];
 
 export function DesignMetalCreateBar({ onCreated, onSearch }: { onCreated?: (caseNumber: string) => void; onSearch?: (caseNumber: string) => void }) {
+  const router = useRouter();
   const [caseNumber, setCaseNumber] = useState("");
   const [nature, setNature] = useState("");
   const [dateExp, setDateExp] = useState("");
@@ -36,13 +38,14 @@ export function DesignMetalCreateBar({ onCreated, onSearch }: { onCreated?: (cas
       fd.set("date_expedition", dateExp);
       await createCaseAction(fd);
     } catch {
-      // createCaseAction fait un redirect
+      // createCaseAction fait un redirect, on le catch
     }
     setCaseNumber("");
     setNature("");
     setDateExp("");
     setCreating(false);
     onCreated?.(cn);
+    router.refresh();
   }
 
   const natureMeta = DM_NATURES.find(n => n.value === nature);
@@ -104,6 +107,7 @@ export function DesignMetalCreateBar({ onCreated, onSearch }: { onCreated?: (cas
                 if (!v) return;
                 setScanValue("");
                 onSearch?.(v);
+                router.push(`/app/design-metal?focus=${encodeURIComponent(v)}`);
               }
             }}
             placeholder="N° du cas..."
