@@ -1,8 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { DesignMetalTable } from "@/components/sheet/DesignMetalTable";
 import { DesignMetalHistoryWrapper } from "@/app/app/design-metal/DesignMetalHistoryWrapper";
-import { DesignMetalCreateBar } from "@/components/sheet/DesignMetalCreateBar";
+import { DesignMetalProductionWrapper } from "@/components/sheet/DesignMetalProductionWrapper";
 import { FlashMessage } from "@/components/sheet/FlashMessage";
 import { AnnouncementsBanner } from "@/components/sheet/AnnouncementsBanner";
 
@@ -56,13 +55,12 @@ export default async function Page({
       {/* ── Onglet Production ── */}
       {tab !== "historique" && (
         <>
-          <div style={{ flexShrink: 0, background: "#0b0b0b", padding: "10px 20px 8px", borderBottom: "1px solid #1a1a1a" }}>
-            <DesignMetalCreateBar />
-          </div>
-
-          <div style={{ flex: 1, minHeight: 0 }}>
-            <DesignMetalTable focusId={focusId} currentUserId={user.id} currentSector={userSectors[0] ?? ""} isAdmin={userSectors.includes("admin")} />
-          </div>
+          <DesignMetalProductionWrapper
+            focusId={focusId}
+            currentUserId={user.id}
+            currentSector={userSectors[0] ?? ""}
+            isAdmin={userSectors.includes("admin")}
+          />
         </>
       )}
 
