@@ -116,17 +116,7 @@ export async function createCaseAction(formData: FormData) {
     .trim();
   if (!rawCaseNumber) return;
 
-  // ─ Détection "cas physique" ─
-  let caseNumber = rawCaseNumber;
-  let forcePhysical = false;
-  if (rawCaseNumber.length >= 4 && rawCaseNumber.length % 2 === 0) {
-    const half = rawCaseNumber.length / 2;
-    if (rawCaseNumber.slice(0, half) === rawCaseNumber.slice(half)) {
-      caseNumber = rawCaseNumber.slice(0, half);
-      forcePhysical = true;
-      console.log(`[createCaseAction DR] Double scan détecté : "${rawCaseNumber}" → "${caseNumber}" (physique)`);
-    }
-  }
+  const caseNumber = rawCaseNumber;
 
   // ─ Vérification doublon par numéro de cas ─
   const { data: existing } = await supabase
@@ -214,11 +204,6 @@ export async function createCaseAction(formData: FormData) {
       p_date: dateExp,
       p_manual: false,
     });
-  }
-
-  // Si scan doublé détecté (ex "130172130172") → on marque le cas tout juste créé physique
-  if (forcePhysical) {
-    await supabase.rpc("rpc_mark_case_physical", { p_case_id: caseId });
   }
 
   revalidatePath("/app/design-resine");
