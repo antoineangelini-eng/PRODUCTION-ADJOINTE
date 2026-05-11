@@ -17,6 +17,7 @@ import { DeleteConfirmModal } from "@/components/sheet/DeleteConfirmModal";
 import { toggleOnHoldAction } from "@/lib/on-hold";
 import { OnHoldReasonModal, OnHoldReasonTooltip } from "@/components/sheet/OnHoldModal";
 import type { ToastCase } from "@/components/sheet/CaseToast";
+import { ScrollCalendar } from "@/components/sheet/ScrollCalendar";
 
 const NATURE_META: Record<string, { color: string }> = {
   "Chassis Argoat":    { color: "#e07070" },
@@ -26,12 +27,22 @@ const NATURE_META: Record<string, { color: string }> = {
   "Deflex":            { color: "#a78bfa" },
   "Complet":           { color: "#38bdf8" },
 };
-const MACHINE_OPTIONS = [
+const MACHINE_PM = [
   { value: "PM1", color: "#7c8196" },
   { value: "PM2", color: "#5a9ba8" },
   { value: "PM3", color: "#a87a90" },
   { value: "PM4", color: "#f59e0b" },
 ];
+const MACHINE_IMES = [
+  { value: "IMES PRO PLUS 1", color: "#60a5fa" },
+  { value: "IMES PRO PLUS",   color: "#818cf8" },
+  { value: "IMES PRO 5",      color: "#34d399" },
+  { value: "IMES PRO 1",      color: "#2dd4bf" },
+  { value: "IMES NORMALE",    color: "#94a3b8" },
+  { value: "IMES PRO 4",      color: "#c084fc" },
+  { value: "IMES HUMIDE",     color: "#22d3ee" },
+];
+const MACHINE_OPTIONS = [...MACHINE_PM, ...MACHINE_IMES];
 const TYPE_DENTS_OPTIONS = [
   { value: "Dents usinées",      color: "#7c8196" },
   { value: "Dents du commerce", color: "#f59e0b" },
@@ -88,45 +99,13 @@ function TimeBadge({ dt }: { dt: { date: string; time: string } | null }) {
   if (!dt) return <Val muted>—</Val>;
   return <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}><span style={{ fontSize: 11, color: "#aaa" }}>{dt.date}</span><span style={{ fontSize: 12, fontWeight: 700, color: "#4ade80", background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.3)", borderRadius: 5, padding: "1px 10px" }}>{dt.time}</span></div>;
 }
-const MFR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
-const DFR = ["Lu","Ma","Me","Je","Ve","Sa","Di"];
-function MiniCalendar({ value, onSelect, onClose, rect }: { value: string; onSelect: (d: string) => void; onClose: () => void; rect: DOMRect }) {
-  const today = new Date(); const init = value ? new Date(value + "T00:00:00") : today;
-  const [view, setView] = useState({ year: init.getFullYear(), month: init.getMonth() });
+function PopupCalendar({ value, onSelect, onClose, rect }: { value: string; onSelect: (d: string) => void; onClose: () => void; rect: DOMRect }) {
   const ref = useRef<HTMLDivElement>(null);
-  const top = rect.bottom + 260 > window.innerHeight ? rect.top - 264 : rect.bottom + 4;
-  useEffect(() => {
-    function h(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) onClose(); }
-    setTimeout(() => document.addEventListener("mousedown", h), 0); return () => document.removeEventListener("mousedown", h);
-  }, [onClose]);
-  const sel = value ? new Date(value + "T00:00:00") : null;
-  const { year, month } = view;
-  const total = new Date(year, month + 1, 0).getDate();
-  const first = (() => { const d = new Date(year, month, 1).getDay(); return d === 0 ? 6 : d - 1; })();
-  const cells: (number | null)[] = [...Array(first).fill(null), ...Array.from({ length: total }, (_, i) => i + 1)];
-  while (cells.length % 7) cells.push(null);
-  const pick = (day: number) => { const mm = String(month + 1).padStart(2, "0"); const dd = String(day).padStart(2, "0"); onSelect(`${year}-${mm}-${dd}`); onClose(); };
+  const top = rect.bottom + 320 > window.innerHeight ? rect.top - 330 : rect.bottom + 4;
+  useEffect(() => { function h(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) onClose(); } setTimeout(() => document.addEventListener("mousedown", h), 0); return () => document.removeEventListener("mousedown", h); }, [onClose]);
   return (
-    <div ref={ref} style={{ position: "fixed", zIndex: 9999, top, left: rect.left, background: "#1a1a1a", border: "1px solid #3d3d3d", borderRadius: 10, padding: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.8)", minWidth: 224, userSelect: "none" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <button onClick={() => setView(v => v.month === 0 ? { year: v.year - 1, month: 11 } : { ...v, month: v.month - 1 })} style={{ background: "none", border: "none", color: "white", cursor: "pointer", fontSize: 18, padding: "0 6px" }}>‹</button>
-        <span style={{ fontSize: 12, fontWeight: 700, color: "white" }}>{MFR[month]} {year}</span>
-        <button onClick={() => setView(v => v.month === 11 ? { year: v.year + 1, month: 0 } : { ...v, month: v.month + 1 })} style={{ background: "none", border: "none", color: "white", cursor: "pointer", fontSize: 18, padding: "0 6px" }}>›</button>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2, marginBottom: 4 }}>
-        {DFR.map(d => <div key={d} style={{ textAlign: "center", fontSize: 10, color: "#555", fontWeight: 600 }}>{d}</div>)}
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2 }}>
-        {cells.map((day, i) => {
-          if (!day) return <div key={i} />;
-          const iT = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-          const iS = sel && day === sel.getDate() && month === sel.getMonth() && year === sel.getFullYear();
-          return <button key={i} onClick={() => pick(day)} style={{ background: iS ? "#4ade80" : iT ? "rgba(74,222,128,0.12)" : "none", border: iT && !iS ? "1px solid rgba(74,222,128,0.3)" : "1px solid transparent", color: iS ? "#000" : "white", borderRadius: 5, fontSize: 11, padding: "4px 2px", cursor: "pointer", fontWeight: iS ? 700 : 400 }}
-            onMouseEnter={e => { if (!iS) (e.target as HTMLButtonElement).style.background = "rgba(255,255,255,0.08)"; }}
-            onMouseLeave={e => { if (!iS) (e.target as HTMLButtonElement).style.background = iT ? "rgba(74,222,128,0.12)" : "none"; }}>{day}</button>;
-        })}
-      </div>
-      <button onClick={() => { onSelect(""); onClose(); }} style={{ marginTop: 8, width: "100%", background: "none", border: "1px solid #3d3d3d", borderRadius: 6, color: "#555", fontSize: 11, padding: "5px 0", cursor: "pointer" }}>Effacer</button>
+    <div ref={ref} style={{ position: "fixed", zIndex: 9999, top, left: rect.left, boxShadow: "0 8px 32px rgba(0,0,0,0.8)" }}>
+      <ScrollCalendar value={value} onChange={d => { onSelect(d); onClose(); }} />
     </div>
   );
 }
@@ -155,6 +134,7 @@ function MachineDropdown({ options, value, onChange, buttonStyle }: {
 }) {
   const [open, setOpen] = React.useState(false);
   const btnRef = React.useRef<HTMLButtonElement>(null);
+  const portalRef = React.useRef<string>("machine-dd-" + Math.random().toString(36).slice(2, 8));
   const [pos, setPos] = React.useState({ top: 0, left: 0, openUp: false });
 
   React.useEffect(() => {
@@ -162,7 +142,7 @@ function MachineDropdown({ options, value, onChange, buttonStyle }: {
     function h(e: MouseEvent) {
       const target = e.target as Node;
       if (btnRef.current && !btnRef.current.contains(target)) {
-        const dropdown = document.getElementById("machine-dropdown-portal");
+        const dropdown = document.getElementById(portalRef.current);
         if (dropdown && !dropdown.contains(target)) setOpen(false);
       }
     }
@@ -174,7 +154,8 @@ function MachineDropdown({ options, value, onChange, buttonStyle }: {
     e.stopPropagation();
     if (!open && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
-      const dropdownHeight = (options.length + 1) * 32 + 14; // estimation hauteur
+      const maxGroupLen = Math.max(MACHINE_PM.length, MACHINE_IMES.length);
+      const dropdownHeight = (maxGroupLen + 2) * 32 + 20;
       const spaceBelow = window.innerHeight - rect.bottom;
       const openUp = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
       setPos({
@@ -187,6 +168,15 @@ function MachineDropdown({ options, value, onChange, buttonStyle }: {
   }
 
   const selected = options.find(o => o.value === value);
+
+  function renderBtn(o: { value: string; color: string }) {
+    return (
+      <button key={o.value} onClick={e => { e.stopPropagation(); onChange(o.value); setOpen(false); }}
+        style={{ padding: "4px 10px", borderRadius: 5, border: value === o.value ? `1px solid ${o.color}55` : "1px solid transparent", background: value === o.value ? `${o.color}20` : "transparent", color: o.color, fontSize: 12, fontWeight: 700, cursor: "pointer", textAlign: "center" as const, whiteSpace: "nowrap" }}>
+        {o.value}
+      </button>
+    );
+  }
 
   return (
     <>
@@ -201,22 +191,28 @@ function MachineDropdown({ options, value, onChange, buttonStyle }: {
         <svg viewBox="0 0 10 6" width="8" height="8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6, flexShrink: 0 }}><path d="M1 1l4 4 4-4" /></svg>
       </button>
       {open && typeof document !== "undefined" && ReactDOM.createPortal(
-        <div id="machine-dropdown-portal"
+        <div id={portalRef.current}
           style={{ position: "fixed",
             top: pos.openUp ? undefined : pos.top,
             bottom: pos.openUp ? (window.innerHeight - pos.top) : undefined,
             left: pos.left, transform: "translateX(-50%)",
-            background: "#1c1c1c", border: "1px solid #2e2e2e", borderRadius: 8, padding: 5,
-            zIndex: 9999, display: "flex", flexDirection: "column", gap: 2, minWidth: 80,
+            background: "#1c1c1c", border: "1px solid #2e2e2e", borderRadius: 8, padding: 8,
+            zIndex: 9999, display: "flex", gap: 8,
             boxShadow: "0 8px 24px rgba(0,0,0,0.6)" }}>
-          <button onClick={e => { e.stopPropagation(); onChange(""); setOpen(false); }}
-            style={{ padding: "4px 10px", borderRadius: 5, border: "none", background: !value ? "#2a2a2a" : "transparent", color: "#555", fontSize: 12, fontWeight: 600, cursor: "pointer", textAlign: "center" as const }}>—</button>
-          {options.map(o => (
-            <button key={o.value} onClick={e => { e.stopPropagation(); onChange(o.value); setOpen(false); }}
-              style={{ padding: "4px 10px", borderRadius: 5, border: value === o.value ? `1px solid ${o.color}55` : "1px solid transparent", background: value === o.value ? `${o.color}20` : "transparent", color: o.color, fontSize: 12, fontWeight: 700, cursor: "pointer", textAlign: "center" as const }}>
-              {o.value}
-            </button>
-          ))}
+          {/* Colonne gauche : PM + bouton reset */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 60 }}>
+            <div style={{ fontSize: 9, fontWeight: 700, color: "#555", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "center", padding: "2px 0 4px" }}>PM</div>
+            <button onClick={e => { e.stopPropagation(); onChange(""); setOpen(false); }}
+              style={{ padding: "4px 10px", borderRadius: 5, border: "none", background: !value ? "#2a2a2a" : "transparent", color: "#555", fontSize: 12, fontWeight: 600, cursor: "pointer", textAlign: "center" as const }}>—</button>
+            {MACHINE_PM.map(renderBtn)}
+          </div>
+          {/* Séparateur */}
+          <div style={{ width: 1, background: "#2e2e2e", alignSelf: "stretch" }} />
+          {/* Colonne droite : IMES */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 120 }}>
+            <div style={{ fontSize: 9, fontWeight: 700, color: "#555", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: "center", padding: "2px 0 4px" }}>IMES</div>
+            {MACHINE_IMES.map(renderBtn)}
+          </div>
         </div>,
         document.body
       )}
@@ -523,7 +519,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
     <div style={{ display:"flex", flexDirection:"column", height:"100%", minHeight:0, background:"#111" }}>
       <style dangerouslySetInnerHTML={{ __html: CARD_KEYFRAMES }} />
       {editingDate && (
-        <MiniCalendar value={editingDate.value} rect={editingDate.rect}
+        <PopupCalendar value={editingDate.value} rect={editingDate.rect}
           onSelect={date => { patchRow(editingDate.caseId,"ur",editingDate.column,date||null); saveCell(editingDate.caseId,editingDate.column,date||null); setEditingDate(null); }}
           onClose={() => setEditingDate(null)} />
       )}

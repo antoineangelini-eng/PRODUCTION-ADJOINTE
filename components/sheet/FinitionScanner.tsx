@@ -17,7 +17,7 @@ function normalizeAzerty(v: string): string {
   return v.split("").map(ch => AZERTY_MAP[ch] ?? ch).join("").toUpperCase();
 }
 
-type ScannedCase = { caseNumber: string; caseId: string };
+type ScannedCase = { caseNumber: string; caseId: string; autoValidate?: boolean };
 type ScanError = { caseNumber: string; message: string };
 
 export function FinitionScanner({
@@ -55,13 +55,14 @@ export function FinitionScanner({
     setValue("");
 
     try {
-      const cas = await resolveCaseForFinition(caseNumber);
+      const alreadyScannedIds = scanned.map(s => s.caseId);
+      const cas = await resolveCaseForFinition(caseNumber, alreadyScannedIds);
       if (!cas) {
-        setLastScan({ caseNumber, status: "error", message: "Introuvable" });
-        setErrors(prev => [{ caseNumber, message: "Introuvable" }, ...prev.slice(0, 9)]);
-      } else if (scanned.some(s => s.caseId === cas.id)) {
-        setLastScan({ caseNumber, status: "error", message: "Déjà scanné" });
-        setErrors(prev => [{ caseNumber, message: "Déjà scanné" }, ...prev.slice(0, 9)]);
+        // Si des cas ont déjà été bipés pour ce numéro, c'est un doublon complet
+        const alreadyHas = scanned.some(s => s.caseNumber === caseNumber);
+        const msg = alreadyHas ? "Toutes les natures déjà scannées" : "Introuvable";
+        setLastScan({ caseNumber, status: "error", message: msg });
+        setErrors(prev => [{ caseNumber, message: msg }, ...prev.slice(0, 9)]);
       } else {
         const field = receptionMode === "metal" ? "reception_metal_ok" : "reception_resine_ok";
         const check = await checkFinitionReceptionAction(cas.id, field);
@@ -69,8 +70,9 @@ export function FinitionScanner({
           setLastScan({ caseNumber, status: "error", message: check.error ?? "Erreur" });
           setErrors(prev => [{ caseNumber, message: check.error ?? "Erreur" }, ...prev.slice(0, 9)]);
         } else {
-          setLastScan({ caseNumber, status: "ok" });
-          setScanned(prev => [...prev, { caseNumber, caseId: cas.id }]);
+          const msg = check.autoValidate ? "prêt (auto-validation)" : "prêt à valider";
+          setLastScan({ caseNumber, status: "ok", message: msg });
+          setScanned(prev => [...prev, { caseNumber, caseId: cas.id, autoValidate: check.autoValidate }]);
         }
       }
     } catch {
@@ -85,7 +87,7 @@ export function FinitionScanner({
     if (scanned.length === 0 || validating) return;
     setValidating(true);
     try {
-      const payload = scanned.map(s => ({ case_id: s.caseId, case_number: s.caseNumber }));
+      const payload = scanned.map(s => ({ case_id: s.caseId, case_number: s.caseNumber, autoValidate: s.autoValidate }));
       const field = receptionMode === "metal" ? "reception_metal_ok" as const : "reception_resine_ok" as const;
       const results = await batchValidateScannedAction(payload, field);
       // Reset
@@ -172,7 +174,7 @@ export function FinitionScanner({
             <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600 }}>
               <span style={{ fontSize: 10, color: feedbackColor }}>{lastScan.status === "ok" ? "●" : "✕"}</span>
               <span style={{ color: feedbackColor }}>
-                {lastScan.caseNumber} — {lastScan.status === "ok" ? "prêt à valider" : lastScan.message}
+                {lastScan.caseNumber} — {lastScan.status === "ok" ? (lastScan.message ?? "prêt à valider") : lastScan.message}
               </span>
             </div>
           )}

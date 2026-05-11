@@ -249,7 +249,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
     const ut = row.sector_usinage_titane ?? {};
     const typeDents = ur.type_de_dents_override ?? dm.type_de_dents ?? null;
     const isDC = typeDents === "Dents du commerce" || typeDents === "Pas de dents";
-    const needsMetal = row.nature_du_travail === "Chassis Argoat" || row.nature_du_travail === "Chassis Dent All";
+    const needsMetal = row.nature_du_travail === "Chassis Argoat" || row.nature_du_travail === "Chassis Dent All" || row.nature_du_travail === "Définitif Résine";
     const needsResine = !isDC;
     const metalDate = ut.reception_metal_at ?? dm.reception_metal_date ?? null;
     const resineDate = ur.reception_resine_at ?? null;
@@ -448,7 +448,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
               const receptionResineDate = ur.reception_resine_at ?? null;
 
               // Déterminer si le cas a besoin de métal et/ou résine selon la nature et le type de dents
-              const needsMetal  = row.nature_du_travail === "Chassis Argoat" || row.nature_du_travail === "Chassis Dent All";
+              const needsMetal  = row.nature_du_travail === "Chassis Argoat" || row.nature_du_travail === "Chassis Dent All" || row.nature_du_travail === "Définitif Résine";
               const needsResine = !isDentsCommerce;
 
               // Réceptions Finition (checkboxes)

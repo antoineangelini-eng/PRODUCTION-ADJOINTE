@@ -302,29 +302,36 @@ export async function validateFinitionBatchAction(
   });
 }
 
-export async function resolveCaseForFinition(caseNumber: string): Promise<{
+export async function resolveCaseForFinition(
+  caseNumber: string,
+  excludeIds: string[] = [],
+): Promise<{
   id: string;
   case_number: string;
 } | null> {
   const supabase = await createClient();
-  const { data: caseData, error: caseError } = await supabase
+  // Un même numéro de cas peut avoir plusieurs natures (ex: Complet + Chassis Dent All)
+  const { data: cases, error: caseError } = await supabase
     .from("cases")
     .select("id, case_number")
-    .eq("case_number", caseNumber)
-    .maybeSingle();
+    .eq("case_number", caseNumber);
 
-  if (caseError || !caseData) return null;
+  if (caseError || !cases || cases.length === 0) return null;
 
-  const { data: assignment } = await supabase
-    .from("case_assignments")
-    .select("case_id")
-    .eq("case_id", caseData.id)
-    .eq("sector_code", "finition")
-    .in("status", ["active", "in_progress", "on_hold"])
-    .maybeSingle();
+  // Chercher parmi tous les cas celui qui est actif en finition (en excluant ceux déjà bipés)
+  for (const c of cases) {
+    if (excludeIds.includes(c.id)) continue;
+    const { data: assignment } = await supabase
+      .from("case_assignments")
+      .select("case_id")
+      .eq("case_id", c.id)
+      .eq("sector_code", "finition")
+      .in("status", ["active", "in_progress", "on_hold"])
+      .maybeSingle();
+    if (assignment) return c;
+  }
 
-  if (!assignment) return null;
-  return caseData;
+  return null;
 }
 
 /** Cocher réception métal ou résine pour un cas en Finition (toggle pour clic dans le tableau).
@@ -365,7 +372,7 @@ export async function toggleFinitionReceptionAction(
   const ur = (caseData as any).sector_usinage_resine ?? {};
   const typeDents = ur.type_de_dents_override ?? dm.type_de_dents ?? null;
   const isDentsCommerce = typeDents === "Dents du commerce" || typeDents === "Pas de dents";
-  const needsMetal = (caseData as any).nature_du_travail === "Chassis Argoat" || (caseData as any).nature_du_travail === "Chassis Dent All";
+  const needsMetal = (caseData as any).nature_du_travail === "Chassis Argoat" || (caseData as any).nature_du_travail === "Chassis Dent All" || (caseData as any).nature_du_travail === "Définitif Résine";
   const needsResine = !isDentsCommerce;
 
   // L'autre réception est-elle déjà OK ?
@@ -385,6 +392,8 @@ export async function toggleFinitionReceptionAction(
 export type ScanCheckResult = {
   ok: boolean;
   error?: string;
+  /** Le cas n'a pas besoin de cette réception mais toutes ses réceptions nécessaires sont déjà OK → auto-valider */
+  autoValidate?: boolean;
 };
 
 /** Vérification read-only au bip : le cas existe-t-il en finition, a-t-il besoin de cette réception,
@@ -397,10 +406,12 @@ export async function checkFinitionReceptionAction(
 
   const { data: finRow } = await admin
     .from("sector_finition")
-    .select("reception_metal_ok, reception_resine_ok")
+    .select("reception_metal_ok, reception_resine_ok, validation")
     .eq("case_id", caseId)
     .single();
   if (!finRow) return { ok: false, error: "Cas non trouvé en finition" };
+
+  if (finRow.validation) return { ok: false, error: "Cas déjà validé" };
 
   const { data: caseData } = await admin
     .from("cases")
@@ -413,17 +424,35 @@ export async function checkFinitionReceptionAction(
   const ur = (caseData as any).sector_usinage_resine ?? {};
   const typeDents = ur.type_de_dents_override ?? dm.type_de_dents ?? null;
   const isDentsCommerce = typeDents === "Dents du commerce" || typeDents === "Pas de dents";
-  const needsMetal = (caseData as any).nature_du_travail === "Chassis Argoat" || (caseData as any).nature_du_travail === "Chassis Dent All";
+  const needsMetal = (caseData as any).nature_du_travail === "Chassis Argoat" || (caseData as any).nature_du_travail === "Chassis Dent All" || (caseData as any).nature_du_travail === "Définitif Résine";
   const needsResine = !isDentsCommerce;
 
+  // Le cas n'a pas besoin de cette réception spécifique
   if (field === "reception_metal_ok" && !needsMetal) {
-    return { ok: false, error: "Ce cas ne nécessite pas de réception métal" };
+    // Vérifier si toutes les réceptions nécessaires sont déjà faites → auto-valider
+    const metalDone = true; // needsMetal est false
+    const resineDone = needsResine ? !!finRow.reception_resine_ok : true;
+    if (metalDone && resineDone) {
+      return { ok: true, autoValidate: true };
+    }
+    return { ok: false, error: "Ce cas nécessite une réception résine (pas métal)" };
   }
   if (field === "reception_resine_ok" && !needsResine) {
-    return { ok: false, error: "Ce cas ne nécessite pas de réception résine" };
+    const metalDone = needsMetal ? !!finRow.reception_metal_ok : true;
+    const resineDone = true; // needsResine est false
+    if (metalDone && resineDone) {
+      return { ok: true, autoValidate: true };
+    }
+    return { ok: false, error: "Ce cas nécessite une réception métal (pas résine)" };
   }
 
   if (finRow[field]) {
+    // La réception demandée est déjà faite — vérifier si le cas peut être auto-validé
+    const metalDone = needsMetal ? !!finRow.reception_metal_ok : true;
+    const resineDone = needsResine ? !!finRow.reception_resine_ok : true;
+    if (metalDone && resineDone) {
+      return { ok: true, autoValidate: true };
+    }
     return { ok: false, error: `Réception ${field === "reception_metal_ok" ? "métal" : "résine"} déjà enregistrée` };
   }
 
@@ -448,7 +477,7 @@ export type ScanValidateItem = {
 /** Bouton Valider : enregistre les réceptions en base, puis valide les cas complets.
  *  Utilise createClient() (authentifié) pour le RPC. */
 export async function batchValidateScannedAction(
-  cases: { case_id: string; case_number: string }[],
+  cases: { case_id: string; case_number: string; autoValidate?: boolean }[],
   receptionField: "reception_metal_ok" | "reception_resine_ok",
 ): Promise<ScanValidateItem[]> {
   const admin = createAdminClient();
@@ -457,7 +486,15 @@ export async function batchValidateScannedAction(
   const now = new Date().toISOString();
   const atField = receptionField + "_at";
 
-  for (const { case_id, case_number } of cases) {
+  for (const { case_id, case_number, autoValidate } of cases) {
+    // Auto-validate : le cas n'a pas besoin de cette réception mais est déjà complet → valider directement
+    if (autoValidate) {
+      const { error } = await supabase.rpc("rpc_update_finition", { p_case_id: case_id, p_patch: { validation: true } });
+      if (error) { results.push({ case_id, case_number, validated: false, message: error.message }); continue; }
+      results.push({ case_id, case_number, validated: true, message: "Cas auto-validé (réceptions déjà complètes)" });
+      continue;
+    }
+
     // 1. Écrire la réception en base maintenant
     await admin
       .from("sector_finition")
@@ -488,7 +525,7 @@ export async function batchValidateScannedAction(
     const nature = (caseData as any).nature_du_travail ?? null;
     const typeDents = ur.type_de_dents_override ?? dm.type_de_dents ?? null;
     const isDentsCommerce = typeDents === "Dents du commerce" || typeDents === "Pas de dents";
-    const needsMetal = nature === "Chassis Argoat" || nature === "Chassis Dent All";
+    const needsMetal = nature === "Chassis Argoat" || nature === "Chassis Dent All" || nature === "Définitif Résine";
     const needsResine = !isDentsCommerce;
 
     // Données pour impression étiquette Chassis Dent All
@@ -606,7 +643,7 @@ export async function getFinitionStatsAction(): Promise<{
       const ur = c.sector_usinage_resine ?? {};
       const typeDents = ur.type_de_dents_override ?? dm.type_de_dents ?? null;
       const isDentsCommerce = typeDents === "Dents du commerce" || typeDents === "Pas de dents";
-      const needsMetal  = c.nature_du_travail === "Chassis Argoat";
+      const needsMetal  = c.nature_du_travail === "Chassis Argoat" || c.nature_du_travail === "Chassis Dent All" || c.nature_du_travail === "Définitif Résine";
       const needsResine = !isDentsCommerce;
       const ut = c.sector_usinage_titane ?? {};
       const metalDate  = ut.reception_metal_at ?? dm.reception_metal_date ?? null;

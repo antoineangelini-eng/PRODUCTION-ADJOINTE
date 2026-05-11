@@ -18,7 +18,7 @@ function FinCard({ row, onReopen }: { row: FinHistoryRow; onReopen: () => void }
         <div style={{ display: "flex", flexDirection: "column" as const, gap: 4 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ fontSize: 9, fontWeight: 600, textTransform: "uppercase" as const, color: "#999", letterSpacing: "0.05em" }}>Réception métal</div>
-            {row.nature_du_travail === "Provisoire Résine" || row.nature_du_travail === "Définitif Résine"
+            {row.nature_du_travail === "Provisoire Résine" || row.nature_du_travail === "Complet"
               ? <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "1px 10px", borderRadius: 4, background: "repeating-linear-gradient(135deg, rgba(239,68,68,0.06) 0px, rgba(239,68,68,0.06) 4px, transparent 4px, transparent 8px)", border: "1px solid rgba(239,68,68,0.18)", color: "rgba(239,68,68,0.3)", fontSize: 13 }}>⊘</span>
               : <span style={{ fontSize: 11, color: "#e0e0e0" }}>{fmtDate(row.reception_metal_at)}</span>}
           </div>
