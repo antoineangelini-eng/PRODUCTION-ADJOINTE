@@ -14,9 +14,16 @@ export async function buildUtPrintJobAction(data: {
   quantite: number;
   nature?: string | null;
   modele?: boolean;
+  machine?: string | null;
+  calcul?: string | null;
+  brut?: string | null;
 }): Promise<PrintJobData> {
   const printerIp = await getCurrentUserPrinterIpAction();
   if (!printerIp) return null;
-  const zpl = buildSimpleZPL(data.caseNumber, data.dateExpedition, data.receptionMetal, data.quantite, data.nature ?? null, data.modele ?? false);
+  const zpl = buildSimpleZPL(
+    data.caseNumber, data.dateExpedition, data.receptionMetal, data.quantite,
+    data.nature ?? null, data.modele ?? false,
+    { machine: data.machine ?? null, calcul: data.calcul ?? null, brut: data.brut ?? null },
+  );
   return { zpl, printerIp };
 }

@@ -116,8 +116,17 @@ export function buildZPL(data: LabelData): string {
   return lines.join("\n");
 }
 
-/** Étiquette simple pour UT : numéro de cas + code-barres + nature + date d'expédition + réception métal + quantité + modèle */
-export function buildSimpleZPL(caseNumber: string, dateExpedition: string | null, receptionMetal: string | null = null, quantite: number = 1, nature: string | null = null, modele: boolean = false): string {
+/** Étiquette simple pour UT : numéro de cas + code-barres + nature + machine/calcul/brut + dates + modèle + quantité
+ *  Layout compact — tout tient dans 270 dots de hauteur (taille physique de l'étiquette). */
+export function buildSimpleZPL(
+  caseNumber: string,
+  dateExpedition: string | null,
+  receptionMetal: string | null = null,
+  quantite: number = 1,
+  nature: string | null = null,
+  modele: boolean = false,
+  extra?: { machine?: string | null; calcul?: string | null; brut?: string | null },
+): string {
   const dateFr = dateExpedition
     ? new Date(dateExpedition.slice(0, 10) + "T00:00:00").toLocaleDateString("fr-FR")
     : "—";
@@ -131,6 +140,78 @@ export function buildSimpleZPL(caseNumber: string, dateExpedition: string | null
 
   const modeleLabel = modele ? "Oui" : "Non";
 
+  const machineVal = extra?.machine || null;
+  const calculVal  = extra?.calcul  || null;
+  const brutVal    = extra?.brut    || null;
+  const hasExtra   = Boolean(machineVal || calculVal || brutVal);
+
+  if (hasExtra) {
+    // ── Layout COMPACT avec section USINAGE — 270 dots ──
+    return [
+      "^XA",
+      "^CI28",
+      "^PW406",
+      "^LL270",
+      "^LH0,0",
+
+      // En-tête : numéro de cas + code-barres + nature
+      `^FO16,8^A0N,32,32^FD${caseNumber}^FS`,
+      ...(nature ? [`^FO16,40^A0N,14,14^FD${nature}^FS`] : []),
+      `^BY2^FO200,6^BCN,48,N,N,N^FD${caseNumber}^FS`,
+      "^FO12,58^GB382,2,2^FS",
+
+      // Section USINAGE : bandeau noir avec labels + valeurs en blanc, colonnes centrées
+      `^FO4,61^GB398,46,46^FS`,
+      ...(() => {
+        const cols: { label: string; val: string }[] = [];
+        if (machineVal) cols.push({ label: "Machine", val: machineVal });
+        if (calculVal)  cols.push({ label: "N. Calcul", val: calculVal });
+        if (brutVal)    cols.push({ label: "Brut", val: brutVal });
+        const w = Math.floor(398 / cols.length);
+        return cols.flatMap((c, i) => {
+          const x = 4 + i * w;
+          return [
+            `^FO${x},63^A0N,12,12^FB${w},1,0,C^FR^FD${c.label}^FS`,
+            `^FO${x},79^A0N,24,24^FB${w},1,0,C^FR^FD${c.val}^FS`,
+          ];
+        });
+      })(),
+
+      // Séparation sous USINAGE
+      "^FO12,108^GB382,2,2^FS",
+
+      // Trait vertical séparant dates (gauche) et modèle/qte (droite)
+      "^FO296,110^GB2,154,2^FS",
+
+      // Colonne gauche : Expédition + Réception métal
+      `^FO16,114^A0N,12,12^FDExpedition :^FS`,
+      `^FO16,129^A0N,34,34^FD${expDay}^FS`,
+      `^FO16,164^A0N,22,22^FD${dateFr}^FS`,
+      "^FO12,190^GB280,1,1^FS",
+      ...(recepFr ? [
+        `^FO16,195^A0N,11,11^FDReception metal :^FS`,
+        `^FO16,209^A0N,20,20^FD${recepDay} ${recepFr}^FS`,
+      ] : []),
+
+      // Colonne droite : Modèle + Quantité
+      `^FO304,112^A0N,14,14^FDModele^FS`,
+      ...(modele
+        ? [`^FO310,130^A0N,38,38^FD${modeleLabel}^FS`]
+        : [
+            `^FO302,126^GB96,46,46^FS`,
+            `^FO310,130^A0N,38,38^FR^FD${modeleLabel}^FS`,
+          ]
+      ),
+      ...(quantite > 0 ? [
+        `^FO302,206^GB96,42,42^FS`,
+        `^FO308,210^A0N,34,34^FR^FDQte ${quantite}^FS`,
+      ] : []),
+
+      "^XZ",
+    ].join("\n");
+  }
+
+  // ── Layout STANDARD sans section USINAGE — 270 dots (inchangé) ──
   return [
     "^XA",
     "^CI28",
@@ -148,13 +229,10 @@ export function buildSimpleZPL(caseNumber: string, dateExpedition: string | null
     "^FO296,78^GB2,180,2^FS",
 
     // ── Colonne gauche : dates ──
-    // Date d'expédition + jour de la semaine
     `^FO16,88^A0N,16,16^FDExpedition :^FS`,
     `^FO16,110^A0N,40,40^FD${expDay}^FS`,
     `^FO16,152^A0N,28,28^FD${dateFr}^FS`,
-    // Séparation fine (colonne gauche seulement)
     "^FO12,186^GB280,1,1^FS",
-    // Réception métal en dessous + jour de la semaine
     ...(recepFr ? [
       `^FO16,194^A0N,14,14^FDReception metal :^FS`,
       `^FO16,212^A0N,24,24^FD${recepDay} ${recepFr}^FS`,
@@ -162,7 +240,6 @@ export function buildSimpleZPL(caseNumber: string, dateExpedition: string | null
 
     // ── Colonne droite : modèle + quantité ──
     `^FO304,84^A0N,18,18^FDModele^FS`,
-    // Valeur modèle en gros — Oui = texte normal, Non = blanc sur noir
     ...(modele
       ? [`^FO312,108^A0N,44,44^FD${modeleLabel}^FS`]
       : [
@@ -170,7 +247,6 @@ export function buildSimpleZPL(caseNumber: string, dateExpedition: string | null
           `^FO312,108^A0N,44,44^FR^FD${modeleLabel}^FS`,
         ]
     ),
-    // Quantité en bas de la colonne droite (masqué si 0)
     ...(quantite > 0 ? [
       `^FO302,200^GB96,44,44^FS`,
       `^FO308,204^A0N,36,36^FR^FDQte ${quantite}^FS`,

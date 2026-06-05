@@ -582,6 +582,9 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
         const hasB = Boolean(ut.numero_calcul_b);
         const qte = (hasH && hasB) ? 2 : 1;
         const dm = (row as any).sector_design_metal ?? {};
+        // Fusionner machine/calcul/brut (mode H/B → "valH / valB")
+        const mergeHB = (simple: string | null, h: string | null, b: string | null) =>
+          (h || b) ? [h, b].filter(Boolean).join(" / ") : (simple || null);
         buildUtPrintJobAction({
           caseNumber: row.case_number ?? okId,
           dateExpedition: row.date_expedition ?? null,
@@ -589,6 +592,9 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
           quantite: qte,
           nature: row.nature_du_travail ?? null,
           modele: Boolean(dm.modele_a_faire_ok),
+          machine: mergeHB(ut.machine_ut, ut.machine_ut_h, ut.machine_ut_b),
+          calcul: mergeHB(ut.numero_calcul, ut.numero_calcul_h, ut.numero_calcul_b),
+          brut: mergeHB(ut.nombre_brut, ut.nombre_brut_h, ut.nombre_brut_b),
         }).then(job => {
           if (!job) return;
           fetch(`${relayUrl}/print`, {
