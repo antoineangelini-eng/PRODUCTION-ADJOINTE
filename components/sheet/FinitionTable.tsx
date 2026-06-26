@@ -68,10 +68,12 @@ function DateCell({ value, color = "white" }: { value: string | null; color?: st
   return <span style={{ color }}>{new Date(value.slice(0,10)+"T00:00:00").toLocaleDateString("fr-FR")}</span>;
 }
 
-export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelectionChange, receptionMode, onReceptionModeChange, scanValidateResults, onDismissScanResults }: {
+export function FinitionTable({ filter, onReload, highlightId, searchFilter, onSearchFilterChange, lotPanel, onSelectionChange, receptionMode, onReceptionModeChange, scanValidateResults, onDismissScanResults }: {
   filter?: "today"|"tomorrow"|"all"|"late"|"prio_today"|"prio_j1"|"prio_j2";
   onReload?: (fn:()=>void)=>void;
   highlightId?: string|null;
+  searchFilter?: string;
+  onSearchFilterChange?: (v: string) => void;
   lotPanel?: React.ReactNode;
   onSelectionChange?: (isBusy: boolean) => void;
   receptionMode?: "metal"|"resine";
@@ -117,6 +119,16 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { onReload?.(() => load(true)); }, [load, onReload]);
+
+  // Auto-scroll vers le cas recherché
+  useEffect(() => {
+    if (!highlightId || loading || rows.length === 0) return;
+    const found = rows.find(r => r.case_number === highlightId || String(r.id) === highlightId);
+    if (!found) return;
+    setTimeout(() => {
+      document.getElementById(`row-fin-${found.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 100);
+  }, [highlightId, loading, rows]);
 
   // Auto-refresh après 5 min d'inactivité
   const lastActivityRef = useRef(Date.now());
@@ -304,8 +316,12 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
         }
       }
     }
+    // Filtrer par recherche texte (numéro de cas)
+    if (searchFilter) {
+      return result.filter(r => (r.case_number ?? "").includes(searchFilter));
+    }
     return result;
-  }, [rows, filter, today, tomorrow, day2]);
+  }, [rows, filter, today, tomorrow, day2, searchFilter]);
 
 
   const emptyMessage = () => {
@@ -360,9 +376,18 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
 
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"0 20px 8px", position:"sticky", top:0, zIndex:3, background:"#0b0b0b", paddingTop:8 }}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ fontSize:12, color:"white", padding:"4px 10px", border:"1px solid rgba(255,255,255,0.2)", borderRadius:6 }}>
-            {filtered.length} dossier{filtered.length > 1 ? "s" : ""}
-          </div>
+          <span style={{ fontSize:12, color:"#ccc", padding:"4px 14px", background:"#1e1e1e", border:"1px solid #2e2e2e", borderRadius:20, fontWeight:600 }}>
+            {searchFilter ? `${filtered.length} / ${rows.length}` : filtered.length} dossier{(searchFilter ? rows.length : filtered.length) > 1 ? "s" : ""}
+          </span>
+          <input
+            value={searchFilter ?? ""}
+            onChange={e => onSearchFilterChange?.(e.target.value.replace(/\D/g, ""))}
+            placeholder="Rechercher..."
+            style={{ padding:"5px 10px", width:140, fontSize:12, borderRadius:7, background:"#121212", border:"1px solid #2a2a2a", color:"#fff", outline:"none", height:30 }}
+          />
+          {searchFilter && (
+            <button onClick={() => onSearchFilterChange?.("")} style={{ background:"none", border:"none", color:"#555", cursor:"pointer", fontSize:16, padding:"0 4px", lineHeight:1 }}>×</button>
+          )}
           {batchResult && batchResult.ok.length > 0 && (
             <div style={{ display:"flex", alignItems:"center", gap:6, padding:"4px 12px", background:"rgba(74,222,128,0.08)", border:"1px solid rgba(74,222,128,0.2)", borderRadius:6 }}>
               <span style={{ color:"#4ade80", fontSize:13 }}>✓</span>
@@ -428,7 +453,7 @@ export function FinitionTable({ filter, onReload, highlightId, lotPanel, onSelec
               const ut  = (row as any).sector_usinage_titane ?? {};
 
               const validated     = Boolean(fin.validation);
-              const isHighlighted = highlightId === String(row.id);
+              const isHighlighted = highlightId === String(row.id) || highlightId === row.case_number;
               const isChecked     = checkedIds.has(String(row.id));
               const isProvisoire  = row.nature_du_travail === "Provisoire Résine";
               const isOnHold      = Boolean((row as any)._other_on_hold);

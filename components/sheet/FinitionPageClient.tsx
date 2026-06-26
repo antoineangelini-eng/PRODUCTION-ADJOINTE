@@ -7,9 +7,10 @@ import { usePollingRefresh } from "@/hooks/usePollingRefresh";
 
 type Tab = "all" | "today" | "tomorrow" | "late" | "prio_today" | "prio_j1" | "prio_j2";
 
-export function FinitionPageClient(_props: { hideHeader?: boolean } = {}) {
+export function FinitionPageClient({ focusId }: { hideHeader?: boolean; focusId?: string | null } = {}) {
   const [tab, setTab] = useState<Tab>("all");
-  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(focusId ?? null);
+  const [searchFilter, setSearchFilter] = useState("");
   const [isBusy, setIsBusy] = useState(false);
   const [receptionMode, setReceptionMode] = useState<"metal" | "resine">("metal");
   const [stats, setStats] = useState({
@@ -33,6 +34,7 @@ export function FinitionPageClient(_props: { hideHeader?: boolean } = {}) {
     reloadRef.current?.();
     refreshStats();
   }
+
 
   const TABS: { id: Tab; label: string; count?: number; countColor?: string }[] = [
     { id: "all",      label: "Tous les dossiers" },
@@ -145,6 +147,8 @@ export function FinitionPageClient(_props: { hideHeader?: boolean } = {}) {
             filter={tab}
             onReload={fn => { reloadRef.current = fn; }}
             highlightId={highlightId}
+            searchFilter={searchFilter}
+            onSearchFilterChange={setSearchFilter}
             onSelectionChange={setIsBusy}
             receptionMode={receptionMode}
             onReceptionModeChange={setReceptionMode}

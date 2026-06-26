@@ -4,7 +4,7 @@ import { FinitionPageClient } from "@/components/sheet/FinitionPageClient";
 import { FinitionHistoryWrapper } from "@/app/app/finition/FinitionHistoryWrapper";
 import { AnnouncementsBanner } from "@/components/sheet/AnnouncementsBanner";
 
-export default async function FinitionPage({ searchParams }: { searchParams?: Promise<{ tab?: string }> }) {
+export default async function FinitionPage({ searchParams }: { searchParams?: Promise<{ tab?: string; focus?: string }> }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -14,6 +14,7 @@ export default async function FinitionPage({ searchParams }: { searchParams?: Pr
   if (!userSectors.includes("finition") && !userSectors.includes("admin")) redirect("/app");
   const params = await searchParams;
   const tab = params?.tab ?? "production";
+  const focusId = params?.focus ?? null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -33,7 +34,7 @@ export default async function FinitionPage({ searchParams }: { searchParams?: Pr
 
       {tab !== "historique" && (
         <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          <FinitionPageClient hideHeader />
+          <FinitionPageClient hideHeader focusId={focusId} />
         </div>
       )}
 
