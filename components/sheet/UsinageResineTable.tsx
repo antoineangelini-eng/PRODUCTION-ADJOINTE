@@ -429,19 +429,8 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
         blockers.push({ case_id: id, error_message: `Cas ${row.case_number} — champs manquants : ${miss.join(", ")}` });
       }
     }
-    // Vérification : date de réception résine ne dépasse pas la date d'expédition
-    for (const id of checkedIds) {
-      const row = rows.find(r => String(r.id) === id);
-      if (!row) continue;
-      const ur = (row as any).sector_usinage_resine ?? {};
-      const receptionDate = ur.reception_resine_at?.slice(0, 10);
-      const expeditionDate = (row as any).date_expedition?.slice(0, 10);
-      if (receptionDate && expeditionDate && receptionDate > expeditionDate) {
-        const fmtR = new Date(receptionDate + "T00:00:00").toLocaleDateString("fr-FR");
-        const fmtE = new Date(expeditionDate + "T00:00:00").toLocaleDateString("fr-FR");
-        blockers.push({ case_id: id, error_message: `Cas ${row.case_number} : date de réception résine (${fmtR}) postérieure à la date d'expédition (${fmtE}). Validation impossible.` });
-      }
-    }
+    // Note : on ne bloque plus la validation si reception_resine_at > date_expedition
+    // (le système de couleur sur la date d'expédition reste actif comme indicateur visuel)
     if (blockers.length > 0) {
       setBatchResult({ okIds: [], errors: blockers });
       return;
@@ -560,6 +549,41 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
         </button>
       </div>
       <div style={{ overflowY:"auto", flex:1, minHeight:0, padding:"12px 8px 80px" }}>
+        {/* ── Bandeau : cas qui partent aujourd'hui ── */}
+        {(() => {
+          const today = new Date().toISOString().split("T")[0];
+          const casesToday = rows.filter(r => r.date_expedition?.slice(0, 10) === today);
+          if (casesToday.length === 0) return null;
+          const late = rows.filter(r => { const d = r.date_expedition?.slice(0, 10); return d && d < today; });
+          return (
+            <div style={{ display:"flex", flexDirection:"column", gap:6, margin:"0 0 12px 0" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 16px", background:"rgba(245,158,11,0.06)", border:"1px solid rgba(245,158,11,0.3)", borderRadius:10 }}>
+                <span style={{ fontSize:16 }}>⚠</span>
+                <div style={{ flex:1 }}>
+                  <span style={{ fontSize:13, fontWeight:700, color:"#f59e0b" }}>
+                    {casesToday.length} cas à expédier aujourd'hui
+                  </span>
+                  <span style={{ fontSize:12, color:"#d4a04a", marginLeft:10 }}>
+                    {casesToday.map(r => r.case_number).join(", ")}
+                  </span>
+                </div>
+              </div>
+              {late.length > 0 && (
+                <div style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 16px", background:"rgba(239,68,68,0.06)", border:"1px solid rgba(239,68,68,0.3)", borderRadius:10 }}>
+                  <span style={{ fontSize:16 }}>🔴</span>
+                  <div style={{ flex:1 }}>
+                    <span style={{ fontSize:13, fontWeight:700, color:"#f87171" }}>
+                      {late.length} cas en retard
+                    </span>
+                    <span style={{ fontSize:12, color:"#e57373", marginLeft:10 }}>
+                      {late.map(r => r.case_number).join(", ")}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
         {rows.length===0 && <div style={{ color:"#333", fontSize:13, textAlign:"center", paddingTop:40 }}>Aucun dossier en cours.</div>}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(360px, 1fr))", gap:10 }}>
           {(() => {

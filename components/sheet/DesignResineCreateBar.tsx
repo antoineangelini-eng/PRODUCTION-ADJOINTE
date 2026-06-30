@@ -26,19 +26,27 @@ export function DesignResineCreateBar({ prefill = "", onCreated, onSearch }: { p
   const [scanValue, setScanValue] = useState("");
   const [dateExp, setDateExp] = useState("");
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   async function handleCreate() {
     if (!caseNumber.trim() || !nature || creating) return;
     const cn = caseNumber.trim();
     setCreating(true);
+    setCreateError(null);
     try {
       const fd = new FormData();
       fd.set("case_number", cn);
       fd.set("nature", nature);
       if (dateExp) fd.set("date_expedition", dateExp);
       await createCaseAction(fd);
-    } catch {
-      // createCaseAction fait un redirect, on le gère ici
+    } catch (err: any) {
+      // redirect() de Next.js lance une erreur NEXT_REDIRECT — on l'ignore
+      // Les vraies erreurs sont affichées
+      const msg = err?.message ?? "";
+      if (!msg.includes("NEXT_REDIRECT") && !msg.includes("NEXT_NOT_FOUND")) {
+        console.error("[DR createCase]", err);
+        setCreateError(msg || "Erreur lors de la création");
+      }
     }
     setCaseNumber("");
     setNature("");
@@ -86,6 +94,12 @@ export function DesignResineCreateBar({ prefill = "", onCreated, onSearch }: { p
           }}>
             {creating ? "..." : "Créer"}
           </button>
+          {createError && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 6 }}>
+              <span style={{ fontSize: 11, color: "#f87171" }}>{createError}</span>
+              <button onClick={() => setCreateError(null)} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 14, padding: 0 }}>×</button>
+            </div>
+          )}
         </div>
       </div>
 

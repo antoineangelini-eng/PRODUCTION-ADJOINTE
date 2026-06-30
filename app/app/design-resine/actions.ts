@@ -126,6 +126,8 @@ export async function createCaseAction(formData: FormData) {
     .limit(1)
     .maybeSingle();
 
+  const nature = String(formData.get("nature") ?? "Provisoire Résine").trim() || "Provisoire Résine";
+
   if (existing?.id) {
     // Vérifier si le cas est dans le tableau actif DR
     const { data: activeAssign } = await supabase
@@ -152,10 +154,75 @@ export async function createCaseAction(formData: FormData) {
     if (doneAssign) {
       redirect(`/app/design-resine?msg=in_history&cn=${caseNumber}`);
     }
+
+    // ─ Le cas existe (ex: créé depuis DM) mais n'a pas encore d'assignment DR ─
+    // → On rattache le cas existant au secteur DR au lieu d'en créer un nouveau
+    const admin = createAdminClient();
+
+    // Créer l'assignment design_resine
+    await admin.from("case_assignments").insert({
+      case_id: existing.id,
+      sector_code: "design_resine",
+      status: "active",
+      activated_at: new Date().toISOString(),
+      created_by: (await supabase.auth.getUser()).data.user?.id ?? null,
+    });
+
+    // Créer la ligne sector_design_resine si elle n'existe pas
+    await admin.from("sector_design_resine").upsert(
+      { case_id: existing.id },
+      { onConflict: "case_id", ignoreDuplicates: true }
+    );
+
+    // Mettre à jour la nature du travail sur le cas
+    await admin.from("cases").update({ nature_du_travail: nature }).eq("id", existing.id);
+
+    // Appliquer les défauts DR
+    const drDefaults: Record<string, any> = { modele_a_realiser_ok: true };
+    if (nature === "Complet") {
+      drDefaults.type_de_dents = null;
+      drDefaults.base_type = null;
+    } else if (nature === "Deflex") {
+      drDefaults.type_de_dents = "Dents usinées";
+      drDefaults.base_type = "Usinée";
+    } else {
+      drDefaults.type_de_dents = "Dents usinées";
+    }
+    await admin.from("sector_design_resine").update(drDefaults).eq("case_id", existing.id);
+
+    // Créer les lignes secteur manquantes (pour le routage futur)
+    await admin.from("sector_usinage_resine").upsert({ case_id: existing.id }, { onConflict: "case_id", ignoreDuplicates: true });
+    await admin.from("sector_finition").upsert({ case_id: existing.id }, { onConflict: "case_id", ignoreDuplicates: true });
+
+    // Date d'expédition
+    const manualDate = String(formData.get("date_expedition") ?? "").trim();
+    if (manualDate) {
+      await supabase.rpc("rpc_update_case_expedition", {
+        p_case_id: existing.id,
+        p_date: manualDate,
+        p_manual: true,
+      });
+    } else if (!(await supabase.from("cases").select("date_expedition").eq("id", existing.id).single()).data?.date_expedition) {
+      // Pas de date d'expédition existante → calcul auto
+      const { data: wdConfig } = await supabase
+        .from("working_days_config")
+        .select("days")
+        .eq("nature", nature)
+        .single();
+      const nbDays = wdConfig?.days ?? 3;
+      const dateExp = toDateStr(addBusinessDays(new Date(), nbDays));
+      await supabase.rpc("rpc_update_case_expedition", {
+        p_case_id: existing.id,
+        p_date: dateExp,
+        p_manual: false,
+      });
+    }
+
+    revalidatePath("/app/design-resine");
+    redirect(`/app/design-resine?focus=${caseNumber}`);
   }
 
-  const nature = String(formData.get("nature") ?? "Provisoire Résine").trim() || "Provisoire Résine";
-
+  // ─ Cas complètement nouveau ─
   const { data, error } = await supabase.rpc("rpc_create_case_from_design_resine", {
     p_case_number: caseNumber,
     p_nature_du_travail: nature,

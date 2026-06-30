@@ -539,7 +539,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
                     ) : (
                       <div style={{position:"relative",display:"inline-flex",alignItems:"center",gap:4,justifyContent:"center"}}>
                         <select value={nat} onChange={e=>{const v=e.target.value;patchRow(String(row.id),null,"nature_du_travail",v);updateCaseNatureAction(String(row.id),v);}} style={{
-                          padding:"2px 6px",border:`1px solid ${(natureMeta?.color??"#fff")}44`,background:(natureMeta?.color??"#fff")+"18",color:natureMeta?.color??"#fff",
+                          padding:"2px 6px",border:`1px solid ${(natureMeta?.color??"#fff")}44`,backgroundColor:(natureMeta?.color??"#fff")+"18",color:natureMeta?.color??"#fff",
                           fontSize:11,cursor:"pointer",borderRadius:6,fontWeight:700,outline:"none",
                           WebkitAppearance:"none",MozAppearance:"none",appearance:"none",
                           backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23888'/%3E%3C/svg%3E")`,
