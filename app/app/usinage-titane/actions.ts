@@ -23,6 +23,7 @@ export type UsinageTitaneRow = {
     design_chassis_at: string | null;
     reception_metal_date: string | null;
     modele_a_faire_ok: boolean | null;
+    peek: boolean | null;
   } | null;
   sector_usinage_titane: {
     envoye_usinage: boolean | null;
@@ -44,6 +45,7 @@ export type UsinageTitaneRow = {
     mode_hb_brut: boolean | null;
     delai_j1_date: string | null;
     reception_metal_at: string | null;
+    teinte: string | null;
   } | null;
 };
 
@@ -55,7 +57,7 @@ export async function loadUsinageTitaneRowsAction(): Promise<UsinageTitaneRow[]>
       created_by, status, on_hold_at, on_hold_reason,
       cases:case_id (
         id, created_at, case_number, date_expedition, nature_du_travail, is_physical,
-        sector_design_metal ( design_chassis, design_chassis_at, reception_metal_date, modele_a_faire_ok ),
+        sector_design_metal ( design_chassis, design_chassis_at, reception_metal_date, modele_a_faire_ok, peek ),
         sector_usinage_titane (
           envoye_usinage, envoye_usinage_at,
           numero_lot_metal, numero_lot_metal_h, numero_lot_metal_b,
@@ -63,7 +65,7 @@ export async function loadUsinageTitaneRowsAction(): Promise<UsinageTitaneRow[]>
           nombre_brut, nombre_brut_h, nombre_brut_b,
           numero_calcul, numero_calcul_h, numero_calcul_b,
           mode_hb_machine, mode_hb_calcul, mode_hb_brut,
-          delai_j1_date, reception_metal_at
+          delai_j1_date, reception_metal_at, teinte
         )
       )
     `)
@@ -119,7 +121,7 @@ export async function saveUsinageTitaneCellAction(formData: FormData) {
     "numero_calcul", "numero_calcul_h", "numero_calcul_b",
     "nombre_brut", "nombre_brut_h", "nombre_brut_b",
     "mode_hb_machine", "mode_hb_calcul", "mode_hb_brut",
-    "delai_j1_date", "reception_metal_at",
+    "delai_j1_date", "reception_metal_at", "teinte",
   ];
 
   let patch: Record<string, any>;

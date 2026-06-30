@@ -71,6 +71,22 @@ export async function getMyResolvedCountAction(): Promise<number> {
   return count ?? 0;
 }
 
+export type UnseenResolved = { id: string; titre: string; statut: string; note_admin: string | null };
+
+export async function getMyUnseenResolvedAction(): Promise<UnseenResolved[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data } = await supabase
+    .from("feedback")
+    .select("id, titre, statut, note_admin")
+    .eq("user_id", user.id)
+    .eq("seen_by_user", false)
+    .in("statut", ["fait", "refuse"])
+    .order("created_at", { ascending: false });
+  return (data ?? []) as UnseenResolved[];
+}
+
 export async function markFeedbackSeenAction(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
   // Vérifier que l'utilisateur est connecté

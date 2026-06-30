@@ -151,6 +151,9 @@ function HistoryCard({ row, onReopen }: { row: DmHistoryRow; onReopen: () => voi
             <span style={{ display: "inline-flex", padding: "1px 6px", borderRadius: 4, fontSize: 9, fontWeight: 600, background: `${natColor}18`, border: `1px solid ${natColor}40`, color: natColor }}>
               {row.nature_du_travail}
             </span>
+            {row.peek && row.nature_du_travail === "Chassis Argoat" && (
+              <span style={{ display: "inline-flex", padding: "1px 5px", borderRadius: 3, fontSize: 8, fontWeight: 800, letterSpacing: "0.06em", background: "rgba(181,194,179,0.15)", border: "1px solid rgba(181,194,179,0.4)", color: "#b5c2b3" }}>PEEK</span>
+            )}
           </div>
           <span style={{ fontSize: 9, color: "#4ade80" }}>✓</span>
         </div>

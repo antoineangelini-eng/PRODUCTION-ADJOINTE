@@ -90,10 +90,18 @@ function getRowShadow(isChecked: boolean, isHovered: boolean, isActive: boolean)
 // addBusinessDays importée depuis @/lib/jours-feries
 
 // ── Sous-composants ──────────────────────────────────────────────
-function NatureBadge({ nature }: { nature: string | null }) {
+function NatureBadge({ nature, isPeek }: { nature: string | null; isPeek?: boolean }) {
   if (!nature) return <span style={{ color: "#555" }}>—</span>;
-  const meta = NATURE_META[nature] ?? { color: "#aaa" };
-  return <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: meta.color + "18", border: `1px solid ${meta.color}50`, color: meta.color }}>{nature}</span>;
+  const baseColor = NATURE_META[nature]?.color ?? "#aaa";
+  const color = (isPeek && nature === "Chassis Argoat") ? "#b5c2b3" : baseColor;
+  return (
+    <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: color + "18", border: `1px solid ${color}50`, color }}>{nature}</span>
+      {isPeek && nature === "Chassis Argoat" && (
+        <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: "0.06em", padding: "0px 5px", borderRadius: 3, background: "rgba(181,194,179,0.15)", border: "1px solid rgba(181,194,179,0.4)", color: "#b5c2b3" }}>PEEK</span>
+      )}
+    </div>
+  );
 }
 
 function BoolReadOnly({ value }: { value: boolean | null }) {
@@ -700,6 +708,7 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
 <th style={{ ...thEdit, paddingBottom: 10 }}>Machine</th>
 <th style={{ ...thEdit, paddingBottom: 10 }}>N° calcul</th>
 <th style={{ ...thEdit, paddingBottom: 10 }}>Brut</th>
+              <th style={{ ...thEdit, paddingBottom: 10 }}>Teinte</th>
               <th style={{ ...thEdit, paddingBottom: 10 }}>Réception métal</th>
               <th style={{ ...thRead, paddingBottom: 10 }}>Modèle à faire</th>
               <th style={{ ...thEdit, paddingBottom: 10 }}>Sél.</th>
@@ -709,14 +718,15 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
 
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={17} style={{ padding: 32, color: "#333", fontSize: 13, textAlign: "center" }}>Aucun dossier en cours.</td></tr>
+              <tr><td colSpan={18} style={{ padding: 32, color: "#333", fontSize: 13, textAlign: "center" }}>Aucun dossier en cours.</td></tr>
             )}
 
             {sortedRows.map(row => {
               const ut = (row as any).sector_usinage_titane ?? {};
               const dm = (row as any).sector_design_metal ?? {};
               const nat      = row.nature_du_travail ?? "";
-              const natColor = NATURE_META[nat]?.color ?? "#666";
+              const isPeek   = Boolean(dm.peek) && nat === "Chassis Argoat";
+              const natColor = isPeek ? "#b5c2b3" : (NATURE_META[nat]?.color ?? "#666");
               const isChecked = checkedIds.has(String(row.id));
               const isHovered = hoveredId === String(row.id);
               const isActive  = activeRowId === String(row.id);
@@ -764,7 +774,7 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
                   {(() => { const raw = row.date_expedition?.slice(0,10) ?? ""; const today = new Date().toISOString().split("T")[0]; const expColor = raw && raw < today ? "#f87171" : raw && raw === today ? "#f59e0b" : undefined; return (
                   <td style={tdCard}><span style={{ color: expColor, fontWeight: expColor ? 700 : undefined }}>{row.date_expedition ? new Date(row.date_expedition).toLocaleDateString("fr-FR") : "—"}</span></td>
                   ); })()}
-                  <td style={tdCard}><NatureBadge nature={nat} /></td>
+                  <td style={tdCard}><NatureBadge nature={nat} isPeek={isPeek} /></td>
                   <td style={tdCard}><BoolReadOnly value={dm.design_chassis ?? null} /></td>
                   <td style={tdCard}><DateTimeCell value={dm.design_chassis_at ?? null} /></td>
 
@@ -844,6 +854,11 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
                       width={80}
                     />}
                   />
+
+                  {/* Teinte (valeur initiale copiée depuis DM, éditable ici) */}
+                  <td style={tdCard} onClick={e => e.stopPropagation()}>
+                    <InlineTextInput value={ut.teinte ?? null} width={100} onSave={v => { patchRow(String(row.id), "ut", "teinte", v || null); saveCell(String(row.id), "teinte", v || null); }} />
+                  </td>
 
                   {/* Réception métal */}
                   {(() => { const isReceptionLate = rawDate && row.date_expedition?.slice(0,10) && rawDate > row.date_expedition.slice(0,10); return (

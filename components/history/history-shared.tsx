@@ -145,14 +145,16 @@ export function HistoryFilters({ count, natFilter, setNatFilter, yearFilter, set
   );
 }
 
-export function CardShell({ row, accentColor, open, onToggle, onReopen, children, summaryExtra }: {
+export function CardShell({ row, accentColor, open, onToggle, onReopen, children, summaryExtra, afterNature, natColorOverride }: {
   row: { case_number: string | null; nature_du_travail: string | null; created_at: string | null; date_expedition: string | null; completed_at: string | null; is_physical?: boolean; validated_by_name?: string | null; sent_by_name?: string | null };
   accentColor: string; open: boolean;
   onToggle: () => void; onReopen: (e: React.MouseEvent) => void;
   children?: React.ReactNode;
   summaryExtra?: React.ReactNode;
+  afterNature?: React.ReactNode;
+  natColorOverride?: string;
 }) {
-  const natColor = NATURE_META[row.nature_du_travail ?? ""]?.color ?? "#555";
+  const natColor = natColorOverride ?? NATURE_META[row.nature_du_travail ?? ""]?.color ?? "#555";
   return (
     <div onClick={onToggle} style={{ background: "#1c1c1c", border: `1px solid ${open ? natColor + "60" : "#272727"}`, borderRadius: 10, overflow: "hidden", transition: "border-color 200ms", display: "flex", flexDirection: "column", cursor: "pointer" }}>
       <div style={{ padding: "10px 12px", borderTop: `3px solid ${natColor}`, background: open ? "rgba(255,255,255,0.03)" : "transparent", transition: "background 200ms" }}>
@@ -163,6 +165,7 @@ export function CardShell({ row, accentColor, open, onToggle, onReopen, children
             <span style={{ fontSize: 14, fontWeight: 700, color: "white" }}>{row.case_number}</span>
             {row.is_physical && <PhysicalBadge />}
             <span style={{ display: "inline-flex", padding: "1px 6px", borderRadius: 4, fontSize: 9, fontWeight: 600, background: `${natColor}18`, border: `1px solid ${natColor}40`, color: natColor }}>{row.nature_du_travail}</span>
+            {afterNature}
           </div>
           <span style={{ fontSize: 9, color: "#4ade80" }}>✓</span>
         </div>

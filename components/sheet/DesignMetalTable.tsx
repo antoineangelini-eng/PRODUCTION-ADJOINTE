@@ -929,34 +929,56 @@ export function DesignMetalTable({
                     }
 
                     if (col.key === "nature_du_travail") {
+                      const isPeek = Boolean(dm.peek);
                       const c = NATURE_META[nat]?.color ?? "#888";
                       return (
                         <td key={col.key} style={tdCard}>
-                          <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
-                            <select
-                              value={nat}
-                              onChange={(e) => saveCaseInfo(String(row.id), "nature_du_travail", e.target.value)}
-                              onClick={(e) => e.stopPropagation()}
-                              style={{
-                                padding: "3px 22px 3px 8px",
-                                fontSize: 11,
-                                fontWeight: 700,
-                                background: c + "15",
-                                border: `1px solid ${c}50`,
-                                color: c,
-                                borderRadius: 6,
-                                outline: "none",
-                                cursor: "pointer",
-                                appearance: "none",
-                                WebkitAppearance: "none",
-                                minWidth: 120,
-                              }}
-                            >
-                              <option value="Chassis Argoat" style={{ background: "#111", color: "#e07070" }}>Chassis Argoat</option>
-                              <option value="Chassis Dent All" style={{ background: "#111", color: "#4ade80" }}>Chassis Dent All</option>
-                              <option value="Définitif Résine" style={{ background: "#111", color: "#c4a882" }}>Définitif Résine</option>
-                            </select>
-                            <svg viewBox="0 0 10 6" width="9" height="9" style={{ position: "absolute", right: 7, pointerEvents: "none", opacity: 0.7 }} fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1l4 4 4-4" /></svg>
+                          <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                            <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+                              <select
+                                value={nat}
+                                onChange={(e) => saveCaseInfo(String(row.id), "nature_du_travail", e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                style={{
+                                  padding: "3px 22px 3px 8px",
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  background: c + "15",
+                                  border: `1px solid ${c}50`,
+                                  color: c,
+                                  borderRadius: 6,
+                                  outline: "none",
+                                  cursor: "pointer",
+                                  appearance: "none",
+                                  WebkitAppearance: "none",
+                                  minWidth: 120,
+                                }}
+                              >
+                                <option value="Chassis Argoat" style={{ background: "#111", color: "#e07070" }}>Chassis Argoat</option>
+                                <option value="Chassis Dent All" style={{ background: "#111", color: "#4ade80" }}>Chassis Dent All</option>
+                                <option value="Définitif Résine" style={{ background: "#111", color: "#c4a882" }}>Définitif Résine</option>
+                              </select>
+                              <svg viewBox="0 0 10 6" width="9" height="9" style={{ position: "absolute", right: 7, pointerEvents: "none", opacity: 0.7 }} fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M1 1l4 4 4-4" /></svg>
+                            </div>
+                            {nat === "Chassis Argoat" && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); saveBool(String(row.id), "peek", isPeek); }}
+                                style={{
+                                  padding: "1px 8px",
+                                  fontSize: 9,
+                                  fontWeight: 800,
+                                  letterSpacing: "0.08em",
+                                  borderRadius: 4,
+                                  cursor: "pointer",
+                                  transition: "all 150ms",
+                                  background: isPeek ? "rgba(181,194,179,0.18)" : "transparent",
+                                  border: isPeek ? "1px solid rgba(181,194,179,0.5)" : "1px solid #333",
+                                  color: isPeek ? "#b5c2b3" : "#555",
+                                }}
+                              >
+                                PEEK
+                              </button>
+                            )}
                           </div>
                         </td>
                       );

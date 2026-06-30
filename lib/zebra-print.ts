@@ -167,9 +167,18 @@ export function buildSimpleZPL(
         if (machineVal) cols.push({ label: "Machine", val: machineVal });
         if (calculVal)  cols.push({ label: "N. Calcul", val: calculVal });
         if (brutVal)    cols.push({ label: "Brut", val: brutVal });
+        const hasHB = cols.some(c => c.val.includes(" / "));
         const w = Math.floor(398 / cols.length);
         return cols.flatMap((c, i) => {
           const x = 4 + i * w;
+          if (hasHB) {
+            // Mode H/B : police 14, 2 lignes, séparer sur "\&" (saut de ligne ZPL)
+            const dv = c.val.includes(" / ") ? c.val.split(" / ").join("\\&") : c.val;
+            return [
+              `^FO${x},63^A0N,12,12^FB${w},1,0,C^FR^FD${c.label}^FS`,
+              `^FO${x},77^A0N,14,14^FB${w},2,0,C^FR^FD${dv}^FS`,
+            ];
+          }
           return [
             `^FO${x},63^A0N,12,12^FB${w},1,0,C^FR^FD${c.label}^FS`,
             `^FO${x},79^A0N,24,24^FB${w},1,0,C^FR^FD${c.val}^FS`,

@@ -22,6 +22,7 @@ export type DmHistoryRow = {
   type_de_dents: string | null;
   modele_a_faire_ok: boolean | null;
   teintes_associees: string | null;
+  peek: boolean | null;
 };
 
 export async function loadDmHistoryAction(): Promise<DmHistoryRow[]> {
@@ -37,7 +38,7 @@ export async function loadDmHistoryAction(): Promise<DmHistoryRow[]> {
         sector_design_metal (
           design_chassis, design_chassis_at, dentall_case_number,
           envoye_dentall, reception_metal_date, type_de_dents,
-          modele_a_faire_ok, teintes_associees
+          modele_a_faire_ok, teintes_associees, peek
         )
       )
     `)
@@ -69,6 +70,7 @@ export async function loadDmHistoryAction(): Promise<DmHistoryRow[]> {
       type_de_dents:       dm.type_de_dents ?? null,
       modele_a_faire_ok:   dm.modele_a_faire_ok ?? null,
       teintes_associees:   dm.teintes_associees ?? null,
+      peek:                dm.peek ?? null,
     };
   });
 }

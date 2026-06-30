@@ -4,8 +4,10 @@ import {
   submitFeedbackAction,
   loadMyFeedbackAction,
   getMyResolvedCountAction,
+  getMyUnseenResolvedAction,
   markFeedbackSeenAction,
   type FeedbackRow,
+  type UnseenResolved,
 } from "@/app/app/feedback-actions";
 
 const PRIO_META: Record<string, { label: string; color: string }> = {
@@ -82,6 +84,8 @@ export function FeedbackButton() {
   const [allFeedback, setAllFeedback] = useState<FeedbackRow[]>([]);
   const [loadingFb, setLoadingFb]     = useState(false);
   const [resolvedCount, setResolvedCount] = useState(0);
+  const [toasts, setToasts] = useState<UnseenResolved[]>([]);
+  const shownToastIdsRef = useRef<Set<string>>(new Set());
 
   // IDs des tickets résolu non-vus au moment de l'ouverture de la modale.
   const unseenIdsRef = useRef<string[]>([]);
@@ -90,19 +94,33 @@ export function FeedbackButton() {
   // Flag : on a déjà envoyé le markSeen pour cette session modale
   const markedSeenRef = useRef(false);
 
-  // ── Polling notification toutes les 30s (indépendant de tout) ──
+  // ── Polling notification toutes les 30s — récupère les détails pour les toasts ──
   useEffect(() => {
     let active = true;
     const check = async () => {
       try {
-        const c = await getMyResolvedCountAction();
-        if (active) setResolvedCount(c);
+        const unseen = await getMyUnseenResolvedAction();
+        if (!active) return;
+        setResolvedCount(unseen.length);
+        const fresh = unseen.filter(u => !shownToastIdsRef.current.has(u.id));
+        if (fresh.length > 0) {
+          fresh.forEach(u => shownToastIdsRef.current.add(u.id));
+          setToasts(prev => [...prev, ...fresh]);
+        }
       } catch {}
     };
     check();
     const interval = setInterval(check, 30_000);
     return () => { active = false; clearInterval(interval); };
   }, []);
+
+  function dismissToast(id: string) {
+    setToasts(prev => prev.filter(t => t.id !== id));
+    shownToastIdsRef.current.delete(id);
+    markFeedbackSeenAction([id])
+      .then(() => setResolvedCount(prev => Math.max(0, prev - 1)))
+      .catch(() => {});
+  }
 
   // ── Charger les feedbacks à l'ouverture de la modale (une seule fois) ──
   useEffect(() => {
@@ -213,7 +231,6 @@ export function FeedbackButton() {
           </span>
         )}
       </button>
-      <style>{`@keyframes pulse-notif { 0%,100%{box-shadow:0 0 6px rgba(74,222,128,0.4)} 50%{box-shadow:0 0 12px rgba(74,222,128,0.7)} }`}</style>
 
       {open && (
         <div onClick={handleClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -325,6 +342,53 @@ export function FeedbackButton() {
           </div>
         </div>
       )}
+
+      {/* Toasts de notification — tickets résolus */}
+      {toasts.length > 0 && (
+        <div style={{ position: "fixed", bottom: 20, right: 20, zIndex: 9999, display: "flex", flexDirection: "column", gap: 10, maxWidth: 360 }}>
+          {toasts.map(t => {
+            const isFait = t.statut === "fait";
+            const accentColor = isFait ? "#4ade80" : "#f87171";
+            const statusLabel = isFait ? "Validé" : "Refusé";
+            const statusIcon = isFait ? "✅" : "✕";
+            return (
+              <div key={t.id} style={{
+                background: "#1c1c1c", border: `1px solid ${accentColor}40`, borderLeft: `3px solid ${accentColor}`,
+                borderRadius: 10, padding: "14px 16px", boxShadow: `0 4px 20px rgba(0,0,0,0.5), 0 0 8px ${accentColor}15`,
+                animation: "toast-slide-in 300ms ease-out",
+              }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: accentColor + "18", border: `1px solid ${accentColor}40`, color: accentColor }}>
+                        {statusIcon} {statusLabel}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "white", marginBottom: 4 }}>{t.titre}</div>
+                    {t.note_admin && (
+                      <div style={{ fontSize: 11, color: "#a5b0d8", lineHeight: 1.4, background: "rgba(129,140,248,0.06)", border: "1px solid rgba(129,140,248,0.15)", borderRadius: 5, padding: "6px 8px", marginTop: 6 }}>
+                        {t.note_admin}
+                      </div>
+                    )}
+                  </div>
+                  <button onClick={() => dismissToast(t.id)}
+                    style={{ background: "transparent", border: "none", color: "#555", fontSize: 16, cursor: "pointer", padding: "0 2px", lineHeight: 1, flexShrink: 0 }}
+                    onMouseEnter={e => { e.currentTarget.style.color = "#ccc"; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = "#555"; }}
+                    title="Fermer"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <style>{`
+        @keyframes pulse-notif { 0%,100%{box-shadow:0 0 6px rgba(74,222,128,0.4)} 50%{box-shadow:0 0 12px rgba(74,222,128,0.7)} }
+        @keyframes toast-slide-in { from{opacity:0;transform:translateX(40px)} to{opacity:1;transform:translateX(0)} }
+      `}</style>
     </>
   );
 }

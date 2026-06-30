@@ -46,6 +46,8 @@ function UtCard({ row, onReopen }: { row: UtHistoryRow; onReopen: () => void }) 
       row={row} accentColor="#f59e0b" open={open}
       onToggle={() => setOpen(o => !o)}
       onReopen={e => { e.stopPropagation(); onReopen(); }}
+      natColorOverride={row.peek && row.nature_du_travail === "Chassis Argoat" ? "#b5c2b3" : undefined}
+      afterNature={row.peek ? <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: "0.06em", padding: "1px 5px", borderRadius: 3, background: "rgba(181,194,179,0.15)", border: "1px solid rgba(181,194,179,0.4)", color: "#b5c2b3" }}>PEEK</span> : undefined}
       summaryExtra={
         <div style={{ display: "flex", flexDirection: "column" as const, gap: 4 }}>
           {row.envoye_usinage_at && (
@@ -66,6 +68,12 @@ function UtCard({ row, onReopen }: { row: UtHistoryRow; onReopen: () => void }) 
         <div style={{ flex: 1, minWidth: 110 }}><Field label="Modèle à faire"><Bool val={row.modele_a_faire_ok} /></Field></div>
         <div style={{ flex: 1, minWidth: 110 }}><Field label="Design châssis"><Bool val={row.design_chassis} /></Field></div>
         <div style={{ flex: 1, minWidth: 140 }}><Field label="Date design châssis"><Txt val={fmtDate(row.design_chassis_at)} /></Field></div>
+      </div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 110 }}><Field label="Teinte"><Txt val={row.teinte} /></Field></div>
+        {row.peek && (
+          <div style={{ flex: 1, minWidth: 80 }}><Field label="Type châssis"><span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.06em", padding: "1px 6px", borderRadius: 3, background: "rgba(181,194,179,0.15)", border: "1px solid rgba(181,194,179,0.4)", color: "#b5c2b3" }}>PEEK</span></Field></div>
+        )}
       </div>
       {/* Machine / N° calcul / Brut — toujours affichés, H & B distincts */}
       <HBRow label="Machine"   simple={row.machine_ut}    h={row.machine_ut_h}    b={row.machine_ut_b} />

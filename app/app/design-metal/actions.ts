@@ -44,6 +44,7 @@ export type DesignMetalRow = {
     type_de_dents: string | null;
     modele_a_faire_ok: boolean | null;
     teintes_associees: string | null;
+    peek: boolean | null;
   } | null;
 };
 
@@ -58,7 +59,7 @@ export async function loadDesignMetalRowsAction(): Promise<DesignMetalRow[]> {
         sector_design_metal (
           design_chassis, design_chassis_at, dentall_case_number,
           envoye_dentall, reception_metal_date, type_de_dents,
-          modele_a_faire_ok, teintes_associees
+          modele_a_faire_ok, teintes_associees, peek
         )
       )
     `)

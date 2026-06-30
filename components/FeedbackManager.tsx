@@ -42,7 +42,7 @@ export function FeedbackManager({ onCountChange }: { onCountChange?: (n: number)
   const [rows, setRows]           = useState<FeedbackRow[]>([]);
   const [loading, setLoading]     = useState(true);
   const [viewMode, setViewMode]   = useState<ViewMode>("actifs");
-  const [editId, setEditId]       = useState<string | null>(null);
+  const [editRow, setEditRow]     = useState<FeedbackRow | null>(null);
   const [note, setNote]           = useState("");
   const [statut, setStatut]       = useState<FeedbackRow["statut"]>("ouvert");
   const [saving, setSaving]       = useState(false);
@@ -70,15 +70,17 @@ export function FeedbackManager({ onCountChange }: { onCountChange?: (n: number)
   const progressPct = total > 0 ? Math.round((resolved / total) * 100) : 0;
 
   function openEdit(row: FeedbackRow) {
-    setEditId(row.id); setNote(row.note_admin ?? ""); setStatut(row.statut);
+    setEditRow(row); setNote(row.note_admin ?? ""); setStatut(row.statut);
   }
 
+  function closeEdit() { setEditRow(null); }
+
   async function save() {
-    if (!editId) return;
+    if (!editRow) return;
     setSaving(true);
-    await updateFeedbackAction(editId, statut, note.trim() || null);
+    await updateFeedbackAction(editRow.id, statut, note.trim() || null);
     setSaving(false);
-    setEditId(null);
+    setEditRow(null);
     load();
   }
 
@@ -146,7 +148,7 @@ export function FeedbackManager({ onCountChange }: { onCountChange?: (n: number)
       </div>
 
       {/* Liste */}
-      <div style={{ overflowY: "auto", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 6, paddingBottom: 16 }}>
+      <div style={{ overflowY: "auto", flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 18, paddingBottom: 16 }}>
         {loading ? <div style={{ padding: 32, color: "#555", fontSize: 13 }}>Chargement...</div>
           : displayed.length === 0 ? (
             <div style={{ padding: 40, textAlign: "center" }}>
@@ -159,81 +161,109 @@ export function FeedbackManager({ onCountChange }: { onCountChange?: (n: number)
           : displayed.map(row => {
             const sm = STATUT_META[row.statut];
             const pm = PRIO_META[row.priorite];
-            const isEdit = editId === row.id;
             return (
               <div key={row.id} style={{
-                background: "#1c1c1c", border: `1px solid ${isEdit ? "#333" : "#232323"}`, borderRadius: 10, overflow: "hidden",
+                background: "#1c1c1c", border: "1px solid #232323", borderRadius: 10,
                 opacity: row.statut === "refuse" ? 0.6 : 1,
                 transition: "opacity 150ms",
+                borderLeft: `3px solid ${pm.color}`,
               }}>
-                {/* En-tête */}
-                <div style={{ padding: "10px 14px", display: "flex", alignItems: "flex-start", gap: 10 }}>
-                  {/* Bande de priorité */}
-                  <div style={{
-                    width: 3, alignSelf: "stretch", borderRadius: 2, flexShrink: 0,
-                    background: pm.color,
-                  }} />
-
-                  {/* Contenu */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{row.titre}</span>
-                      {row.sector && <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 3, background: "#1e1e1e", border: "1px solid #2a2a2a", color: "#666" }}>{SECTOR_LABELS[row.sector] ?? row.sector}</span>}
-                    </div>
-                    <div style={{ fontSize: 12, color: "#888", marginBottom: 6, lineHeight: 1.5 }}>{row.description}</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 10, color: "#444" }}>
-                      <span style={{ color: "#aaa", fontWeight: 600 }}>{row.display_name ?? row.email}</span>
-                      <span style={{ color: "#2a2a2a" }}>·</span>
-                      <span title={new Date(row.created_at).toLocaleString("fr-FR")}>{relativeDate(row.created_at)}</span>
-                    </div>
-                    {row.note_admin && !isEdit && (
-                      <div style={{ marginTop: 8, fontSize: 11, color: "#7c8196", background: "rgba(129,140,248,0.06)", border: "1px solid rgba(129,140,248,0.15)", borderRadius: 6, padding: "6px 10px", lineHeight: 1.4 }}>
-                        Note admin : {row.note_admin}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Statut + bouton */}
-                  <div style={{ display: "flex", flexDirection: "column" as const, alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: sm.color + "15", border: `1px solid ${sm.color}35`, color: sm.color }}>
+                <div style={{ padding: "14px 18px" }}>
+                  {/* Ligne 1 : titre + secteur + statut + bouton traiter */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "white" }}>{row.titre}</span>
+                    {row.sector && <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 3, background: "#1e1e1e", border: "1px solid #2a2a2a", color: "#666" }}>{SECTOR_LABELS[row.sector] ?? row.sector}</span>}
+                    <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 700, padding: "4px 12px", borderRadius: 20, background: sm.color + "15", border: `1px solid ${sm.color}35`, color: sm.color, flexShrink: 0 }}>
                       {sm.icon} {sm.label}
                     </span>
-                    <button onClick={() => isEdit ? setEditId(null) : openEdit(row)}
-                      style={{ fontSize: 10, padding: "3px 10px", borderRadius: 5, border: "1px solid #2a2a2a", background: "#1a1a1a", color: "#888", cursor: "pointer", transition: "all 150ms" }}
-                      onMouseEnter={e => { e.currentTarget.style.borderColor = "#444"; e.currentTarget.style.color = "#ccc"; }}
-                      onMouseLeave={e => { e.currentTarget.style.borderColor = "#2a2a2a"; e.currentTarget.style.color = "#888"; }}
+                    <button onClick={() => openEdit(row)}
+                      style={{ fontSize: 11, padding: "6px 16px", borderRadius: 6, border: "1px solid rgba(129,140,248,0.5)", background: "rgba(129,140,248,0.1)", color: "#818cf8", fontWeight: 600, cursor: "pointer", transition: "all 150ms", flexShrink: 0 }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "rgba(129,140,248,0.2)"; e.currentTarget.style.borderColor = "rgba(129,140,248,0.7)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "rgba(129,140,248,0.1)"; e.currentTarget.style.borderColor = "rgba(129,140,248,0.5)"; }}
                     >
-                      {isEdit ? "Annuler" : "Traiter"}
+                      Traiter
                     </button>
                   </div>
-                </div>
 
-                {/* Panneau traitement */}
-                {isEdit && (
-                  <div style={{ background: "#141414", borderTop: "1px solid #1e1e1e", padding: "12px 14px" }}>
-                    <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-                      {Object.entries(STATUT_META).map(([key, meta]) => (
-                        <button key={key} onClick={() => setStatut(key as any)}
-                          style={{ flex: 1, padding: "6px 0", borderRadius: 6, cursor: "pointer", fontSize: 11, fontWeight: 600, border: `1px solid ${statut === key ? meta.color + "80" : "#2a2a2a"}`, background: statut === key ? meta.color + "15" : "transparent", color: statut === key ? meta.color : "#555", transition: "all 150ms" }}>
-                          {meta.icon} {meta.label}
-                        </button>
-                      ))}
-                    </div>
-                    <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Note pour l'utilisateur (optionnel)..." rows={2}
-                      style={{ width: "100%", background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 6, color: "white", fontSize: 11, padding: "7px 10px", outline: "none", resize: "none" as const, boxSizing: "border-box" as const, fontFamily: "inherit", marginBottom: 8 }} />
-                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                      <button onClick={save} disabled={saving}
-                        style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.4)", color: "#4ade80", padding: "6px 18px", borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                        {saving ? "..." : "Enregistrer"}
-                      </button>
-                    </div>
+                  {/* Description */}
+                  <div style={{ fontSize: 12, color: "#888", marginBottom: 8, lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}>{row.description}</div>
+
+                  {/* Auteur + date */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 10, color: "#444" }}>
+                    <span style={{ color: "#aaa", fontWeight: 600 }}>{row.display_name ?? row.email}</span>
+                    <span style={{ color: "#2a2a2a" }}>·</span>
+                    <span title={new Date(row.created_at).toLocaleString("fr-FR")}>{relativeDate(row.created_at)}</span>
                   </div>
-                )}
+                  {row.note_admin && (
+                    <div style={{ marginTop: 10, fontSize: 11, color: "#7c8196", background: "rgba(129,140,248,0.06)", border: "1px solid rgba(129,140,248,0.15)", borderRadius: 6, padding: "8px 12px", lineHeight: 1.4 }}>
+                      Note admin : {row.note_admin}
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })
         }
       </div>
+
+      {/* Modale de traitement */}
+      {editRow && (
+        <div onClick={closeEdit} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#1c1c1c", border: "1px solid #333", borderRadius: 12, padding: 24, width: 440, maxWidth: "90vw" }}>
+
+            {/* Info du ticket */}
+            <div style={{ background: "#141414", border: "1px solid #222", borderRadius: 8, padding: "12px 16px", marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: "white" }}>{editRow.titre}</span>
+                {editRow.sector && <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 3, background: "#1e1e1e", border: "1px solid #2a2a2a", color: "#666" }}>{SECTOR_LABELS[editRow.sector] ?? editRow.sector}</span>}
+              </div>
+              <div style={{ fontSize: 12, color: "#888", lineHeight: 1.6, marginBottom: 8 }}>{editRow.description}</div>
+              <div style={{ fontSize: 10, color: "#555" }}>
+                {editRow.display_name ?? editRow.email} · {relativeDate(editRow.created_at)}
+              </div>
+            </div>
+
+            {/* Choix du statut */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "#666", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 8 }}>Statut</div>
+              <div style={{ display: "flex", gap: 6 }}>
+                {Object.entries(STATUT_META).map(([key, meta]) => (
+                  <button key={key} onClick={() => setStatut(key as any)}
+                    style={{
+                      flex: 1, padding: "10px 0", borderRadius: 7, cursor: "pointer",
+                      fontSize: 12, fontWeight: 700,
+                      border: `1px solid ${statut === key ? meta.color + "80" : "#2a2a2a"}`,
+                      background: statut === key ? meta.color + "18" : "transparent",
+                      color: statut === key ? meta.color : "#555",
+                      transition: "all 150ms",
+                    }}>
+                    {meta.icon} {meta.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Note admin */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "#666", textTransform: "uppercase" as const, letterSpacing: "0.06em", marginBottom: 8 }}>Note pour l{"'"}utilisateur</div>
+              <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Optionnel..." rows={2}
+                style={{ width: "100%", background: "#141414", border: "1px solid #2a2a2a", borderRadius: 7, color: "white", fontSize: 12, padding: "10px 12px", outline: "none", resize: "vertical" as const, boxSizing: "border-box" as const, fontFamily: "inherit" }} />
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={closeEdit}
+                style={{ background: "#1e1e1e", border: "1px solid #2e2e2e", color: "#ccc", padding: "8px 16px", borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                Annuler
+              </button>
+              <button onClick={save} disabled={saving}
+                style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.4)", color: "#4ade80", padding: "8px 22px", borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
+                {saving ? "..." : "Enregistrer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
