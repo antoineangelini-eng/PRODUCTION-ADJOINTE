@@ -14,6 +14,7 @@ export type DesignResineRow = {
   nature_du_travail: string | null;
   is_physical: boolean | null;
   created_by: string | null;
+  _updated_by: string | null;
   sent_by_name: string | null;
   sector_design_metal: {
     design_chassis: boolean | null;
@@ -47,7 +48,7 @@ export async function loadDesignResineRowsAction(): Promise<DesignResineRow[]> {
   const { data, error } = await supabase
     .from("case_assignments")
     .select(`
-      created_by, status, on_hold_at, on_hold_reason,
+      created_by, updated_by, status, on_hold_at, on_hold_reason,
       cases:case_id (
         id, created_at, case_number, date_expedition, nature_du_travail, is_physical,
         sector_design_metal ( design_chassis, design_chassis_at, type_de_dents, teintes_associees, modele_a_faire_ok ),
@@ -65,7 +66,7 @@ export async function loadDesignResineRowsAction(): Promise<DesignResineRow[]> {
 
   if (error) throw new Error(error.message);
   const rows = ((data ?? []) as any[])
-    .map((r: any) => r.cases ? { ...r.cases, created_by: r.created_by ?? null, _on_hold: r.status === "on_hold", _on_hold_at: r.on_hold_at ?? null, _on_hold_reason: r.on_hold_reason ?? null } : null)
+    .map((r: any) => r.cases ? { ...r.cases, created_by: r.created_by ?? null, _updated_by: r.updated_by ?? null, _on_hold: r.status === "on_hold", _on_hold_at: r.on_hold_at ?? null, _on_hold_reason: r.on_hold_reason ?? null } : null)
     .filter(Boolean);
 
   // Résoudre "Envoyé par" = qui a validé le cas en DM (secteur précédent)

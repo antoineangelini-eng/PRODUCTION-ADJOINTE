@@ -177,6 +177,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
   const [voletModalCaseNumber, setVoletModalCaseNumber] = useState<string|null>(null);
   const [voletCreating, setVoletCreating] = useState(false);
   const [reasonTooltip,setReasonTooltip]=useState<{id:string;rect:{top:number;left:number;width:number;bottom:number}}|null>(null);
+  const [mesCas,setMesCas]=useState(false);
   const [commentModalId, setCommentModalId] = useState<string|null>(null);
   const [commentDraft, setCommentDraft] = useState("");
 
@@ -253,11 +254,12 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
   }, [rows]);
 
   const sortedRows = useMemo(()=>{
+    const base = mesCas ? rows.filter(r => (r as any)._updated_by === currentUserId) : rows;
     const isDrOrigin = (r: DesignResineRow) => !(r as any).sector_design_metal;
-    const drCreated = rows.filter(isDrOrigin).sort((a, b) =>
+    const drCreated = base.filter(isDrOrigin).sort((a, b) =>
       (b.created_at ?? "").localeCompare(a.created_at ?? "")
     );
-    const fromDm = rows.filter(r => !isDrOrigin(r)).sort((a, b) =>
+    const fromDm = base.filter(r => !isDrOrigin(r)).sort((a, b) =>
       (a.date_expedition ?? "9999").localeCompare(b.date_expedition ?? "9999")
     );
     // 1) Cas créés par DR en premier (standalone = pas liés à un cas DM)
@@ -286,7 +288,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
       const bH = (b as any)._on_hold ? 1 : 0;
       return aH - bH;
     });
-  }, [rows]);
+  }, [rows, mesCas, currentUserId]);
   useEffect(()=>{
     if(!focusId||loading)return;
     const found=rows.find(r=>r.case_number===focusId);
@@ -422,6 +424,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,position:"sticky",top:0,zIndex:3,background:"#0b0b0b",padding:"0 20px 8px 20px"}}>
         <div style={{minHeight:36,display:"flex",alignItems:"center",gap:10}}>
           {!searchNotFound&&<div style={{fontSize:12,color:"white",padding:"4px 10px",background:"transparent",border:"1px solid rgba(255,255,255,0.2)",borderRadius:6}}>{sortedRows.length} dossier{sortedRows.length>1?"s":""}</div>}
+          <button onClick={()=>setMesCas(p=>!p)} style={{padding:"4px 12px",borderRadius:20,fontSize:11,fontWeight:700,cursor:"pointer",border:mesCas?"1px solid rgba(129,140,248,0.6)":"1px solid #444",background:mesCas?"rgba(129,140,248,0.12)":"rgba(255,255,255,0.04)",color:mesCas?"#818cf8":"#aaa",transition:"all 150ms"}}>{mesCas?"✦ Mes cas":"Mes cas"}</button>
           {searchNotFound&&focusId&&<div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 12px",background:"#1a0f0f",border:"1px solid rgba(239,68,68,0.4)",borderRadius:6}}><span style={{fontSize:12,color:"#f87171"}}>Cas <strong style={{color:"white"}}>"{focusId}"</strong> introuvable</span><button onClick={()=>setSearchNotFound(false)} style={{background:"none",border:"none",color:"#555",cursor:"pointer",fontSize:14}}>×</button></div>}
           {batchResult?.okIds.length?<div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:6}}><span style={{color:"white",fontSize:13}}>✓</span><span style={{color:"white",fontSize:12,fontWeight:600}}>{batchResult.okIds.length} envoyé{batchResult.okIds.length>1?"s":""}</span></div>:null}
           {batchResult?.errors.length?(

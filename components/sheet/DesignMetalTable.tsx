@@ -294,6 +294,7 @@ export function DesignMetalTable({
   const [holdBusy, setHoldBusy] = useState<string | null>(null);
   const [holdModalCaseId, setHoldModalCaseId] = useState<string | null>(null);
   const [reasonTooltip, setReasonTooltip] = useState<{ id: string; rect: { top: number; left: number; width: number; bottom: number } } | null>(null);
+  const [mesCas, setMesCas] = useState(false);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) {
@@ -589,6 +590,8 @@ export function DesignMetalTable({
       </div>
     );
 
+  const displayedRows = mesCas ? rows.filter(r => (r as any)._updated_by === currentUserId) : rows;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0, background: "#111" }}>
       <style dangerouslySetInnerHTML={{ __html: KEYFRAMES }} />
@@ -641,9 +644,22 @@ export function DesignMetalTable({
                 fontWeight: 600,
               }}
             >
-              {rows.length} dossier{rows.length > 1 ? "s" : ""}
+              {displayedRows.length} dossier{displayedRows.length > 1 ? "s" : ""}
             </span>
           )}
+
+          <button
+            onClick={() => setMesCas(p => !p)}
+            style={{
+              padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: "pointer",
+              border: mesCas ? "1px solid rgba(129,140,248,0.6)" : "1px solid #444",
+              background: mesCas ? "rgba(129,140,248,0.12)" : "rgba(255,255,255,0.04)",
+              color: mesCas ? "#818cf8" : "#aaa",
+              transition: "all 150ms",
+            }}
+          >
+            {mesCas ? "✦ Mes cas" : "Mes cas"}
+          </button>
 
           {searchNotFound && focusId && (
             <div
@@ -767,7 +783,7 @@ export function DesignMetalTable({
               </tr>
             )}
 
-            {rows.map((row) => {
+            {displayedRows.map((row) => {
               const dm = (row as any).sector_design_metal ?? {};
               const nat = row.nature_du_travail ?? "";
               const natColor = NATURE_META[nat]?.color ?? "#666";

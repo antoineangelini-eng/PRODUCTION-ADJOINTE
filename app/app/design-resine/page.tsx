@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { DesignResinePageClient } from "@/components/sheet/DesignResinePageClient";
 import { DesignResineHistoryWrapper } from "@/app/app/design-resine/DesignResineHistoryWrapper";
+import { DesignResineMesCas } from "@/app/app/design-resine/DesignResineMesCas";
 import { FlashMessage } from "@/components/sheet/FlashMessage";
 import { AnnouncementsBanner } from "@/components/sheet/AnnouncementsBanner";
 
@@ -30,17 +31,21 @@ export default async function Page({
       <div style={{ flexShrink: 0, background: "#0b0b0b", padding: "10px 20px 0", borderBottom: "1px solid #1a1a1a" }}>
         <h1 style={{ margin: "0 0 12px", fontSize: 18 }}>Design Résine</h1>
         <div style={{ display: "flex", gap: 0 }}>
-          {[{ key: "production", label: "⚙ Production" }, { key: "historique", label: "📋 Historique" }].map(({ key, label }) => (
+          {[
+            { key: "production", label: "⚙ Production", accent: "#7c8196" },
+            { key: "historique", label: "📋 Historique", accent: "#7c8196" },
+            { key: "mes-cas",    label: "👤 Mes cas",    accent: "#818cf8" },
+          ].map(({ key, label, accent }) => (
             <a key={key} href={`/app/design-resine?tab=${key}`} style={{
               padding: "8px 22px", fontSize: 12, fontWeight: 700, textDecoration: "none", display: "block",
-              borderBottom: tab === key ? "2px solid #7c8196" : "2px solid transparent",
-              color: tab === key ? "#7c8196" : "#555", marginBottom: -1, transition: "color 150ms",
+              borderBottom: tab === key ? `2px solid ${accent}` : "2px solid transparent",
+              color: tab === key ? accent : "#555", marginBottom: -1, transition: "color 150ms",
             }}>{label}</a>
           ))}
         </div>
       </div>
 
-      {tab !== "historique" && (
+      {(tab === "production" || (tab !== "historique" && tab !== "mes-cas")) && (
         <>
           <div style={{ flex: 1, minHeight: 0 }}>
             <DesignResinePageClient focusId={focusId} prefill={prefill} />
@@ -51,6 +56,12 @@ export default async function Page({
       {tab === "historique" && (
         <div style={{ flex: 1, minHeight: 0, padding: "0 16px 16px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
           <DesignResineHistoryWrapper />
+        </div>
+      )}
+
+      {tab === "mes-cas" && (
+        <div style={{ flex: 1, minHeight: 0, padding: "0 16px 16px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <DesignResineMesCas />
         </div>
       )}
     </div>

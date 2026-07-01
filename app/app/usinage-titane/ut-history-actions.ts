@@ -13,6 +13,7 @@ export type UtHistoryRow = {
   is_physical: boolean;
   completed_at: string | null;
   validated_by_name: string | null;
+  _validated_by: string | null;
   sent_by_name: string | null;
   envoye_usinage: boolean | null;
   numero_lot_metal: string | null;
@@ -79,6 +80,7 @@ export async function loadUtHistoryAction(): Promise<UtHistoryRow[]> {
       nature_du_travail: c.nature_du_travail ?? null, is_physical: Boolean(c.is_physical),
       completed_at: r.updated_at ?? null,
       validated_by_name: r.updated_by ? (nameMap[r.updated_by] ?? null) : null,
+      _validated_by: r.updated_by ?? null,
       sent_by_name: senderId ? (nameMap[senderId] ?? null) : null,
       envoye_usinage: ut.envoye_usinage ?? null,
       numero_lot_metal: ut.numero_lot_metal ?? null,

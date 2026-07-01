@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { DesignMetalHistoryWrapper } from "@/app/app/design-metal/DesignMetalHistoryWrapper";
 import { DesignMetalProductionWrapper } from "@/components/sheet/DesignMetalProductionWrapper";
+import { DesignMetalMesCas } from "@/app/app/design-metal/DesignMetalMesCas";
 import { FlashMessage } from "@/components/sheet/FlashMessage";
 import { AnnouncementsBanner } from "@/components/sheet/AnnouncementsBanner";
 
@@ -35,14 +36,15 @@ export default async function Page({
         {/* Onglets */}
         <div style={{ display: "flex", gap: 0 }}>
           {[
-            { key: "production", label: "⚙ Production" },
-            { key: "historique", label: "📋 Historique" },
-          ].map(({ key, label }) => (
+            { key: "production", label: "⚙ Production", accent: "#4ade80" },
+            { key: "historique", label: "📋 Historique", accent: "#4ade80" },
+            { key: "mes-cas",    label: "👤 Mes cas",    accent: "#818cf8" },
+          ].map(({ key, label, accent }) => (
             <a key={key} href={`/app/design-metal?tab=${key}`} style={{
               padding: "8px 22px", fontSize: 12, fontWeight: 700,
               textDecoration: "none", display: "block",
-              borderBottom: tab === key ? "2px solid #4ade80" : "2px solid transparent",
-              color: tab === key ? "#4ade80" : "#555",
+              borderBottom: tab === key ? `2px solid ${accent}` : "2px solid transparent",
+              color: tab === key ? accent : "#555",
               marginBottom: -1,
               transition: "color 150ms",
             }}>
@@ -53,7 +55,7 @@ export default async function Page({
       </div>
 
       {/* ── Onglet Production ── */}
-      {tab !== "historique" && (
+      {(tab === "production" || (tab !== "historique" && tab !== "mes-cas")) && (
         <>
           <DesignMetalProductionWrapper
             focusId={focusId}
@@ -68,6 +70,13 @@ export default async function Page({
       {tab === "historique" && (
         <div style={{ flex: 1, minHeight: 0, padding: "0 16px 16px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
           <DesignMetalHistoryWrapper currentSector={profile.sector} />
+        </div>
+      )}
+
+      {/* ── Onglet Mes cas ── */}
+      {tab === "mes-cas" && (
+        <div style={{ flex: 1, minHeight: 0, padding: "0 16px 16px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <DesignMetalMesCas />
         </div>
       )}
     </div>

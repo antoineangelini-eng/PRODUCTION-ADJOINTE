@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { SearchBar } from "@/components/sheet/SearchBar";
 import { UsinageTitanePageClient } from "@/components/sheet/UsinageTitanePageClient";
 import { UsinageTitaneHistoryWrapper } from "@/app/app/usinage-titane/UsinageTitaneHistoryWrapper";
+import { UsinageTitaneMesCas } from "@/app/app/usinage-titane/UsinageTitaneMesCas";
 import { AnnouncementsBanner } from "@/components/sheet/AnnouncementsBanner";
 
 export default async function Page({ searchParams }: { searchParams?: Promise<{ focus?: string; tab?: string }> }) {
@@ -23,17 +24,21 @@ export default async function Page({ searchParams }: { searchParams?: Promise<{ 
       <div style={{ flexShrink: 0, background: "#0b0b0b", padding: "10px 20px 0", borderBottom: "1px solid #1a1a1a" }}>
         <h1 style={{ margin: "0 0 12px", fontSize: 18 }}>Usinage Titane</h1>
         <div style={{ display: "flex", gap: 0 }}>
-          {[{ key: "production", label: "⚙ Production" }, { key: "historique", label: "📋 Historique" }].map(({ key, label }) => (
+          {[
+            { key: "production", label: "⚙ Production", accent: "#f59e0b" },
+            { key: "historique", label: "📋 Historique", accent: "#f59e0b" },
+            { key: "mes-cas",    label: "👤 Mes cas",    accent: "#818cf8" },
+          ].map(({ key, label, accent }) => (
             <a key={key} href={`/app/usinage-titane?tab=${key}`} style={{
               padding: "8px 22px", fontSize: 12, fontWeight: 700, textDecoration: "none", display: "block",
-              borderBottom: tab === key ? "2px solid #f59e0b" : "2px solid transparent",
-              color: tab === key ? "#f59e0b" : "#555", marginBottom: -1, transition: "color 150ms",
+              borderBottom: tab === key ? `2px solid ${accent}` : "2px solid transparent",
+              color: tab === key ? accent : "#555", marginBottom: -1, transition: "color 150ms",
             }}>{label}</a>
           ))}
         </div>
       </div>
 
-      {tab !== "historique" && (
+      {(tab === "production" || (tab !== "historique" && tab !== "mes-cas")) && (
         <>
           <div style={{ flexShrink: 0, background: "#0b0b0b", padding: "10px 20px 8px", borderBottom: "1px solid #1a1a1a" }}>
             <SearchBar basePath="/app/usinage-titane" />
@@ -47,6 +52,12 @@ export default async function Page({ searchParams }: { searchParams?: Promise<{ 
       {tab === "historique" && (
         <div style={{ flex: 1, minHeight: 0, padding: "0 16px 16px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
           <UsinageTitaneHistoryWrapper />
+        </div>
+      )}
+
+      {tab === "mes-cas" && (
+        <div style={{ flex: 1, minHeight: 0, padding: "0 16px 16px", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <UsinageTitaneMesCas />
         </div>
       )}
     </div>

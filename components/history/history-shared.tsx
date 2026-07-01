@@ -115,17 +115,21 @@ export function ReopenModal({ caseNumber, natureDuTravail, dateExpedition, secto
   );
 }
 
-export function HistoryFilters({ count, natFilter, setNatFilter, yearFilter, setYearFilter, search, setSearch, years, onReload }: {
+export function HistoryFilters({ count, natFilter, setNatFilter, yearFilter, setYearFilter, search, setSearch, years, onReload, mesCas, setMesCas }: {
   count: number; natFilter: string; setNatFilter: (v: string) => void;
   yearFilter: string; setYearFilter: (v: string) => void;
   search: string; setSearch: (v: string) => void;
   years: string[]; onReload: () => void;
+  mesCas?: boolean; setMesCas?: (v: boolean) => void;
 }) {
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 0 12px", flexShrink: 0, flexWrap: "wrap" as const }}>
       <span style={{ fontSize: 12, color: "#ccc", padding: "4px 12px", background: "#1e1e1e", border: "1px solid #2e2e2e", borderRadius: 20, fontWeight: 600, flexShrink: 0 }}>
         {count} dossier{count > 1 ? "s" : ""} terminé{count > 1 ? "s" : ""}
       </span>
+      {setMesCas && (
+        <button onClick={() => setMesCas(!mesCas)} style={{ padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: "pointer", border: mesCas ? "1px solid rgba(129,140,248,0.6)" : "1px solid #444", background: mesCas ? "rgba(129,140,248,0.12)" : "rgba(255,255,255,0.04)", color: mesCas ? "#818cf8" : "#aaa", transition: "all 150ms" }}>{mesCas ? "✦ Mes cas" : "Mes cas"}</button>
+      )}
       <select value={natFilter} onChange={e => setNatFilter(e.target.value)}
         style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", color: "white", fontSize: 11, padding: "5px 8px", borderRadius: 6, outline: "none" }}>
         <option value="" style={{ background: "#1a1a1a", color: "#aaa" }}>Toutes les natures</option>

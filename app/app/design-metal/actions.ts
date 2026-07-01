@@ -35,6 +35,7 @@ export type DesignMetalRow = {
   nature_du_travail: string | null;
   is_physical: boolean | null;
   created_by: string | null;
+  _updated_by: string | null;
   sector_design_metal: {
     design_chassis: boolean | null;
     design_chassis_at: string | null;
@@ -53,7 +54,7 @@ export async function loadDesignMetalRowsAction(): Promise<DesignMetalRow[]> {
   const { data } = await supabase
     .from("case_assignments")
     .select(`
-      created_by, status, on_hold_at, on_hold_reason,
+      created_by, updated_by, status, on_hold_at, on_hold_reason,
       cases:case_id (
         id, created_at, case_number, date_expedition, nature_du_travail, is_physical,
         sector_design_metal (
@@ -71,6 +72,7 @@ export async function loadDesignMetalRowsAction(): Promise<DesignMetalRow[]> {
   return ((data ?? []) as any[]).map((r: any) => ({
     ...r.cases,
     created_by: r.created_by ?? null,
+    _updated_by: r.updated_by ?? null,
     _on_hold: r.status === "on_hold",
     _on_hold_at: r.on_hold_at ?? null,
     _on_hold_reason: r.on_hold_reason ?? null,

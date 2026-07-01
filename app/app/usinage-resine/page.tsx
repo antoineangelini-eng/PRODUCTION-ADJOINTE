@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { UsinageResinePageClient } from "@/components/sheet/UsinageResinePageClient";
 import { UsinageResineHistoryWrapper } from "@/app/app/usinage-resine/UsinageResineHistoryWrapper";
+import { UsinageResineMesCas } from "@/app/app/usinage-resine/UsinageResineMesCas";
 import { EmaxPaletteTracker } from "@/app/app/usinage-resine/EmaxPaletteTracker";
 import { AnnouncementsBanner } from "@/components/sheet/AnnouncementsBanner";
 
@@ -16,7 +17,7 @@ const EmaxIcon = ({ color }: { color: string }) => (
   </svg>
 );
 
-const tabs: { key: string; label: React.ReactNode }[] = [
+const tabs: { key: string; label: React.ReactNode; accent?: string }[] = [
   { key: "production", label: "⚙ Production" },
   {
     key: "emax",
@@ -28,6 +29,7 @@ const tabs: { key: string; label: React.ReactNode }[] = [
     ),
   },
   { key: "historique", label: "📋 Historique" },
+  { key: "mes-cas", label: "👤 Mes cas", accent: "#818cf8" },
 ];
 
 export default async function Page({
@@ -58,21 +60,24 @@ export default async function Page({
       }}>
         <h1 style={{ margin: "0 0 12px", fontSize: 18 }}>Usinage Résine</h1>
         <div style={{ display: "flex", gap: 0 }}>
-          {tabs.map(({ key, label }) => (
-            <a key={key} href={`/app/usinage-resine?tab=${key}`} style={{
-              padding: "8px 22px", fontSize: 12, fontWeight: 700,
-              textDecoration: "none", display: "flex", alignItems: "center", gap: 5,
-              borderBottom: tab === key ? "2px solid #9487a8" : "2px solid transparent",
-              color: tab === key ? "#9487a8" : "#555",
-              marginBottom: -1, transition: "color 150ms",
-            }}>
-              {label}
-            </a>
-          ))}
+          {tabs.map(({ key, label, accent }) => {
+            const c = accent ?? "#9487a8";
+            return (
+              <a key={key} href={`/app/usinage-resine?tab=${key}`} style={{
+                padding: "8px 22px", fontSize: 12, fontWeight: 700,
+                textDecoration: "none", display: "flex", alignItems: "center", gap: 5,
+                borderBottom: tab === key ? `2px solid ${c}` : "2px solid transparent",
+                color: tab === key ? c : "#555",
+                marginBottom: -1, transition: "color 150ms",
+              }}>
+                {label}
+              </a>
+            );
+          })}
         </div>
       </div>
 
-      {tab === "production" && <UsinageResinePageClient focusId={focusId} hideHeader />}
+      {(tab === "production" || (tab !== "emax" && tab !== "historique" && tab !== "mes-cas")) && <UsinageResinePageClient focusId={focusId} hideHeader />}
 
       {tab === "emax" && (
         <div style={{
@@ -89,6 +94,15 @@ export default async function Page({
           overflow: "hidden", display: "flex", flexDirection: "column",
         }}>
           <UsinageResineHistoryWrapper />
+        </div>
+      )}
+
+      {tab === "mes-cas" && (
+        <div style={{
+          flex: 1, minHeight: 0, padding: "0 16px 16px",
+          overflow: "hidden", display: "flex", flexDirection: "column",
+        }}>
+          <UsinageResineMesCas />
         </div>
       )}
     </div>

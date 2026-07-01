@@ -282,6 +282,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
   const onBannerClearRef = useRef(onBannerClear); onBannerClearRef.current = onBannerClear;
   const [currentUserId,setCurrentUserId]=useState("");
   const [isAdmin,setIsAdmin]=useState(false);
+  const [mesCas,setMesCas]=useState(false);
   useEffect(()=>{import("@/app/app/user-info-action").then(m=>m.getUserInfoAction()).then(info=>{setCurrentUserId(info.userId);setIsAdmin(info.isAdmin);});},[]);
   const [rows, setRows]             = useState<UsinageResineRow[]>([]);
   const [newRowIds, setNewRowIds]   = useState<Set<string>>(new Set());
@@ -514,7 +515,8 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
       )}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, zIndex:10, background:"#111", padding:"0 8px 10px 8px", borderBottom:"1px solid #1e1e1e", flexShrink:0 }}>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-          {!searchNotFound && <span style={{ fontSize:12, color:"#ccc", padding:"4px 14px", background:"#1e1e1e", border:"1px solid #2e2e2e", borderRadius:20, fontWeight:600 }}>{searchFilter ? `${rows.filter(r=>(r.case_number??"").includes(searchFilter)).length} / ` : ""}{rows.length} dossier{rows.length>1?"s":""}</span>}
+          {!searchNotFound && (() => { const base = mesCas ? rows.filter(r => (r as any)._updated_by === currentUserId) : rows; return <span style={{ fontSize:12, color:"#ccc", padding:"4px 14px", background:"#1e1e1e", border:"1px solid #2e2e2e", borderRadius:20, fontWeight:600 }}>{searchFilter ? `${base.filter(r=>(r.case_number??"").includes(searchFilter)).length} / ` : ""}{base.length} dossier{base.length>1?"s":""}</span>; })()}
+          <button onClick={()=>setMesCas(p=>!p)} style={{padding:"4px 12px",borderRadius:20,fontSize:11,fontWeight:700,cursor:"pointer",border:mesCas?"1px solid rgba(129,140,248,0.6)":"1px solid #444",background:mesCas?"rgba(129,140,248,0.12)":"rgba(255,255,255,0.04)",color:mesCas?"#818cf8":"#aaa",transition:"all 150ms"}}>{mesCas?"✦ Mes cas":"Mes cas"}</button>
           <input
             value={searchFilter}
             onChange={e => setSearchFilter(e.target.value.replace(/\D/g,""))}
@@ -584,11 +586,12 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
             </div>
           );
         })()}
-        {rows.length===0 && <div style={{ color:"#333", fontSize:13, textAlign:"center", paddingTop:40 }}>Aucun dossier en cours.</div>}
+        {(mesCas ? rows.filter(r => (r as any)._updated_by === currentUserId) : rows).length===0 && <div style={{ color:"#333", fontSize:13, textAlign:"center", paddingTop:40 }}>{mesCas ? "Aucun de vos cas en cours." : "Aucun dossier en cours."}</div>}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(360px, 1fr))", gap:10 }}>
           {(() => {
             // Regrouper les rows par case_number
-            const filtered = rows.filter(r => !searchFilter || (r.case_number ?? "").includes(searchFilter));
+            const baseRows = mesCas ? rows.filter(r => (r as any)._updated_by === currentUserId) : rows;
+            const filtered = baseRows.filter(r => !searchFilter || (r.case_number ?? "").includes(searchFilter));
             const groups: UsinageResineRow[][] = [];
             const seen = new Map<string, number>();
             for (const row of filtered) {

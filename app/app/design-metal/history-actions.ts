@@ -13,6 +13,7 @@ export type DmHistoryRow = {
   is_physical: boolean;
   completed_at: string | null;
   validated_by_name: string | null;
+  _validated_by: string | null;
   // sector_design_metal
   design_chassis: boolean | null;
   design_chassis_at: string | null;
@@ -62,6 +63,7 @@ export async function loadDmHistoryAction(): Promise<DmHistoryRow[]> {
       is_physical:         Boolean(c.is_physical),
       completed_at:        r.updated_at ?? null,
       validated_by_name:   r.updated_by ? (nameMap[r.updated_by] ?? null) : null,
+      _validated_by:       r.updated_by ?? null,
       design_chassis:      dm.design_chassis ?? null,
       design_chassis_at:   dm.design_chassis_at ?? null,
       dentall_case_number: dm.dentall_case_number ?? null,

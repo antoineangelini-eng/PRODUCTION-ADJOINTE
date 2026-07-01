@@ -264,6 +264,9 @@ export function DesignMetalHistory() {
   const [natFilter, setNatFilter] = useState("");
   const [yearFilter, setYearFilter] = useState("");
   const [reopenRow, setReopenRow] = useState<DmHistoryRow | null>(null);
+  const [mesCas, setMesCas]       = useState(false);
+  const [currentUserId, setCurrentUserId] = useState("");
+  useEffect(() => { import("@/app/app/user-info-action").then(m => m.getUserInfoAction()).then(info => setCurrentUserId(info.userId)); }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -275,6 +278,7 @@ export function DesignMetalHistory() {
   const years = [...new Set(rows.map(r => r.completed_at?.slice(0, 4)).filter(Boolean))].sort().reverse();
 
   const filtered = rows.filter(r => {
+    if (mesCas && r._validated_by !== currentUserId) return false;
     if (search && !r.case_number?.toLowerCase().includes(search.toLowerCase())) return false;
     if (natFilter && r.nature_du_travail !== natFilter) return false;
     if (yearFilter && r.completed_at?.slice(0, 4) !== yearFilter) return false;
@@ -289,6 +293,7 @@ export function DesignMetalHistory() {
         <span style={{ fontSize: 12, color: "#ccc", padding: "4px 12px", background: "#1e1e1e", border: "1px solid #2e2e2e", borderRadius: 20, fontWeight: 600, flexShrink: 0 }}>
           {filtered.length} dossier{filtered.length > 1 ? "s" : ""} terminé{filtered.length > 1 ? "s" : ""}
         </span>
+        <button onClick={() => setMesCas(p => !p)} style={{ padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: "pointer", border: mesCas ? "1px solid rgba(129,140,248,0.6)" : "1px solid #444", background: mesCas ? "rgba(129,140,248,0.12)" : "rgba(255,255,255,0.04)", color: mesCas ? "#818cf8" : "#aaa", transition: "all 150ms" }}>{mesCas ? "✦ Mes cas" : "Mes cas"}</button>
         <select value={natFilter} onChange={e => setNatFilter(e.target.value)}
           style={{ background: "#1a1a1a", border: "1px solid #2a2a2a", color: "white", fontSize: 11, padding: "5px 8px", borderRadius: 6, outline: "none" }}>
           <option value="" style={{ background: "#1a1a1a", color: "#aaa" }}>Toutes les natures</option>

@@ -13,6 +13,7 @@ export type UrHistoryRow = {
   is_physical: boolean;
   completed_at: string | null;
   validated_by_name: string | null;
+  _validated_by: string | null;
   sent_by_name: string | null;
   usinage_dents_resine: boolean | null;
   identite_machine: string | null;
@@ -81,6 +82,7 @@ export async function loadUrHistoryAction(): Promise<UrHistoryRow[]> {
       nature_du_travail: c.nature_du_travail ?? null, is_physical: Boolean(c.is_physical),
       completed_at: r.updated_at ?? null,
       validated_by_name: r.updated_by ? (nameMap[r.updated_by] ?? null) : null,
+      _validated_by: r.updated_by ?? null,
       sent_by_name: senderId ? (nameMap[senderId] ?? null) : null,
       usinage_dents_resine: ur.usinage_dents_resine ?? null,
       identite_machine: ur.identite_machine ?? null,

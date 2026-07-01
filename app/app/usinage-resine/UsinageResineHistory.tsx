@@ -69,12 +69,16 @@ export function UsinageResineHistory() {
   const [reopenRow, setReopenRow]   = useState<UrHistoryRow | null>(null);
   const [saving, setSaving]         = useState(false);
   const [error, setError]           = useState<string | null>(null);
+  const [mesCas, setMesCas]         = useState(false);
+  const [currentUserId, setCurrentUserId] = useState("");
+  useEffect(() => { import("@/app/app/user-info-action").then(m => m.getUserInfoAction()).then(info => setCurrentUserId(info.userId)); }, []);
 
   const load = useCallback(async () => { setLoading(true); setRows(await loadUrHistoryAction()); setLoading(false); }, []);
   useEffect(() => { load(); }, [load]);
 
   const years = [...new Set(rows.map(r => r.completed_at?.slice(0, 4)).filter(Boolean))].sort().reverse() as string[];
   const filtered = rows.filter(r => {
+    if (mesCas && r._validated_by !== currentUserId) return false;
     if (search && !r.case_number?.toLowerCase().includes(search.toLowerCase())) return false;
     if (natFilter && r.nature_du_travail !== natFilter) return false;
     if (yearFilter && r.completed_at?.slice(0, 4) !== yearFilter) return false;
@@ -94,7 +98,7 @@ export function UsinageResineHistory() {
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
       <HistoryFilters count={filtered.length} natFilter={natFilter} setNatFilter={setNatFilter}
         yearFilter={yearFilter} setYearFilter={setYearFilter} search={search} setSearch={setSearch}
-        years={years} onReload={load} />
+        years={years} onReload={load} mesCas={mesCas} setMesCas={setMesCas} />
       <div style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
         {loading ? <div style={{ padding: 32, color: "#555", fontSize: 13 }}>Chargement…</div>
           : filtered.length === 0 ? <div style={{ padding: 32, color: "#333", fontSize: 13, textAlign: "center" }}>Aucun dossier terminé.</div>

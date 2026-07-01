@@ -375,6 +375,7 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
   const [holdBusy, setHoldBusy] = useState<string | null>(null);
   const [holdModalCaseId, setHoldModalCaseId] = useState<string | null>(null);
   const [reasonTooltip, setReasonTooltip] = useState<{ id: string; rect: { top: number; left: number; width: number; bottom: number } } | null>(null);
+  const [mesCas, setMesCas] = useState(false);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) { setLoading(true); setError(null); }
@@ -438,7 +439,8 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
 
   // Tri par date d'expédition — les plus urgents (proches) d'abord, on_hold en bas
   const sortedRows = useMemo(() => {
-    return [...rows].sort((a, b) => {
+    const base = mesCas ? rows.filter(r => (r as any)._updated_by === currentUserId) : rows;
+    return [...base].sort((a, b) => {
       const aH = (a as any)._on_hold ? 1 : 0;
       const bH = (b as any)._on_hold ? 1 : 0;
       if (aH !== bH) return aH - bH;
@@ -446,7 +448,7 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
       const db = b.date_expedition ? new Date(b.date_expedition).getTime() : Number.POSITIVE_INFINITY;
       return da - db;
     });
-  }, [rows]);
+  }, [rows, mesCas, currentUserId]);
 
   // Cas en attente : cas actifs en BDD pour ce secteur qui ne sont PAS encore
   // dans le tableau affiché (le tableau se rafraîchira automatiquement dans
@@ -653,7 +655,8 @@ export function UsinageTitaneTable({ focusId, onReload, onSelectionChange, onNew
       {/* Barre validation */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "sticky", top: 0, zIndex: 10, background: "#111", padding: "0 8px 10px 8px", borderBottom: "1px solid #1e1e1e", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: 2 }}>
-          {!searchNotFound && <span style={{ fontSize: 12, color: "#bdbdbd", padding: "4px 14px", background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 20, fontWeight: 600 }}>{rows.length} dossier{rows.length > 1 ? "s" : ""}</span>}
+          {!searchNotFound && <span style={{ fontSize: 12, color: "#bdbdbd", padding: "4px 14px", background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 20, fontWeight: 600 }}>{sortedRows.length} dossier{sortedRows.length > 1 ? "s" : ""}</span>}
+          <button onClick={() => setMesCas(p => !p)} style={{ padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: "pointer", border: mesCas ? "1px solid rgba(129,140,248,0.6)" : "1px solid #444", background: mesCas ? "rgba(129,140,248,0.12)" : "rgba(255,255,255,0.04)", color: mesCas ? "#818cf8" : "#aaa", transition: "all 150ms" }}>{mesCas ? "✦ Mes cas" : "Mes cas"}</button>
           {urgentCount > 0 && (
             <span style={{ fontSize: 12, color: "#f59e0b", padding: "4px 12px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.4)", borderRadius: 20, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#f59e0b", boxShadow: "0 0 8px #f59e0b", animation: "pulse 2s infinite" }} />
