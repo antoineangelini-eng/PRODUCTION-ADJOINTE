@@ -252,13 +252,13 @@ const COLUMNS = [
   { key: "created_at", header: "Création", editable: false, type: undefined, column: undefined },
   { key: "date_expedition", header: "Expédition", editable: true, type: undefined, column: undefined },
   { key: "nature_du_travail", header: "Nature", editable: true, type: undefined, column: undefined },
+  { key: "type_de_dents", header: "Type de dents", editable: true, type: "select", column: "type_de_dents" },
   { key: "teintes_associees", header: "Teintes", editable: true, type: "text", column: "teintes_associees" },
   { key: "design_chassis", header: "Design Châssis", editable: true, type: "boolean", column: "design_chassis" },
   { key: "design_chassis_at", header: "Date & Heure", sub: "Design châssis terminé", editable: false, type: undefined, column: undefined },
   { key: "envoye_dentall", header: "Envoyé DentAll", editable: true, type: "boolean", column: "envoye_dentall" },
   { key: "reception_metal_date", header: "Réception métal", editable: true, type: "date", column: "reception_metal_date" },
   { key: "dentall_case_number", header: "N° Dent All", editable: true, type: "text", column: "dentall_case_number" },
-  { key: "type_de_dents", header: "Type de dents", editable: true, type: "select", column: "type_de_dents" },
   { key: "modele_a_faire_ok", header: "Modèle à faire", editable: true, type: "indicator", column: "modele_a_faire_ok" },
 ];
 
