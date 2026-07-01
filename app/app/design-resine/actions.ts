@@ -372,10 +372,13 @@ export async function createResineVoletAction(
   // Vérifier qu'il n'y a pas déjà un volet résine actif pour ce numéro
   const { data: existingVolets } = await admin
     .from("cases")
-    .select("id, nature_du_travail")
+    .select("id, nature_du_travail, date_expedition")
     .eq("case_number", caseNumber);
   // Un volet existe déjà si on a au moins 2 cas avec ce numéro
   if ((existingVolets ?? []).length >= 2) return { ok: false, error: "Un volet résine existe déjà pour ce cas" };
+
+  // Récupérer la date d'expédition du cas DM original (s'il existe)
+  const originalDateExp = (existingVolets ?? [])[0]?.date_expedition ?? null;
 
   // Créer un nouveau cas avec le même numéro
   const { data, error } = await supabase.rpc("rpc_create_case_from_design_resine", {
@@ -400,14 +403,19 @@ export async function createResineVoletAction(
   }
   await admin.from("sector_design_resine").update(drDefaults).eq("case_id", caseId);
 
-  // Date d'expédition basée sur les jours ouvrés
-  const { data: wdConfig } = await supabase
-    .from("working_days_config")
-    .select("days")
-    .eq("nature", nature)
-    .single();
-  const nbDays = wdConfig?.days ?? 3;
-  const dateExp = toDateStr(addBusinessDays(new Date(), nbDays));
+  // Date d'expédition : hériter du cas DM original, sinon calculer
+  let dateExp: string;
+  if (originalDateExp) {
+    dateExp = originalDateExp;
+  } else {
+    const { data: wdConfig } = await supabase
+      .from("working_days_config")
+      .select("days")
+      .eq("nature", nature)
+      .single();
+    const nbDays = wdConfig?.days ?? 3;
+    dateExp = toDateStr(addBusinessDays(new Date(), nbDays));
+  }
   await supabase.rpc("rpc_update_case_expedition", { p_case_id: caseId, p_date: dateExp, p_manual: false });
 
   revalidatePath("/app/design-resine");
