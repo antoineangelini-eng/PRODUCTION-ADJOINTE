@@ -46,7 +46,7 @@ export async function loadDmHistoryAction(): Promise<DmHistoryRow[]> {
     .eq("sector_code", "design_metal")
     .eq("status", "done")
     .order("updated_at", { ascending: false })
-    .limit(500);
+;
 
   const rows = (data ?? []) as any[];
   const nameMap = await resolveDisplayNames(rows.map((r: any) => r.updated_by));

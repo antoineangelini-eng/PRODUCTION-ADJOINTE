@@ -60,7 +60,7 @@ function generateZPL(combos: Set<ComboKey>, code: string, mat: Materiau, cg: str
 
 async function sendPrint(zpl: string, printerIp: string) {
   if (!printerIp) throw new Error("Aucune imprimante configurée");
-  const relayUrl = process.env.NEXT_PUBLIC_PRINT_RELAY_URL || "http://192.168.1.30:3001";
+  const relayUrl = process.env.NEXT_PUBLIC_PRINT_RELAY_URL || "http://192.168.1.30:9099";
   const r=await fetch(`${relayUrl}/print`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({zpl, printerIp})});
   const j=await r.json(); if(!j.ok) throw new Error(j.error??"Erreur");
 }

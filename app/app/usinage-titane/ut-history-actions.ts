@@ -47,7 +47,7 @@ export async function loadUtHistoryAction(): Promise<UtHistoryRow[]> {
     .eq("sector_code", "usinage_titane")
     .eq("status", "done")
     .order("updated_at", { ascending: false })
-    .limit(500);
+;
 
   const rows = (data ?? []) as any[];
   const caseIds = rows.map((r: any) => r.cases?.id).filter(Boolean);

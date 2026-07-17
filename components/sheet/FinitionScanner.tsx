@@ -99,7 +99,7 @@ export function FinitionScanner({
       onValidated?.();
 
       // Impression étiquette pour Chassis Dent All (réception métal)
-      const relayUrl = process.env.NEXT_PUBLIC_PRINT_RELAY_URL || "http://192.168.1.30:3001";
+      const relayUrl = process.env.NEXT_PUBLIC_PRINT_RELAY_URL || "http://192.168.1.30:9099";
       for (const r of results) {
         if (r.printLabel) {
           buildFinitionMetalPrintJobAction(r.printLabel).then(job => {

@@ -40,7 +40,7 @@ export async function loadDrHistoryAction(): Promise<DrHistoryRow[]> {
     .eq("sector_code", "design_resine")
     .eq("status", "done")
     .order("updated_at", { ascending: false })
-    .limit(500);
+;
 
   const rows = (data ?? []) as any[];
   const caseIds = rows.map((r: any) => r.cases?.id).filter(Boolean);

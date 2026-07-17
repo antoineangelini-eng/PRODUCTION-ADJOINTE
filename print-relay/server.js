@@ -12,7 +12,7 @@
 const http = require("http");
 const net = require("net");
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 9099;
 const ZEBRA_PORT = 9100;
 const TIMEOUT_MS = 5000;
 const MAX_RETRIES = 3;

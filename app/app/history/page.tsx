@@ -78,7 +78,7 @@ export default async function HistoryPage({
       )
     `)
     .order("created_at", { ascending: false })
-    .limit(500);
+;
 
   if (error) return <div style={{ padding: 24 }}><pre style={{ color: "salmon" }}>{error.message}</pre></div>;
 

@@ -237,7 +237,7 @@ export function FinitionTable({ filter, onReload, highlightId, searchFilter, onS
           modele: Boolean(dm.modele_a_faire_ok),
         }).then(job => {
           if (!job) return;
-          const relayUrl = process.env.NEXT_PUBLIC_PRINT_RELAY_URL || "http://192.168.1.30:3001";
+          const relayUrl = process.env.NEXT_PUBLIC_PRINT_RELAY_URL || "http://192.168.1.30:9099";
           fetch(`${relayUrl}/print`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
