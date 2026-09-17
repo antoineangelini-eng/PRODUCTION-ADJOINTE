@@ -41,6 +41,7 @@ const DR_NATURE_OPTIONS = [
 const TYPE_DENTS_OPTIONS = [
   { value: "Dents usinées", color: "#7c8196" },
   { value: "Dents imprimées", color: "#a78bfa" },
+  { value: "Dents du commerce", color: "#f59e0b" },
 ];
 
 const BASE_OPTIONS = [
@@ -389,8 +390,8 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
     const missing:string[]=[];
     if(!dr.design_dents_resine)    missing.push("Design dents résine");
     if(!dr.design_dents_resine_at) missing.push("Date design dents résine");
-    if(!dr.nb_blocs_de_dents)      missing.push("Nb blocs de dents");
     if(!typeDents)                 missing.push("Type de dents");
+    if(typeDents!=="Dents du commerce"&&!dr.nb_blocs_de_dents) missing.push("Nb blocs de dents");
     const modeleOk=dr.modele_a_realiser_ok!==null&&dr.modele_a_realiser_ok!==undefined?dr.modele_a_realiser_ok:(isProv?true:dm.modele_a_faire_ok);
     if(modeleOk===null||modeleOk===undefined) missing.push("Modèle à réaliser");
     const teintes=dr.teintes_associees??dm.teintes_associees;
@@ -484,6 +485,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
               const typeDents=dr.type_de_dents??dm.type_de_dents??"";
               const effectiveTypeDents=typeDents||(isProvisoire||isDeflex?"Dents usinées":"");
               const typeMeta=TYPE_DENTS_OPTIONS.find(o=>o.value===effectiveTypeDents)??{color:"#555"};
+              const isDentsCommerce=effectiveTypeDents==="Dents du commerce";
               const modeleOk=dr.modele_a_realiser_ok!==null&&dr.modele_a_realiser_ok!==undefined?dr.modele_a_realiser_ok:(isDrOnly?true:dm.modele_a_faire_ok??null);
               const teintes=dr.teintes_associees??dm.teintes_associees??null;
 
@@ -576,8 +578,8 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
                     {(() => {
                       const val = effectiveTypeDents || "";
                       const meta = TYPE_DENTS_OPTIONS.find(o=>o.value===val) ?? {color:"#555"};
-                      if (comesFromDm || isProvisoire || isDeflex) {
-                        // Lecture seule si le cas vient de DM, Provisoire Résine ou Deflex
+                      if (comesFromDm) {
+                        // Lecture seule si le cas vient de DM
                         const displayVal = val || "Dents usinées";
                         const displayMeta = TYPE_DENTS_OPTIONS.find(o=>o.value===displayVal) ?? TYPE_DENTS_OPTIONS[0];
                         return <span style={{display:"inline-flex",padding:"3px 10px",borderRadius:6,background:displayMeta.color+"12",border:`1px solid ${displayMeta.color}30`,color:displayMeta.color,fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>{displayVal}</span>;
@@ -604,7 +606,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
                   </td>
 
                   <td style={tdCard}><DateTimeCell value={dr.design_dents_resine_at??null}/></td>
-                  <td style={tdCard} onClick={e=>e.stopPropagation()}><TextInput value={dr.nb_blocs_de_dents??null} onSave={v=>{patchRow(String(row.id),"sector_design_resine","nb_blocs_de_dents",v||null);saveText(String(row.id),"nb_blocs_de_dents",v);}} width={60}/></td>
+                  <td style={isDentsCommerce?{...tdCard,background:"repeating-linear-gradient(135deg, rgba(245,158,11,0.06) 0px, rgba(245,158,11,0.06) 4px, transparent 4px, transparent 8px)"}:tdCard} onClick={e=>e.stopPropagation()}>{isDentsCommerce?<span style={{color:"rgba(245,158,11,0.4)",fontSize:13}}>⊘</span>:<TextInput value={dr.nb_blocs_de_dents??null} onSave={v=>{patchRow(String(row.id),"sector_design_resine","nb_blocs_de_dents",v||null);saveText(String(row.id),"nb_blocs_de_dents",v);}} width={60}/>}</td>
                   <td style={tdCard}><ModeleIndicator
                     ok={modeleOk}
                     locked={!isDrOnly}

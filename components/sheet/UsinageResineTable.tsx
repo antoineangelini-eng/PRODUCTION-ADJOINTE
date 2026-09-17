@@ -635,6 +635,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
             const isOnHold = Boolean((row as any)._on_hold);
             const effectiveTD = ur.type_de_dents_override ?? dm.type_de_dents ?? dr.type_de_dents ?? "";
             const isDentsImprimees = effectiveTD === "Dents imprimées";
+            const isDentsCommerce = effectiveTD === "Dents du commerce";
             const dt = fmtDT(dr.design_dents_resine_at);
             return (
               <div key={row.id} id={`card-ur-${row.id}`} data-nav-row={String(row.id)} style={{ background:BG_CARD, border: inGroup ? "none" : `1px solid ${isChecked?"#2d4d3a":isDone?"#2d3d35":isLotFilled?"#2d2b4a":"#272727"}`, borderRadius: inGroup ? 0 : 12, overflow:"hidden", animation:isFocused?"card-found 2s ease forwards":isNew?"card-new 2.5s ease forwards":"none", transition:"border-color 150ms, opacity 300ms", opacity:isOnHold?0.45:1, ...(!inGroup ? {alignSelf:"start"} : {}) }}>
@@ -707,7 +708,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
                 <div style={{ ...vals3, background:BG_VAL_ROW, borderBottom:BD_MED }}>{dr.design_dents_resine?<OuiBadge/>:<Val muted>—</Val>}<TimeBadge dt={dt}/><BoolBadge val={nat === "Chassis Argoat" ? false : (dr.modele_a_realiser_ok??dm.modele_a_faire_ok??null)} /></div>
                 <div style={{ ...grid2, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl color="#4ade80">Blocs</Lbl><Lbl color="#4ade80">Teinte</Lbl></div>
                 <div style={{ ...vals2, background:"#1b1b1b", borderBottom:BD_STRONG }}>
-                  <InlineText value={ur.nb_blocs_override??dr.nb_blocs_de_dents??null} onFocusChange={setIsEditing} navAttr={`${row.id}_col_1`} onSave={v => { patchRow(String(row.id),"ur","nb_blocs_override",v||null); saveCell(String(row.id),"nb_blocs_override",v||null); }} />
+                  {isDentsCommerce?<span style={{color:"rgba(245,158,11,0.4)",fontSize:13}}>⊘</span>:<InlineText value={ur.nb_blocs_override??dr.nb_blocs_de_dents??null} onFocusChange={setIsEditing} navAttr={`${row.id}_col_1`} onSave={v => { patchRow(String(row.id),"ur","nb_blocs_override",v||null); saveCell(String(row.id),"nb_blocs_override",v||null); }} />}
                   <InlineText value={ur.teintes_override??dr.teintes_associees??dm.teintes_associees??null} onFocusChange={setIsEditing} navAttr={`${row.id}_col_2`} onSave={v => { patchRow(String(row.id),"ur","teintes_override",v||null); saveCell(String(row.id),"teintes_override",v||null); }} />
                 </div>
                 <div style={{ ...grid2, background:BG_LABEL_SAISIE, borderBottom:BD_LIGHT }}><Lbl color="#4ade80">Production</Lbl><Lbl color="#4ade80">Réception</Lbl></div>
