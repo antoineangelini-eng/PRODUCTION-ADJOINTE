@@ -32,7 +32,11 @@ export function buildZPL(data: LabelData): string {
   const baseLabel = data.base ? `${data.base} x${baseQty}` : "";
 
   // 406 dots wide — layout avec titres DENTS / BASE
-  const labelHeight = hasBase ? 260 : 216;
+  // Bande DENTS plus haute si type de dents affiché
+  const hasTD = Boolean(data.typeDeDents);
+  const dentsBarH = hasTD ? 36 : 16;
+  const s = hasTD ? 20 : 0; // décalage vertical pour tout ce qui suit
+  const labelHeight = (hasBase ? 260 : 216) + s;
 
   const lines: string[] = [
     "^XA",
@@ -46,68 +50,73 @@ export function buildZPL(data: LabelData): string {
     `^FO220,12^A0N,18,18^FD${nature}^FS`,
     "^FO4,38^GB398,2,2^FS",
 
-    // ── Titre DENTS (blanc sur noir) + type de dents ──
-    `^FO4,44^GB398,16,16^FS`,
-    `^FO12,46^A0N,12,12^FR^FDDENTS${data.typeDeDents ? ` - ${data.typeDeDents}` : ""}^FS`,
+    // ── Titre DENTS (blanc sur noir) + type de dents en gros ──
+    `^FO4,44^GB398,${dentsBarH},${dentsBarH}^FS`,
+    ...(hasTD ? [
+      `^FO12,46^A0N,10,10^FR^FDDENTS^FS`,
+      `^FO12,58^A0N,20,20^FR^FD${data.typeDeDents}^FS`,
+    ] : [
+      `^FO12,46^A0N,12,12^FR^FDDENTS^FS`,
+    ]),
 
     // ── Ligne 1 : Teinte | Blocs ──
-    `^FO12,66^A0N,11,11^FDTeinte :^FS`,
-    `^FO12,80^A0N,24,24^FD${teinte}^FS`,
-    `^FO220,66^A0N,11,11^FDBlocs :^FS`,
-    `^FO220,80^A0N,24,24^FD${nbBlocs}^FS`,
+    `^FO12,${66+s}^A0N,11,11^FDTeinte :^FS`,
+    `^FO12,${80+s}^A0N,24,24^FD${teinte}^FS`,
+    `^FO220,${66+s}^A0N,11,11^FDBlocs :^FS`,
+    `^FO220,${80+s}^A0N,24,24^FD${nbBlocs}^FS`,
 
     // ── Ligne 2 : Machine | Disque ──
-    `^FO12,108^A0N,11,11^FDMachine :^FS`,
+    `^FO12,${108+s}^A0N,11,11^FDMachine :^FS`,
     ...(data.machine
-      ? [`^FO12,122^A0N,24,24^FD${machine}^FS`]
+      ? [`^FO12,${122+s}^A0N,24,24^FD${machine}^FS`]
       : [
-          `^FO20,120^GE20,20,2^FS`,
-          `^FO18,118^GD24,24,2,,R^FS`,
+          `^FO20,${120+s}^GE20,20,2^FS`,
+          `^FO18,${118+s}^GD24,24,2,,R^FS`,
         ]
     ),
-    `^FO220,108^A0N,11,11^FDDisque :^FS`,
+    `^FO220,${108+s}^A0N,11,11^FDDisque :^FS`,
     ...(data.disque
-      ? [`^FO220,122^A0N,24,24^FD${disque}^FS`]
+      ? [`^FO220,${122+s}^A0N,24,24^FD${disque}^FS`]
       : [
-          `^FO228,120^GE20,20,2^FS`,
-          `^FO226,118^GD24,24,2,,R^FS`,
+          `^FO228,${120+s}^GE20,20,2^FS`,
+          `^FO226,${118+s}^GD24,24,2,,R^FS`,
         ]
     ),
 
     // ── Ligne 3 : Modèle ──
-    `^FO12,150^A0N,11,11^FDModele :^FS`,
+    `^FO12,${150+s}^A0N,11,11^FDModele :^FS`,
     ...(data.modele
-      ? [`^FO12,164^A0N,24,24^FD${modele}^FS`]
+      ? [`^FO12,${164+s}^A0N,24,24^FD${modele}^FS`]
       : [
-          `^FO8,160^GB64,28,28^FS`,
-          `^FO12,164^A0N,24,24^FR^FD${modele}^FS`,
+          `^FO8,${160+s}^GB64,28,28^FS`,
+          `^FO12,${164+s}^A0N,24,24^FR^FD${modele}^FS`,
         ]
     ),
 
     // ── Section BASE ──
     ...(hasBase ? [
       // Titre BASE (blanc sur noir)
-      `^FO4,194^GB398,16,16^FS`,
-      `^FO12,196^A0N,12,12^FR^FDBASE^FS`,
+      `^FO4,${194+s}^GB398,16,16^FS`,
+      `^FO12,${196+s}^A0N,12,12^FR^FDBASE^FS`,
 
       // Colonne 1 : Base type x qty
-      `^FO12,216^A0N,11,11^FDType :^FS`,
+      `^FO12,${216+s}^A0N,11,11^FDType :^FS`,
       ...(data.base === "Imprimée"
         ? [
-            `^FO8,230^GB120,24,24^FS`,
-            `^FO12,232^A0N,20,20^FR^FD${baseLabel}^FS`,
+            `^FO8,${230+s}^GB120,24,24^FS`,
+            `^FO12,${232+s}^A0N,20,20^FR^FD${baseLabel}^FS`,
           ]
-        : [`^FO12,230^A0N,22,22^FD${baseLabel}^FS`]
+        : [`^FO12,${230+s}^A0N,22,22^FD${baseLabel}^FS`]
       ),
       // Colonne 2 : Machine base (sauf Imprimée)
       ...(data.machineBase && data.base !== "Imprimée" ? [
-        `^FO150,216^A0N,11,11^FDMachine :^FS`,
-        `^FO150,230^A0N,22,22^FD${data.machineBase}^FS`,
+        `^FO150,${216+s}^A0N,11,11^FDMachine :^FS`,
+        `^FO150,${230+s}^A0N,22,22^FD${data.machineBase}^FS`,
       ] : []),
       // Colonne 3 : N° Base (sauf Imprimée)
       ...(data.numeroBase && data.base !== "Imprimée" ? [
-        `^FO280,216^A0N,11,11^FDN. Base :^FS`,
-        `^FO280,230^A0N,22,22^FD${data.numeroBase}^FS`,
+        `^FO280,${216+s}^A0N,11,11^FDN. Base :^FS`,
+        `^FO280,${230+s}^A0N,22,22^FD${data.numeroBase}^FS`,
       ] : []),
     ] : []),
 
