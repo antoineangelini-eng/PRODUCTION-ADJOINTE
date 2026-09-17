@@ -302,6 +302,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
   const [isEditing, setIsEditing]   = useState(false);
   const [dualMachineIds, setDualMachineIds] = useState<Set<string>>(new Set());
   const [dualDisqueIds, setDualDisqueIds]   = useState<Set<string>>(new Set());
+  const [dualBaseIds, setDualBaseIds]       = useState<Set<string>>(new Set());
   const onNewCasesRef = useRef(onNewCases); onNewCasesRef.current = onNewCases;
 
   const load = useCallback(async (silent = false) => {
@@ -679,19 +680,21 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
                       </div>
                     </>);
                   }
-                  // Usinée : Base | Machine | N° Base
+                  // Usinée : Base | Machine | N° Base (double-clic = 2 valeurs)
+                  const rid = String(row.id);
+                  const hasDualBase = dualBaseIds.has(rid) || Boolean(ur.numero_base_2) || bqty >= 2;
                   return (<>
                     <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", padding:"4px 10px", background:BG_LABEL_SAISIE, borderBottom:BD_LIGHT }}>
                       <Lbl>Base</Lbl>
                       <Lbl color="#7c8196">Machine</Lbl>
-                      <Lbl color="#4ade80">{bqty >= 2 ? "N° Base 1 / N° Base 2" : "N° Base"}</Lbl>
+                      <Lbl color="#4ade80">{hasDualBase ? "N° Base 1 / N° Base 2" : "N° Base"}</Lbl>
                     </div>
                     <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", padding:"5px 14px 7px", gap:"0 12px", alignItems:"center", justifyItems:"center", background:BG_VAL_SAISIE, borderBottom:BD_MED }}>
                       <span style={{ display:"inline-flex", alignItems:"center", gap:4, padding:"3px 10px", borderRadius:6, background:baseColor+"18", border:`1px solid ${baseColor}44`, color:baseColor, fontSize:12, fontWeight:700 }}>{dr.base_type || "—"}{dr.base_type && <span style={{opacity:0.7}}>×{bqty}</span>}</span>
                       <SelectMachine value={ur.machine_base ?? ""} onChange={v => { patchRow(String(row.id),"ur","machine_base",v||null); saveCell(String(row.id),"machine_base",v||null); }} />
-                      <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                      <div style={{ display:"flex", gap:6, alignItems:"center" }} onDoubleClick={e => { e.stopPropagation(); setDualBaseIds(p => new Set(p).add(rid)); }}>
                         <InlineText value={ur.numero_base_1 ?? null} onFocusChange={setIsEditing} navAttr={`${row.id}_base1`} onSave={v => { patchRow(String(row.id),"ur","numero_base_1",v||null); saveCell(String(row.id),"numero_base_1",v||null); }} />
-                        {bqty >= 2 && <>
+                        {hasDualBase && <>
                           <span style={{color:"#555",fontSize:10}}>/</span>
                           <InlineText value={ur.numero_base_2 ?? null} onFocusChange={setIsEditing} navAttr={`${row.id}_base2`} onSave={v => { patchRow(String(row.id),"ur","numero_base_2",v||null); saveCell(String(row.id),"numero_base_2",v||null); }} />
                         </>}
