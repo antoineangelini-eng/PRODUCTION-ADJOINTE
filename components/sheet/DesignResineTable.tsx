@@ -179,6 +179,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
   const [voletCreating, setVoletCreating] = useState(false);
   const [reasonTooltip,setReasonTooltip]=useState<{id:string;rect:{top:number;left:number;width:number;bottom:number}}|null>(null);
   const [mesCas,setMesCas]=useState(false);
+  const [searchFilter,setSearchFilter]=useState("");
   const [commentModalId, setCommentModalId] = useState<string|null>(null);
   const [commentDraft, setCommentDraft] = useState("");
 
@@ -290,6 +291,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
       return aH - bH;
     });
   }, [rows, mesCas, currentUserId]);
+  const displayRows = useMemo(()=> searchFilter ? sortedRows.filter(r=>(r.case_number??"").includes(searchFilter)) : sortedRows, [sortedRows, searchFilter]);
   useEffect(()=>{
     if(!focusId||loading)return;
     const found=rows.find(r=>r.case_number===focusId);
@@ -424,8 +426,14 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
       {/* Barre validation */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,position:"sticky",top:0,zIndex:3,background:"#0b0b0b",padding:"0 20px 8px 20px"}}>
         <div style={{minHeight:36,display:"flex",alignItems:"center",gap:10}}>
-          {!searchNotFound&&<div style={{fontSize:12,color:"white",padding:"4px 10px",background:"transparent",border:"1px solid rgba(255,255,255,0.2)",borderRadius:6}}>{sortedRows.length} dossier{sortedRows.length>1?"s":""}</div>}
+          {!searchNotFound&&<span style={{fontSize:12,color:"#ccc",padding:"4px 14px",background:"#1e1e1e",border:"1px solid #2e2e2e",borderRadius:20,fontWeight:600}}>{searchFilter?`${sortedRows.filter(r=>(r.case_number??"").includes(searchFilter)).length} / `:""}{sortedRows.length} dossier{sortedRows.length>1?"s":""}</span>}
           <button onClick={()=>setMesCas(p=>!p)} style={{padding:"4px 12px",borderRadius:20,fontSize:11,fontWeight:700,cursor:"pointer",border:mesCas?"1px solid rgba(129,140,248,0.6)":"1px solid #444",background:mesCas?"rgba(129,140,248,0.12)":"rgba(255,255,255,0.04)",color:mesCas?"#818cf8":"#aaa",transition:"all 150ms"}}>{mesCas?"✦ Mes cas":"Mes cas"}</button>
+          <input
+            value={searchFilter}
+            onChange={e => setSearchFilter(e.target.value.replace(/\D/g,""))}
+            placeholder="Rechercher..."
+            style={{ padding:"4px 10px", border:"1px solid #333", background:"#1a1a1a", color:"white", fontSize:12, borderRadius:6, width:120, outline:"none", fontFamily:"monospace" }}
+          />
           {searchNotFound&&focusId&&<div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 12px",background:"#1a0f0f",border:"1px solid rgba(239,68,68,0.4)",borderRadius:6}}><span style={{fontSize:12,color:"#f87171"}}>Cas <strong style={{color:"white"}}>"{focusId}"</strong> introuvable</span><button onClick={()=>setSearchNotFound(false)} style={{background:"none",border:"none",color:"#555",cursor:"pointer",fontSize:14}}>×</button></div>}
           {batchResult?.okIds.length?<div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 12px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:6}}><span style={{color:"white",fontSize:13}}>✓</span><span style={{color:"white",fontSize:12,fontWeight:600}}>{batchResult.okIds.length} envoyé{batchResult.okIds.length>1?"s":""}</span></div>:null}
           {batchResult?.errors.length?(
@@ -469,7 +477,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
             </tr>
           </thead>
           <tbody>
-            {sortedRows.map((row, rowIdx)=>{
+            {displayRows.map((row, rowIdx)=>{
               const dm=(row as any).sector_design_metal??{};
               const dr=(row as any).sector_design_resine??{};
               const nat=row.nature_du_travail??"";
@@ -490,8 +498,8 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
               const teintes=dr.teintes_associees??dm.teintes_associees??null;
 
               // Détection regroupement : est-ce un volet du même cas ?
-              const prevRow = rowIdx > 0 ? sortedRows[rowIdx - 1] : null;
-              const nextRow = rowIdx < sortedRows.length - 1 ? sortedRows[rowIdx + 1] : null;
+              const prevRow = rowIdx > 0 ? displayRows[rowIdx - 1] : null;
+              const nextRow = rowIdx < displayRows.length - 1 ? displayRows[rowIdx + 1] : null;
               const isVoletOfPrev = prevRow && prevRow.case_number === row.case_number;
               const hasVoletNext = nextRow && nextRow.case_number === row.case_number;
               const groupColor = isVoletOfPrev ? (NATURE_META[prevRow!.nature_du_travail ?? ""]?.color ?? "#666") : (natureMeta?.color ?? "#666");
@@ -670,7 +678,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
                 </tr>
               </React.Fragment>);
             })}
-            {sortedRows.length===0&&<tr><td colSpan={17} style={{padding:16,color:"#555",fontSize:13,textAlign:"center"}}>Aucun dossier en cours.</td></tr>}
+            {displayRows.length===0&&<tr><td colSpan={17} style={{padding:16,color:"#555",fontSize:13,textAlign:"center"}}>Aucun dossier en cours.</td></tr>}
           </tbody>
         </table>
       </div>
