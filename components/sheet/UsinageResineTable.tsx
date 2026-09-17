@@ -666,7 +666,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
                 </div>
                 <div style={{ ...grid2, background:BG_LABEL_ROW, borderBottom:BD_LIGHT }}><Lbl>Date de création</Lbl><Lbl>Type de dents</Lbl></div>
                 <div style={{ ...vals2, background:BG_VAL_ROW, borderBottom:BD_MED }}><Val>{fmtDate(row.created_at)}</Val><span style={{ display:"inline-flex", padding:"3px 10px", borderRadius:6, background:(TYPE_DENTS_OPTIONS.find(o=>o.value===effectiveTD)?.color??"#555")+"18", border:`1px solid ${(TYPE_DENTS_OPTIONS.find(o=>o.value===effectiveTD)?.color??"#555")}44`, color:TYPE_DENTS_OPTIONS.find(o=>o.value===effectiveTD)?.color??"#555", fontSize:12, fontWeight:700 }}>{effectiveTD||"—"}</span></div>
-                {(nat === "Deflex" || nat === "Complet") && (() => {
+                {(nat === "Deflex" || nat === "Complet" || nat === "Provisoire Résine") && (() => {
                   const bqty = dr.base_qty ?? 1;
                   const isImprimee = dr.base_type === "Imprimée";
                   const baseColor = isImprimee ? "#a78bfa" : "#f59e0b";

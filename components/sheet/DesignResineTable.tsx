@@ -476,7 +476,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
               const isProvisoire=nat==="Provisoire Résine";
               const isDeflex=nat==="Deflex";
               const isComplet=nat==="Complet";
-              const needsBase=isDeflex||isComplet;
+              const needsBase=isDeflex||isComplet||isProvisoire;
               const isDrOnly=isProvisoire||isDeflex||isComplet;
               const natureMeta=NATURE_META[nat];
               const isC=checkedIds.has(String(row.id)),isA=activeRowId===String(row.id),isH=hoveredId===String(row.id),isF=foundRowId===String(row.id);
@@ -617,7 +617,7 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
                   {/* Base + quantité — uniquement pour Deflex / Complet */}
                   <td style={needsBase ? tdCard : disabledCellStyle} onClick={e=>{if(needsBase)e.stopPropagation();}}>
                     {needsBase ? (() => {
-                      const val = dr.base_type ?? (isDeflex ? "Usinée" : "");
+                      const val = dr.base_type ?? (isDeflex ? "Usinée" : isProvisoire ? "Imprimée" : "");
                       const qty = dr.base_qty ?? 1;
                       const displayMeta = BASE_OPTIONS.find(o=>o.value===val) ?? BASE_OPTIONS[1];
                       const cid = String(row.id);
