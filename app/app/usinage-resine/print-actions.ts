@@ -23,6 +23,7 @@ export async function buildUrPrintJobAction(data: {
   numeroBase1?: string | null;
   numeroBase2?: string | null;
   machineBase?: string | null;
+  typeDeDents?: string | null;
 }): Promise<PrintJobData> {
   const printerIp = await getCurrentUserPrinterIpAction();
   if (!printerIp) return null;
@@ -42,6 +43,7 @@ export async function buildUrPrintJobAction(data: {
     baseQty: data.baseQty ?? 1,
     machineBase: data.machineBase ?? null,
     numeroBase: mergedNumBase,
+    typeDeDents: data.typeDeDents ?? null,
   });
   return { zpl, printerIp };
 }

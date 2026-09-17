@@ -468,6 +468,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
           machineBase: ur.machine_base ?? null,
           numeroBase1: ur.numero_base_1 ?? null,
           numeroBase2: ur.numero_base_2 ?? null,
+          typeDeDents: printTD || null,
         }).then(job => {
           if (!job || !relayUrl) return;
           fetch(`${relayUrl}/print`, {

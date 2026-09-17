@@ -12,6 +12,7 @@ export type LabelData = {
   baseQty: number;
   machineBase: string | null;
   numeroBase: string | null;
+  typeDeDents: string | null;
 };
 
 const ZEBRA_PORT = 9100;
@@ -45,9 +46,9 @@ export function buildZPL(data: LabelData): string {
     `^FO220,12^A0N,18,18^FD${nature}^FS`,
     "^FO4,38^GB398,2,2^FS",
 
-    // ── Titre DENTS (blanc sur noir) ──
+    // ── Titre DENTS (blanc sur noir) + type de dents ──
     `^FO4,44^GB398,16,16^FS`,
-    `^FO12,46^A0N,12,12^FR^FDDENTS^FS`,
+    `^FO12,46^A0N,12,12^FR^FDDENTS${data.typeDeDents ? ` - ${data.typeDeDents}` : ""}^FS`,
 
     // ── Ligne 1 : Teinte | Blocs ──
     `^FO12,66^A0N,11,11^FDTeinte :^FS`,

@@ -19,11 +19,10 @@ const DR_NATURES = [
   { value: "Complet",           color: "#38bdf8" },
 ];
 
-export function DesignResineCreateBar({ prefill = "", onCreated, onSearch }: { prefill?: string; onCreated?: (caseNumber: string) => void; onSearch?: (caseNumber: string) => void }) {
+export function DesignResineCreateBar({ prefill = "", onCreated }: { prefill?: string; onCreated?: (caseNumber: string) => void }) {
   const router = useRouter();
   const [caseNumber, setCaseNumber] = useState(prefill);
   const [nature, setNature] = useState("");
-  const [scanValue, setScanValue] = useState("");
   const [dateExp, setDateExp] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -103,30 +102,6 @@ export function DesignResineCreateBar({ prefill = "", onCreated, onSearch }: { p
         </div>
       </div>
 
-      <div style={{ width: 1, background: "#222", alignSelf: "stretch", marginTop: 20 }} />
-
-      {/* Scanner */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <span style={{ fontSize: 11, color: "white", letterSpacing: 0.5 }}>Rechercher / Scanner</span>
-        <div style={{ display: "flex", gap: 6 }}>
-          <input
-            value={scanValue}
-            onChange={e => setScanValue(normalize(e.target.value))}
-            onKeyDown={e => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                const v = scanValue.trim();
-                if (!v) return;
-                setScanValue("");
-                onSearch?.(v);
-              }
-            }}
-            placeholder="N° du cas..."
-            autoComplete="off"
-            style={{ padding: "7px 10px", border: "1px solid #ffffff", background: "transparent", color: "white", fontSize: 12, width: 160, outline: "none", borderRadius: 4 }}
-          />
-        </div>
-      </div>
     </div>
   );
 }

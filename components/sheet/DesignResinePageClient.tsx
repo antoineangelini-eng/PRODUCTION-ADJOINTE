@@ -24,7 +24,7 @@ export function DesignResinePageClient({ focusId, prefill = "" }: { focusId: str
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
-      {/* Barre création + scanner */}
+      {/* Barre création */}
       <div style={{ flexShrink: 0, background: "#0b0b0b", padding: "10px 20px 8px", borderBottom: "1px solid #1a1a1a" }}>
         <DesignResineCreateBar
           prefill={prefill}
@@ -33,10 +33,6 @@ export function DesignResinePageClient({ focusId, prefill = "" }: { focusId: str
             dismissAll();
             await new Promise(r => setTimeout(r, 300));
             reloadFullRef.current?.();
-          }}
-          onSearch={(cn) => {
-            setActiveFocus(null);
-            setTimeout(() => setActiveFocus(cn), 100);
           }}
         />
       </div>
