@@ -625,18 +625,46 @@ export function DesignResineTable({focusId, onReload, onReloadFull, onSelectionC
                   {/* Base + quantité — uniquement pour Deflex / Complet */}
                   <td style={needsBase ? tdCard : disabledCellStyle} onClick={e=>{if(needsBase)e.stopPropagation();}}>
                     {needsBase ? (() => {
-                      const val = dr.base_type ?? (isDeflex ? "Usinée" : isProvisoire ? "Imprimée" : "");
+                      const val = dr.base_type ?? (isDeflex ? "Usinée" : isProvisoire ? "" : "");
                       const qty = dr.base_qty ?? 1;
                       const displayMeta = BASE_OPTIONS.find(o=>o.value===val) ?? BASE_OPTIONS[1];
                       const cid = String(row.id);
 
                       const cycleBase = () => {
                         if (isDeflex) return; // Deflex = toujours Usinée
+                        if (isProvisoire) {
+                          // Provisoire : Imprimée → Usinée → Sans base → Imprimée
+                          const idx = BASE_OPTIONS.findIndex(o=>o.value===val);
+                          if (idx >= 0 && idx < BASE_OPTIONS.length - 1) {
+                            const next = BASE_OPTIONS[idx+1];
+                            patchRow(cid,"sector_design_resine","base_type",next.value);
+                            saveText(cid,"base_type",next.value);
+                          } else {
+                            // Dernier de la liste ou pas trouvé → sans base (null)
+                            if (val) {
+                              patchRow(cid,"sector_design_resine","base_type",null);
+                              saveText(cid,"base_type","");
+                            } else {
+                              const first = BASE_OPTIONS[0];
+                              patchRow(cid,"sector_design_resine","base_type",first.value);
+                              saveText(cid,"base_type",first.value);
+                            }
+                          }
+                          return;
+                        }
                         const idx = BASE_OPTIONS.findIndex(o=>o.value===val);
                         const next = BASE_OPTIONS[(idx+1) % BASE_OPTIONS.length];
                         patchRow(cid,"sector_design_resine","base_type",next.value);
                         saveText(cid,"base_type",next.value);
                       };
+
+                      if (!val && isProvisoire) {
+                        return (
+                          <span style={{display:"inline-flex",alignItems:"center",padding:"3px 10px",borderRadius:6,background:"rgba(255,255,255,0.04)",border:"1px solid #333",color:"#555",fontSize:12,fontWeight:700,whiteSpace:"nowrap",cursor:"pointer",userSelect:"none"}} onClick={cycleBase} title="Cliquer pour ajouter une base">
+                            Sans base
+                          </span>
+                        );
+                      }
 
                       return (
                         <span style={{display:"inline-flex",alignItems:"center",padding:"3px 10px",borderRadius:6,background:displayMeta.color+"12",border:`1px solid ${displayMeta.color}30`,color:displayMeta.color,fontSize:12,fontWeight:700,whiteSpace:"nowrap",cursor:isDeflex?"default":"pointer",userSelect:"none"}} onClick={cycleBase} title={isDeflex?undefined:"Cliquer pour changer"}>

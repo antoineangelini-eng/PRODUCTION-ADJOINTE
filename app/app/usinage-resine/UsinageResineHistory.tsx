@@ -44,10 +44,10 @@ function UrCard({ row, onReopen }: { row: UrHistoryRow; onReopen: () => void }) 
       <div style={{ display: "flex", gap: 8 }}>
         <div style={{ flex: 1 }}><Field label="Modèle"><Bool val={row.modele_effectif} /></Field></div>
         <div style={{ flex: 1 }}>{row.nature_du_travail === "Deflex" || row.nature_du_travail === "Complet" || row.nature_du_travail === "Provisoire Résine" ? <Field label="Base"><Txt val={row.base_type ? `${row.base_type} ×${row.base_qty ?? 1}` : null} /></Field> : <FieldBlocked label="Base" />}</div>
-        {(row.nature_du_travail === "Deflex" || row.nature_du_travail === "Complet" || row.nature_du_travail === "Provisoire Résine") && row.base_type !== "Imprimée" && (
+        {(row.nature_du_travail === "Deflex" || row.nature_du_travail === "Complet" || row.nature_du_travail === "Provisoire Résine") && row.base_type && row.base_type !== "Imprimée" && (
           <div style={{ flex: 1 }}><Field label="Machine base"><Txt val={row.machine_base} color="#9487a8" /></Field></div>
         )}
-        {(row.nature_du_travail === "Deflex" || row.nature_du_travail === "Complet" || row.nature_du_travail === "Provisoire Résine") && row.base_type !== "Imprimée" && (
+        {(row.nature_du_travail === "Deflex" || row.nature_du_travail === "Complet" || row.nature_du_travail === "Provisoire Résine") && row.base_type && row.base_type !== "Imprimée" && (
           <div style={{ flex: 1 }}><Field label="N° Base"><Txt val={[row.numero_base_1, row.numero_base_2].filter(Boolean).join(" / ") || null} /></Field></div>
         )}
       </div>
