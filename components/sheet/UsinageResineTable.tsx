@@ -478,6 +478,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
         }).catch(() => {});
       }
       setCheckedIds(prev => { const n = new Set(prev); result.okIds.forEach(id => n.delete(id)); return n; });
+      setSearchFilter("");
       // Refresh complet : enlève les cas validés ET fait entrer les nouveaux cas du bandeau
       load();
     }
