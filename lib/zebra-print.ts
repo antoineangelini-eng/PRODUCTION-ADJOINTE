@@ -32,10 +32,10 @@ export function buildZPL(data: LabelData): string {
   const baseLabel = data.base ? `${data.base} x${baseQty}` : "";
 
   // 406 dots wide — layout avec titres DENTS / BASE
-  // Bande DENTS plus haute si type de dents affiché
-  const hasTD = Boolean(data.typeDeDents);
-  const dentsBarH = hasTD ? 36 : 16;
-  const s = hasTD ? 20 : 0; // décalage vertical pour tout ce qui suit
+  // Bande DENTS plus haute seulement pour types non-standard (pas "Dents usinées")
+  const showTD = Boolean(data.typeDeDents) && data.typeDeDents !== "Dents usinées";
+  const dentsBarH = showTD ? 36 : 16;
+  const s = showTD ? 20 : 0; // décalage vertical pour tout ce qui suit
   const labelHeight = (hasBase ? 260 : 216) + s;
 
   const lines: string[] = [
@@ -52,7 +52,7 @@ export function buildZPL(data: LabelData): string {
 
     // ── Titre DENTS (blanc sur noir) + type de dents en gros ──
     `^FO4,44^GB398,${dentsBarH},${dentsBarH}^FS`,
-    ...(hasTD ? [
+    ...(showTD ? [
       `^FO12,46^A0N,10,10^FR^FDDENTS^FS`,
       `^FO12,58^A0N,20,20^FR^FD${data.typeDeDents}^FS`,
     ] : [
