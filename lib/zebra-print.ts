@@ -31,12 +31,16 @@ export function buildZPL(data: LabelData): string {
   const baseQty = data.baseQty ?? 1;
   const baseLabel = data.base ? `${data.base} x${baseQty}` : "";
 
-  // 406 dots wide — layout avec titres DENTS / BASE
-  // Bande DENTS plus haute seulement pour types non-standard (pas "Dents usinées")
+  // 406 dots wide — layout compact
+  // Bande DENTS : type non-standard affiché directement (sans préfixe "DENTS")
   const showTD = Boolean(data.typeDeDents) && data.typeDeDents !== "Dents usinées";
-  const dentsBarH = showTD ? 36 : 16;
-  const s = showTD ? 20 : 0; // décalage vertical pour tout ce qui suit
-  const labelHeight = (hasBase ? 260 : 216) + s;
+  const dentsBarH = showTD ? 22 : 16;
+  const s = showTD ? 6 : 0; // décalage vertical pour tout ce qui suit
+
+  // BASE intégrée dans la bande noire → plus de ligne séparée en dessous
+  const baseHasExtra = hasBase && data.base !== "Imprimée" && Boolean(data.machineBase || data.numeroBase);
+  const baseBarH = hasBase ? (baseHasExtra ? 34 : 22) : 0;
+  const labelHeight = hasBase ? (200 + s + baseBarH) : (216 + s);
 
   const lines: string[] = [
     "^XA",
@@ -50,11 +54,10 @@ export function buildZPL(data: LabelData): string {
     `^FO220,12^A0N,18,18^FD${nature}^FS`,
     "^FO4,38^GB398,2,2^FS",
 
-    // ── Titre DENTS (blanc sur noir) + type de dents en gros ──
+    // ── Bande DENTS (blanc sur noir) ──
     `^FO4,44^GB398,${dentsBarH},${dentsBarH}^FS`,
     ...(showTD ? [
-      `^FO12,46^A0N,10,10^FR^FDDENTS^FS`,
-      `^FO12,58^A0N,20,20^FR^FD${data.typeDeDents}^FS`,
+      `^FO12,48^A0N,16,16^FR^FD${data.typeDeDents}^FS`,
     ] : [
       `^FO12,46^A0N,12,12^FR^FDDENTS^FS`,
     ]),
@@ -93,31 +96,18 @@ export function buildZPL(data: LabelData): string {
         ]
     ),
 
-    // ── Section BASE ──
+    // ── Section BASE : tout intégré dans la bande noire ──
     ...(hasBase ? [
-      // Titre BASE (blanc sur noir)
-      `^FO4,${194+s}^GB398,16,16^FS`,
-      `^FO12,${196+s}^A0N,12,12^FR^FDBASE^FS`,
-
-      // Colonne 1 : Base type x qty
-      `^FO12,${216+s}^A0N,11,11^FDType :^FS`,
-      ...(data.base === "Imprimée"
-        ? [
-            `^FO8,${230+s}^GB120,24,24^FS`,
-            `^FO12,${232+s}^A0N,20,20^FR^FD${baseLabel}^FS`,
-          ]
-        : [`^FO12,${230+s}^A0N,22,22^FD${baseLabel}^FS`]
-      ),
-      // Colonne 2 : Machine base (sauf Imprimée)
-      ...(data.machineBase && data.base !== "Imprimée" ? [
-        `^FO150,${216+s}^A0N,11,11^FDMachine :^FS`,
-        `^FO150,${230+s}^A0N,22,22^FD${data.machineBase}^FS`,
-      ] : []),
-      // Colonne 3 : N° Base (sauf Imprimée)
-      ...(data.numeroBase && data.base !== "Imprimée" ? [
-        `^FO280,${216+s}^A0N,11,11^FDN. Base :^FS`,
-        `^FO280,${230+s}^A0N,22,22^FD${data.numeroBase}^FS`,
-      ] : []),
+      `^FO4,${194+s}^GB398,${baseBarH},${baseBarH}^FS`,
+      ...(baseHasExtra ? [
+        // Usinée : 2 lignes dans la bande
+        `^FO12,${196+s}^A0N,14,14^FR^FDBASE  ${baseLabel}^FS`,
+        ...(data.machineBase ? [`^FO12,${212+s}^A0N,14,14^FR^FDMachine: ${data.machineBase}^FS`] : []),
+        ...(data.numeroBase ? [`^FO${data.machineBase ? 200 : 12},${212+s}^A0N,14,14^FR^FDN.Base: ${data.numeroBase}^FS`] : []),
+      ] : [
+        // Imprimée ou sans extras : 1 ligne dans la bande
+        `^FO12,${198+s}^A0N,16,16^FR^FDBASE  ${baseLabel}^FS`,
+      ]),
     ] : []),
 
     "^XZ",
