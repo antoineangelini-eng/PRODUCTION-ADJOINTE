@@ -4,6 +4,7 @@ import { FinitionTable } from "@/components/sheet/FinitionTable";
 import { FinitionScanner } from "@/components/sheet/FinitionScanner";
 import { getFinitionStatsAction, type ScanValidateItem } from "@/app/app/finition/actions";
 import { usePollingRefresh } from "@/hooks/usePollingRefresh";
+import { RealtimeBanner } from "@/components/sheet/RealtimeBanner";
 
 type Tab = "all" | "today" | "tomorrow" | "late" | "prio_today" | "prio_j1" | "prio_j2";
 
@@ -141,6 +142,8 @@ export function FinitionPageClient({ focusId }: { hideHeader?: boolean; focusId?
             </div>
           </div>
         </div>
+
+        <RealtimeBanner hasPending={hasPending} isBusy={isBusy} onRefresh={confirmRefresh} />
 
         <div style={{ flex:1, minHeight:0, display:"flex", flexDirection:"column", overflow:"hidden" }}>
           <FinitionTable

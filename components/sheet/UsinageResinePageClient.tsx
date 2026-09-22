@@ -24,7 +24,7 @@ export function UsinageResinePageClient({ focusId }: { focusId: string | null; h
 
   const handleReload = useCallback((fn: () => void) => { reloadRef.current = fn; }, []);
   const handleReloadFull = useCallback((fn: () => void) => { reloadFullRef.current = fn; }, []);
-  usePollingRefresh(() => reloadRef.current?.(), isBusy);
+  const { hasPending, confirmRefresh } = usePollingRefresh(() => reloadRef.current?.(), isBusy);
 
   function handleNewCases(cases: ToastCase[]) {
     addToasts(cases);
@@ -87,8 +87,8 @@ export function UsinageResinePageClient({ focusId }: { focusId: string | null; h
       </div>
 
       {/* ── Bandeau realtime ─────────────────────────────────────────────────── */}
-      <RealtimeBanner hasPending={false} isBusy={isBusy} onRefresh={() => reloadRef.current?.()} />
-      <IncomingCasesBanner toasts={toasts} onDismiss={dismiss} onDismissAll={dismissAll} onIntegrate={() => { dismissAll(); reloadRef.current?.(); }} />
+      <RealtimeBanner hasPending={hasPending} isBusy={isBusy} onRefresh={confirmRefresh} />
+      <IncomingCasesBanner toasts={toasts} onDismiss={dismiss} onDismissAll={dismissAll} onIntegrate={() => { dismissAll(); reloadFullRef.current?.(); }} />
 
       {/* ── Lot panel ────────────────────────────────────────────────────────── */}
       <UsinageResineLotPanel

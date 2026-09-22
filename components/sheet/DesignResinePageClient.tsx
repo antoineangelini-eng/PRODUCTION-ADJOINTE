@@ -61,7 +61,7 @@ export function DesignResinePageClient({ focusId, prefill = "" }: { focusId: str
       </div>
 
       <RealtimeBanner hasPending={hasPending} isBusy={isBusy} onRefresh={confirmRefresh} />
-      <IncomingCasesBanner toasts={toasts} onDismiss={dismiss} onDismissAll={dismissAll} onIntegrate={() => { dismissAll(); reloadRef.current?.(); }} />
+      <IncomingCasesBanner toasts={toasts} onDismiss={dismiss} onDismissAll={dismissAll} onIntegrate={() => { dismissAll(); reloadFullRef.current?.(); }} />
 
       {/* Lot panel */}
       <DesignResineLotPanel

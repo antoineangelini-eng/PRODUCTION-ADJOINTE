@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { DesignMetalTable } from "@/components/sheet/DesignMetalTable";
 import { CaseToastContainer, type ToastCase } from "@/components/sheet/CaseToast";
 import { usePollingRefresh } from "@/hooks/usePollingRefresh";
+import { RealtimeBanner } from "@/components/sheet/RealtimeBanner";
 import { createCaseAction } from "@/app/app/design-metal/actions";
 import { InlineCalendarPicker } from "@/components/sheet/ScrollCalendar";
 import { DesignMetalHistory } from "@/app/app/design-metal/DesignMetalHistory";
@@ -56,7 +57,7 @@ export function DesignMetalPageClient({ focusId }: { focusId: string | null }) {
   const reloadRef = useRef<() => void>(() => {});
 
   const handleReload = useCallback((fn: () => void) => { reloadRef.current = fn; }, []);
-  usePollingRefresh(() => reloadRef.current?.(), isBusy);
+  const { hasPending, confirmRefresh } = usePollingRefresh(() => reloadRef.current?.(), isBusy);
 
   function handleSearch() {
     const v = searchInput.trim();
@@ -167,6 +168,8 @@ export function DesignMetalPageClient({ focusId }: { focusId: string | null }) {
               </div>
             </div>
           </div>
+
+          <RealtimeBanner hasPending={hasPending} isBusy={isBusy} onRefresh={confirmRefresh} />
 
           <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
             <DesignMetalTable
