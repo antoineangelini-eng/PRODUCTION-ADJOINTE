@@ -56,28 +56,5 @@ export function RealtimeBanner({
     );
   }
 
-  // Bouton refresh permanent (même sans modifications détectées)
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", justifyContent: "center",
-      padding: "4px 16px",
-      borderBottom: "1px solid #1e1e1e",
-    }}>
-      <button
-        onClick={onRefresh}
-        style={{
-          fontSize: 11, fontWeight: 600, color: "#888",
-          background: "transparent",
-          border: "1px solid #333",
-          borderRadius: 6, padding: "3px 12px",
-          cursor: "pointer", transition: "all 150ms",
-          display: "flex", alignItems: "center", gap: 5,
-        }}
-        onMouseEnter={e => { e.currentTarget.style.color = "#ccc"; e.currentTarget.style.borderColor = "#555"; }}
-        onMouseLeave={e => { e.currentTarget.style.color = "#888"; e.currentTarget.style.borderColor = "#333"; }}
-      >
-        ↻ Actualiser
-      </button>
-    </div>
-  );
+  return null;
 }
