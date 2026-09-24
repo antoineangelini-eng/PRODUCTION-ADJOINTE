@@ -43,9 +43,14 @@ export function buildZPL(data: LabelData): string {
   //                  puis BASE bandeau + Machine base / N°Base en grand
   // ════════════════════════════════════════════════════════════════════
   if (isComplet) {
-    const baseBarY = 148 + s;
+    // Bande DENTS toujours avec le type de dents pour Complet
+    const tdText = data.typeDeDents ?? "Dents usinées";
+    const cDentsBarH = 26;
+    const cs = cDentsBarH - 16 + 4; // décalage vs bande standard
+
+    const baseBarY = 148 + cs;
     const baseInfoY = baseBarY + 26;
-    const labelHeight = hasBase ? (baseInfoY + 34) : (180 + s);
+    const labelHeight = hasBase ? (baseInfoY + 34) : (180 + cs);
 
     const lines: string[] = [
       "^XA",
@@ -59,45 +64,41 @@ export function buildZPL(data: LabelData): string {
       `^FO220,12^A0N,18,18^FD${nature}^FS`,
       "^FO4,38^GB398,2,2^FS",
 
-      // ── Bande DENTS ──
-      `^FO4,44^GB398,${dentsBarH},${dentsBarH}^FS`,
-      ...(showTD ? [
-        `^FO12,48^A0N,16,16^FR^FD${data.typeDeDents}^FS`,
-      ] : [
-        `^FO12,46^A0N,12,12^FR^FDDENTS^FS`,
-      ]),
+      // ── Bande DENTS (toujours avec type) ──
+      `^FO4,44^GB398,${cDentsBarH},${cDentsBarH}^FS`,
+      `^FO12,48^A0N,20,20^FR^FD${tdText}^FS`,
 
       // ── Ligne 1 : Teinte | Modèle | Disque (3 colonnes) ──
-      `^FO12,${66+s}^A0N,11,11^FDTeinte :^FS`,
-      `^FO12,${80+s}^A0N,22,22^FD${teinte}^FS`,
-      `^FO148,${66+s}^A0N,11,11^FDModele :^FS`,
+      `^FO12,${66+cs}^A0N,11,11^FDTeinte :^FS`,
+      `^FO12,${80+cs}^A0N,22,22^FD${teinte}^FS`,
+      `^FO148,${66+cs}^A0N,11,11^FDModele :^FS`,
       ...(data.modele
-        ? [`^FO148,${80+s}^A0N,22,22^FD${modele}^FS`]
+        ? [`^FO148,${80+cs}^A0N,22,22^FD${modele}^FS`]
         : [
-            `^FO144,${76+s}^GB58,26,26^FS`,
-            `^FO148,${80+s}^A0N,22,22^FR^FD${modele}^FS`,
+            `^FO144,${76+cs}^GB58,26,26^FS`,
+            `^FO148,${80+cs}^A0N,22,22^FR^FD${modele}^FS`,
           ]
       ),
-      `^FO280,${66+s}^A0N,11,11^FDDisque :^FS`,
+      `^FO280,${66+cs}^A0N,11,11^FDDisque :^FS`,
       ...(data.disque
-        ? [`^FO280,${80+s}^A0N,22,22^FD${disque}^FS`]
+        ? [`^FO280,${80+cs}^A0N,22,22^FD${disque}^FS`]
         : [
-            `^FO288,${78+s}^GE20,20,2^FS`,
-            `^FO286,${76+s}^GD24,24,2,,R^FS`,
+            `^FO288,${78+cs}^GE20,20,2^FS`,
+            `^FO286,${76+cs}^GD24,24,2,,R^FS`,
           ]
       ),
 
       // ── Ligne 2 : Machine | Blocs (2 colonnes) ──
-      `^FO12,${108+s}^A0N,11,11^FDMachine :^FS`,
+      `^FO12,${108+cs}^A0N,11,11^FDMachine :^FS`,
       ...(data.machine
-        ? [`^FO12,${122+s}^A0N,22,22^FD${machine}^FS`]
+        ? [`^FO12,${122+cs}^A0N,22,22^FD${machine}^FS`]
         : [
-            `^FO20,${120+s}^GE20,20,2^FS`,
-            `^FO18,${118+s}^GD24,24,2,,R^FS`,
+            `^FO20,${120+cs}^GE20,20,2^FS`,
+            `^FO18,${118+cs}^GD24,24,2,,R^FS`,
           ]
       ),
-      `^FO220,${108+s}^A0N,11,11^FDBlocs :^FS`,
-      `^FO220,${122+s}^A0N,22,22^FD${nbBlocs}^FS`,
+      `^FO220,${108+cs}^A0N,11,11^FDBlocs :^FS`,
+      `^FO220,${122+cs}^A0N,22,22^FD${nbBlocs}^FS`,
 
       // ── Section BASE ──
       ...(hasBase ? [
