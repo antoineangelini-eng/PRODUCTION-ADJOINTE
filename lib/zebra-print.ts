@@ -26,6 +26,7 @@ export function buildZPL(data: LabelData): string {
   const modele  = data.modele ? "Oui" : "Non";
 
   const nature = data.nature ?? "";
+  const isComplet = nature === "Complet";
 
   const hasBase = Boolean(data.base);
   const baseQty = data.baseQty ?? 1;
@@ -37,7 +38,93 @@ export function buildZPL(data: LabelData): string {
   const dentsBarH = showTD ? 22 : 16;
   const s = showTD ? 6 : 0; // décalage vertical pour tout ce qui suit
 
-  // BASE intégrée dans la bande noire → plus de ligne séparée en dessous
+  // ════════════════════════════════════════════════════════════════════
+  // Layout COMPLET : 3 colonnes (Teinte/Modèle/Disque) + Machine/Blocs
+  //                  puis BASE bandeau + Machine base / N°Base en grand
+  // ════════════════════════════════════════════════════════════════════
+  if (isComplet) {
+    const baseBarY = 148 + s;
+    const baseInfoY = baseBarY + 26;
+    const labelHeight = hasBase ? (baseInfoY + 34) : (180 + s);
+
+    const lines: string[] = [
+      "^XA",
+      "^CI28",
+      "^PW406",
+      `^LL${labelHeight}`,
+      "^LH0,0",
+
+      // ── En-tête ──
+      `^FO6,8^A0N,28,28^FD${data.caseNumber}^FS`,
+      `^FO220,12^A0N,18,18^FD${nature}^FS`,
+      "^FO4,38^GB398,2,2^FS",
+
+      // ── Bande DENTS ──
+      `^FO4,44^GB398,${dentsBarH},${dentsBarH}^FS`,
+      ...(showTD ? [
+        `^FO12,48^A0N,16,16^FR^FD${data.typeDeDents}^FS`,
+      ] : [
+        `^FO12,46^A0N,12,12^FR^FDDENTS^FS`,
+      ]),
+
+      // ── Ligne 1 : Teinte | Modèle | Disque (3 colonnes) ──
+      `^FO12,${66+s}^A0N,11,11^FDTeinte :^FS`,
+      `^FO12,${80+s}^A0N,22,22^FD${teinte}^FS`,
+      `^FO148,${66+s}^A0N,11,11^FDModele :^FS`,
+      ...(data.modele
+        ? [`^FO148,${80+s}^A0N,22,22^FD${modele}^FS`]
+        : [
+            `^FO144,${76+s}^GB58,26,26^FS`,
+            `^FO148,${80+s}^A0N,22,22^FR^FD${modele}^FS`,
+          ]
+      ),
+      `^FO280,${66+s}^A0N,11,11^FDDisque :^FS`,
+      ...(data.disque
+        ? [`^FO280,${80+s}^A0N,22,22^FD${disque}^FS`]
+        : [
+            `^FO288,${78+s}^GE20,20,2^FS`,
+            `^FO286,${76+s}^GD24,24,2,,R^FS`,
+          ]
+      ),
+
+      // ── Ligne 2 : Machine | Blocs (2 colonnes) ──
+      `^FO12,${108+s}^A0N,11,11^FDMachine :^FS`,
+      ...(data.machine
+        ? [`^FO12,${122+s}^A0N,22,22^FD${machine}^FS`]
+        : [
+            `^FO20,${120+s}^GE20,20,2^FS`,
+            `^FO18,${118+s}^GD24,24,2,,R^FS`,
+          ]
+      ),
+      `^FO220,${108+s}^A0N,11,11^FDBlocs :^FS`,
+      `^FO220,${122+s}^A0N,22,22^FD${nbBlocs}^FS`,
+
+      // ── Section BASE ──
+      ...(hasBase ? [
+        // Bandeau noir : BASE + type
+        `^FO4,${baseBarY}^GB398,22,22^FS`,
+        `^FO12,${baseBarY + 3}^A0N,16,16^FR^FDBASE  ${baseLabel}^FS`,
+
+        // Fond blanc : Machine base + N° Base en grand
+        ...(data.machineBase ? [
+          `^FO12,${baseInfoY}^A0N,12,12^FDMACHINE :^FS`,
+          `^FO12,${baseInfoY + 14}^A0N,20,20^FD${data.machineBase}^FS`,
+        ] : []),
+        ...(data.numeroBase ? [
+          `^FO210,${baseInfoY}^A0N,12,12^FDN. Base :^FS`,
+          `^FO210,${baseInfoY + 14}^A0N,20,20^FD${data.numeroBase}^FS`,
+        ] : []),
+      ] : []),
+
+      "^XZ",
+    ];
+
+    return lines.join("\n");
+  }
+
+  // ════════════════════════════════════════════════════════════════════
+  // Layout STANDARD (Deflex, Provisoire, Définitif, etc.)
+  // ════════════════════════════════════════════════════════════════════
   const baseHasExtra = hasBase && data.base !== "Imprimée" && Boolean(data.machineBase || data.numeroBase);
   const baseBarH = hasBase ? (baseHasExtra ? 34 : 22) : 0;
   const labelHeight = hasBase ? (200 + s + baseBarH) : (216 + s);
