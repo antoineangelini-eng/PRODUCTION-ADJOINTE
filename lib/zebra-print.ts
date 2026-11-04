@@ -13,10 +13,26 @@ export type LabelData = {
   machineBase: string | null;
   numeroBase: string | null;
   typeDeDents: string | null;
+  emplacementData: string | null;
 };
 
 const ZEBRA_PORT = 9100;
 const TIMEOUT_MS = 5000;
+
+/**
+ * Convertit un bitmap hex monochrome en commande ZPL ^GF.
+ * Format : hex string (2 chars par octet), 10 octets/rangée pour 80px.
+ * "1" bits = noir (imprimé), "0" = blanc.
+ */
+function bitmapToZplGF(hexData: string, x: number, y: number, width = 80, height = 80): string[] {
+  const bytesPerRow = Math.ceil(width / 8); // 10 pour 80px
+  const totalBytes = bytesPerRow * height;  // 800 pour 80x80
+  return [
+    `^FO${x},${y}`,
+    `^GFA,${totalBytes},${totalBytes},${bytesPerRow},${hexData.toUpperCase()}`,
+    "^FS",
+  ];
+}
 
 export function buildZPL(data: LabelData): string {
   const teinte  = data.teinte  ?? "—";
@@ -27,6 +43,7 @@ export function buildZPL(data: LabelData): string {
 
   const nature = data.nature ?? "";
   const isComplet = nature === "Complet";
+  const hasEmplacement = Boolean(data.emplacementData) && (data.emplacementData?.length ?? 0) > 10;
 
   const hasBase = Boolean(data.base);
   const baseQty = data.baseQty ?? 1;
@@ -50,7 +67,8 @@ export function buildZPL(data: LabelData): string {
 
     const baseBarY = 148 + cs;
     const baseInfoY = baseBarY + 26;
-    const labelHeight = hasBase ? (baseInfoY + 34) : (180 + cs);
+    const emplacementExtra = hasEmplacement ? 90 : 0; // 80px graphic + 10px margin
+    const labelHeight = (hasBase ? (baseInfoY + 34) : (180 + cs)) + emplacementExtra;
 
     const lines: string[] = [
       "^XA",
@@ -61,7 +79,9 @@ export function buildZPL(data: LabelData): string {
 
       // ── En-tête ──
       `^FO6,8^A0N,28,28^FD${data.caseNumber}^FS`,
-      `^FO220,12^A0N,18,18^FD${nature}^FS`,
+      ...(hasEmplacement
+        ? [`^FO220,12^A0N,14,14^FD${nature}^FS`]
+        : [`^FO220,12^A0N,18,18^FD${nature}^FS`]),
       "^FO4,38^GB398,2,2^FS",
 
       // ── Bande DENTS (toujours avec type) ──
@@ -117,6 +137,16 @@ export function buildZPL(data: LabelData): string {
         ] : []),
       ] : []),
 
+      // ── Emplacement (schéma du disque) ──
+      ...(hasEmplacement ? (() => {
+        const emY = labelHeight - emplacementExtra + 4;
+        return [
+          `^FO4,${emY}^GB398,1,1^FS`, // trait séparateur
+          `^FO8,${emY + 3}^A0N,10,10^FDEmplacement :^FS`,
+          ...bitmapToZplGF(data.emplacementData!, 316, emY + 2),
+        ];
+      })() : []),
+
       "^XZ",
     ];
 
@@ -128,7 +158,8 @@ export function buildZPL(data: LabelData): string {
   // ════════════════════════════════════════════════════════════════════
   const baseHasExtra = hasBase && data.base !== "Imprimée" && Boolean(data.machineBase || data.numeroBase);
   const baseBarH = hasBase ? (baseHasExtra ? 34 : 22) : 0;
-  const labelHeight = hasBase ? (200 + s + baseBarH) : (216 + s);
+  const stdEmplacementExtra = hasEmplacement ? 90 : 0;
+  const labelHeight = (hasBase ? (200 + s + baseBarH) : (216 + s)) + stdEmplacementExtra;
 
   const lines: string[] = [
     "^XA",
@@ -197,6 +228,16 @@ export function buildZPL(data: LabelData): string {
         `^FO12,${198+s}^A0N,16,16^FR^FDBASE  ${baseLabel}^FS`,
       ]),
     ] : []),
+
+    // ── Emplacement (schéma du disque) ──
+    ...(hasEmplacement ? (() => {
+      const emY = labelHeight - stdEmplacementExtra + 4;
+      return [
+        `^FO4,${emY}^GB398,1,1^FS`,
+        `^FO8,${emY + 3}^A0N,10,10^FDEmplacement :^FS`,
+        ...bitmapToZplGF(data.emplacementData!, 316, emY + 2),
+      ];
+    })() : []),
 
     "^XZ",
   ];

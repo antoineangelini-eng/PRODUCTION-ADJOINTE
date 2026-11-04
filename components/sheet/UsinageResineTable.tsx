@@ -18,6 +18,33 @@ import { toggleOnHoldAction } from "@/lib/on-hold";
 import { OnHoldReasonModal, OnHoldReasonTooltip } from "@/components/sheet/OnHoldModal";
 import type { ToastCase } from "@/components/sheet/CaseToast";
 import { ScrollCalendar } from "@/components/sheet/ScrollCalendar";
+import { EmplacementCapture } from "@/components/sheet/EmplacementCapture";
+
+/** Convertit un hex bitmap monochrome 80×80 en data URL PNG pour affichage */
+function hexToDataUrl(hex: string, size = 80): string {
+  if (typeof document === "undefined") return "";
+  const canvas = document.createElement("canvas");
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  const img = ctx.createImageData(size, size);
+  const bytesPerRow = Math.ceil(size / 8);
+  for (let row = 0; row < size; row++) {
+    for (let byteIdx = 0; byteIdx < bytesPerRow; byteIdx++) {
+      const hexOffset = (row * bytesPerRow + byteIdx) * 2;
+      const byte = parseInt(hex.slice(hexOffset, hexOffset + 2), 16) || 0;
+      for (let bit = 0; bit < 8; bit++) {
+        const px = byteIdx * 8 + bit;
+        if (px >= size) break;
+        const idx = (row * size + px) * 4;
+        const isBlack = (byte >> (7 - bit)) & 1;
+        img.data[idx] = img.data[idx + 1] = img.data[idx + 2] = isBlack ? 0 : 255;
+        img.data[idx + 3] = 255;
+      }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return canvas.toDataURL("image/png");
+}
 
 const NATURE_META: Record<string, { color: string }> = {
   "Chassis Argoat":    { color: "#e07070" },
@@ -303,6 +330,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
   const [dualMachineIds, setDualMachineIds] = useState<Set<string>>(new Set());
   const [dualDisqueIds, setDualDisqueIds]   = useState<Set<string>>(new Set());
   const [dualBaseIds, setDualBaseIds]       = useState<Set<string>>(new Set());
+  const [emplacementCaseId, setEmplacementCaseId] = useState<string | null>(null);
   const onNewCasesRef = useRef(onNewCases); onNewCasesRef.current = onNewCases;
 
   const load = useCallback(async (silent = false) => {
@@ -469,6 +497,7 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
           numeroBase1: ur.numero_base_1 ?? null,
           numeroBase2: ur.numero_base_2 ?? null,
           typeDeDents: printTD || null,
+          emplacementData: ur.emplacement_data ?? null,
         }).then(job => {
           if (!job || !relayUrl) return;
           fetch(`${relayUrl}/print`, {
@@ -772,6 +801,26 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
                     </div>
                   </>);
                 })()}
+                {/* ── Bouton Emplacement ── */}
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"6px 14px", borderTop:`1px solid ${BD_LIGHT}` }}>
+                  <button
+                    onClick={() => setEmplacementCaseId(String(row.id))}
+                    style={{
+                      fontSize:11, fontWeight:700, color:"#60a5fa",
+                      background:"rgba(96,165,250,0.08)",
+                      border:"1px solid rgba(96,165,250,0.25)",
+                      borderRadius:6, padding:"4px 12px",
+                      cursor:"pointer", transition:"all 150ms",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background="rgba(96,165,250,0.15)"; e.currentTarget.style.borderColor="rgba(96,165,250,0.4)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background="rgba(96,165,250,0.08)"; e.currentTarget.style.borderColor="rgba(96,165,250,0.25)"; }}
+                  >
+                    📍 Emplacement
+                  </button>
+                  {ur.emplacement_data && (
+                    <img src={hexToDataUrl(ur.emplacement_data)} alt="Emplacement" style={{ width:36, height:36, borderRadius:4, border:"1px solid #333", imageRendering:"pixelated" }} />
+                  )}
+                </div>
               </div>
             );
           } // end renderCard
@@ -800,6 +849,16 @@ export function UsinageResineTable({ focusId, lotFilledIds, onReload, onReloadFu
         const r = rows.find(r => String(r.id) === reasonTooltip.id);
         return <OnHoldReasonTooltip reason={(r as any)?._on_hold_reason} onHoldAt={(r as any)?._on_hold_at} anchorRect={reasonTooltip.rect} onClose={() => setReasonTooltip(null)} />;
       })()}
+      <EmplacementCapture
+        open={emplacementCaseId !== null}
+        onClose={() => setEmplacementCaseId(null)}
+        onSave={async (data) => {
+          if (!emplacementCaseId) return;
+          // Stocker le hex monochrome (compact, ~1600 chars) pour ZPL + affichage
+          patchRow(emplacementCaseId, "ur", "emplacement_data", data.hex);
+          await saveCell(emplacementCaseId, "emplacement_data", data.hex);
+        }}
+      />
     </div>
   );
 }
