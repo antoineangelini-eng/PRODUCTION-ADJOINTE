@@ -25,26 +25,60 @@ export function EmplacementCapture({ open, onClose, onSave }: Props) {
     setError(null);
     setPreview(null);
     try {
-      // Demander le partage d'écran
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { displaySurface: "monitor" } as any,
-      });
+      let imageData: ImageData;
+      let imgW: number;
+      let imgH: number;
 
-      // Capturer une frame
-      const track = stream.getVideoTracks()[0];
-      const imageCapture = new (window as any).ImageCapture(track);
-      const bitmap = await imageCapture.grabFrame();
-      track.stop(); // Arrêter immédiatement le partage
+      // ── Essayer le service local d'abord (pas de popup navigateur) ──
+      let usedLocalService = false;
+      try {
+        const resp = await fetch("http://localhost:9098/capture", { signal: AbortSignal.timeout(5000) });
+        if (resp.ok) {
+          const json = await resp.json();
+          if (json.image) {
+            // Charger l'image base64 dans un canvas
+            const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+              const i = new Image();
+              i.onload = () => resolve(i);
+              i.onerror = reject;
+              i.src = json.image;
+            });
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext("2d")!;
+            ctx.drawImage(img, 0, 0);
+            imageData = ctx.getImageData(0, 0, img.width, img.height);
+            imgW = img.width;
+            imgH = img.height;
+            usedLocalService = true;
+          }
+        }
+      } catch {
+        // Service local indisponible, on continue avec getDisplayMedia
+      }
 
-      // Dessiner sur canvas pour analyse
-      const canvas = document.createElement("canvas");
-      canvas.width = bitmap.width;
-      canvas.height = bitmap.height;
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(bitmap, 0, 0);
+      // ── Fallback : getDisplayMedia (popup navigateur) ──
+      if (!usedLocalService) {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { displaySurface: "monitor" } as any,
+        });
+        const track = stream.getVideoTracks()[0];
+        const imgCapture = new (window as any).ImageCapture(track);
+        const bitmap = await imgCapture.grabFrame();
+        track.stop();
 
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const result = processImage(imageData, canvas.width, canvas.height);
+        const canvas = document.createElement("canvas");
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(bitmap, 0, 0);
+        imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        imgW = canvas.width;
+        imgH = canvas.height;
+      }
+
+      const result = processImage(imageData!, imgW!, imgH!);
 
       if (!result) {
         setError("Impossible de détecter le disque vert. Assurez-vous que PrograMill est visible.");
@@ -52,7 +86,7 @@ export function EmplacementCapture({ open, onClose, onSave }: Props) {
         return;
       }
 
-      setPreview(result as EmplacementResult);
+      setPreview(result);
     } catch (e: any) {
       if (e.name === "NotAllowedError") {
         setError("Capture annulée.");
@@ -85,8 +119,8 @@ export function EmplacementCapture({ open, onClose, onSave }: Props) {
         {!preview && (
           <>
             <p style={{ fontSize: 12, color: "#aaa", margin: "0 0 16px", lineHeight: 1.5 }}>
-              Cliquez sur <strong style={{ color: "#4ade80" }}>Capturer</strong> puis sélectionnez
-              l'écran où PrograMill est affiché. Le disque et les éléments seront détectés automatiquement.
+              Cliquez sur <strong style={{ color: "#4ade80" }}>Capturer</strong> pour détecter
+              automatiquement le disque et les éléments sur l'écran PrograMill.
             </p>
             <button
               onClick={doCapture}
